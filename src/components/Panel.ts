@@ -255,6 +255,13 @@ export class Panel {
 
     this.header.appendChild(headerLeft);
 
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'panel-remove-btn';
+    removeBtn.title = 'Remove panel';
+    removeBtn.setAttribute('aria-label', 'Remove panel');
+    removeBtn.textContent = '\u2212';
+    this.header.appendChild(removeBtn);
+
     this.statusBadgeEl = document.createElement('span');
     this.statusBadgeEl.className = 'panel-data-badge';
     this.statusBadgeEl.style.display = 'none';

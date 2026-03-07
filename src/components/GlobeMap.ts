@@ -327,6 +327,7 @@ export class GlobeMap {
   private outerGlow: any = null;
   private innerGlow: any = null;
   private starField: any = null;
+  private baseStarField: any = null;
   private cyanLight: any = null;
   private extrasAnimFrameId: number | null = null;
   private pendingFlushWhilePaused = false;
@@ -487,6 +488,9 @@ export class GlobeMap {
     // Upgrade material to MeshStandardMaterial + add scene enhancements
     // Save default material for classic preset restoration
     this.savedDefaultMaterial = globe.globeMaterial();
+
+    // Always add cinematic star field for 3D globe
+    setTimeout(() => this.addBaseStars(), 600);
 
     // Apply visual enhancements based on preset
     const initialPreset = getGlobeVisualPreset();
@@ -1139,10 +1143,6 @@ export class GlobeMap {
           </label>`;
         }).join('')}
       </div>`;
-    const authorBadge = document.createElement('div');
-    authorBadge.className = 'map-author-badge';
-    authorBadge.textContent = '© Elie Habib · Someone™';
-    el.appendChild(authorBadge);
     this.container.appendChild(el);
 
     el.querySelectorAll('.layer-toggle input').forEach(input => {
@@ -1986,6 +1986,68 @@ export class GlobeMap {
   public setOnCountry(_cb: any): void {}
   public getHotspotLevel(_id: string) { return 'low'; }
 
+  private async addBaseStars(): Promise<void> {
+    if (!this.globe || this.destroyed) return;
+    try {
+      const THREE = await import('three');
+      const scene = this.globe.scene();
+
+      const starCount = 6000;
+      const positions = new Float32Array(starCount * 3);
+      const colors = new Float32Array(starCount * 3);
+      const sizes = new Float32Array(starCount);
+
+      for (let i = 0; i < starCount; i++) {
+        // Distribute across a large sphere shell (200–600 units)
+        const r = 200 + Math.random() * 400;
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        positions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
+        positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+        positions[i * 3 + 2] = r * Math.cos(phi);
+
+        // Vary brightness and add subtle colour tints
+        const brightness = 0.55 + Math.random() * 0.45;
+        const tint = Math.random();
+        if (tint < 0.15) {
+          // Slightly blue-white (hot star)
+          colors[i * 3]     = brightness * 0.82;
+          colors[i * 3 + 1] = brightness * 0.90;
+          colors[i * 3 + 2] = brightness;
+        } else if (tint < 0.25) {
+          // Slightly warm/yellow (sun-like)
+          colors[i * 3]     = brightness;
+          colors[i * 3 + 1] = brightness * 0.92;
+          colors[i * 3 + 2] = brightness * 0.72;
+        } else {
+          // Pure white
+          colors[i * 3]     = brightness;
+          colors[i * 3 + 1] = brightness;
+          colors[i * 3 + 2] = brightness;
+        }
+
+        // Vary star sizes — most small, a few prominent
+        sizes[i] = Math.random() < 0.04 ? 0.5 + Math.random() * 0.4 : 0.1 + Math.random() * 0.18;
+      }
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geo.setAttribute('color',    new THREE.BufferAttribute(colors, 3));
+      geo.setAttribute('size',     new THREE.BufferAttribute(sizes, 1));
+
+      const mat = new THREE.PointsMaterial({
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.92,
+        sizeAttenuation: true,
+        size: 0.18,
+      });
+
+      this.baseStarField = new THREE.Points(geo, mat);
+      scene.add(this.baseStarField);
+    } catch { /* cosmetic — ignore */ }
+  }
+
   private async applyEnhancedVisuals(): Promise<void> {
     if (!this.globe || this.destroyed) return;
     try {
@@ -2151,7 +2213,7 @@ export class GlobeMap {
       this.extrasAnimFrameId = null;
     }
     const scene = this.globe?.scene();
-    for (const obj of [this.outerGlow, this.innerGlow, this.starField, this.cyanLight]) {
+    for (const obj of [this.outerGlow, this.innerGlow, this.starField, this.baseStarField, this.cyanLight]) {
       if (!obj) continue;
       if (scene) scene.remove(obj);
       if (obj.geometry) obj.geometry.dispose();
@@ -2164,6 +2226,7 @@ export class GlobeMap {
     this.outerGlow = null;
     this.innerGlow = null;
     this.starField = null;
+    this.baseStarField = null;
     this.cyanLight = null;
     if (this.flushTimer) { clearTimeout(this.flushTimer); this.flushTimer = null; }
     if (this.flushMaxTimer) { clearTimeout(this.flushMaxTimer); this.flushMaxTimer = null; }

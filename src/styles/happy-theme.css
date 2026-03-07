@@ -98,26 +98,26 @@
 
 /* ---------- Happy Dark Mode ---------- */
 :root[data-variant="happy"][data-theme="dark"] {
-  /* Backgrounds — deep navy, warm darks */
-  --bg: #1A2332;
-  --bg-secondary: #1E2838;
-  --surface: #222E3E;
-  --surface-hover: #2A3848;
-  --surface-active: #2E3E50;
+  /* Backgrounds — match standard dark theme */
+  --bg: #0a0a0a;
+  --bg-secondary: #111;
+  --surface: #141414;
+  --surface-hover: #1e1e1e;
+  --surface-active: #1a1a2e;
 
   /* Borders */
-  --border: #344050;
-  --border-strong: #445868;
-  --border-subtle: #283545;
+  --border: #2a2a2a;
+  --border-strong: #444;
+  --border-subtle: #1a1a1a;
 
-  /* Text — warm off-whites */
-  --text: #E8E4DC;
-  --text-secondary: #D0CCC4;
-  --text-dim: #A0A098;
-  --text-muted: #808880;
-  --text-faint: #606860;
-  --text-ghost: #485048;
-  --accent: #E8E4DC;
+  /* Text */
+  --text: #e8e8e8;
+  --text-secondary: #ccc;
+  --text-dim: #888;
+  --text-muted: #666;
+  --text-faint: #555;
+  --text-ghost: #444;
+  --accent: #e8e8e8;
 
   /* Overlays & shadows */
   --overlay-subtle: rgba(139, 175, 122, 0.03);
@@ -130,21 +130,21 @@
   --darken-heavy: rgba(0, 0, 0, 0.30);
 
   /* Scrollbar */
-  --scrollbar-thumb: #445868;
-  --scrollbar-thumb-hover: #5A6E80;
+  --scrollbar-thumb: #333;
+  --scrollbar-thumb-hover: #555;
 
   /* Input */
-  --input-bg: #283545;
+  --input-bg: #1a1a1a;
 
   /* Panels */
-  --panel-bg: #222E3E;
-  --panel-border: #344050;
+  --panel-bg: #141414;
+  --panel-border: #2a2a2a;
 
   /* Map */
-  --map-bg: #16202E;
-  --map-grid: #1E3040;
-  --map-country: #2D4035;
-  --map-stroke: #3D5045;
+  --map-bg: #0a0f0a;
+  --map-grid: #1a1a1a;
+  --map-country: #1a2a1a;
+  --map-stroke: #2a2a2a;
 
   /* Typography inherits from light variant selector */
   --font-body: 'Nunito', system-ui, -apple-system, sans-serif;

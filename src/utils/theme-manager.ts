@@ -82,7 +82,7 @@ export function setTheme(theme: Theme): void {
   const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
   if (meta) {
     const variant = document.documentElement.dataset.variant;
-    meta.content = theme === 'dark' ? (variant === 'happy' ? '#1A2332' : '#0a0f0a') : (variant === 'happy' ? '#FAFAF5' : '#f8f9fa');
+    meta.content = theme === 'dark' ? '#0a0f0a' : (variant === 'happy' ? '#FAFAF5' : '#f8f9fa');
   }
   window.dispatchEvent(new CustomEvent('theme-changed', { detail: { theme } }));
 }
@@ -109,15 +109,14 @@ export function applyStoredTheme(): void {
   } else if (hasExplicitPreference) {
     effective = raw as Theme;
   } else {
-    // No stored preference: happy defaults to light, others to dark
-    effective = variant === 'happy' ? 'light' : DEFAULT_THEME;
+    effective = DEFAULT_THEME;
   }
 
   document.documentElement.dataset.theme = effective;
   const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
   if (meta) {
     if (effective === 'dark') {
-      meta.content = variant === 'happy' ? '#1A2332' : '#0a0f0a';
+      meta.content = '#0a0f0a';
     } else {
       meta.content = variant === 'happy' ? '#FAFAF5' : '#f8f9fa';
     }

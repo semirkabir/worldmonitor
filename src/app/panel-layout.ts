@@ -149,33 +149,26 @@ export class PanelLayoutManager implements AppModule {
               <span class="variant-icon">📈</span>
               <span class="variant-label">${t('header.finance')}</span>
             </a>
-            ${SITE_VARIANT === 'commodity' ? `<span class="variant-divider"></span>
+            <span class="variant-divider"></span>
             <a href="${vHref('commodity', 'https://commodity.worldmonitor.app')}"
-               class="variant-option active"
+               class="variant-option ${SITE_VARIANT === 'commodity' ? 'active' : ''}"
                data-variant="commodity"
                ${vTarget('commodity')}
-               title="${t('header.commodity')} ${t('common.currentVariant')}">
+               title="${t('header.commodity')}${SITE_VARIANT === 'commodity' ? ` ${t('common.currentVariant')}` : ''}">
               <span class="variant-icon">⛏️</span>
               <span class="variant-label">${t('header.commodity')}</span>
-            </a>` : ''}
-            ${SITE_VARIANT === 'happy' ? `<span class="variant-divider"></span>
+            </a>
+            <span class="variant-divider"></span>
             <a href="${vHref('happy', 'https://happy.worldmonitor.app')}"
-               class="variant-option active"
+               class="variant-option ${SITE_VARIANT === 'happy' ? 'active' : ''}"
                data-variant="happy"
                ${vTarget('happy')}
-               title="Good News ${t('common.currentVariant')}">
+               title="Good News${SITE_VARIANT === 'happy' ? ` ${t('common.currentVariant')}` : ''}">
               <span class="variant-icon">☀️</span>
               <span class="variant-label">Good News</span>
-            </a>` : ''}`;
+            </a>`;
       })()}</div>
           <span class="logo">MONITOR</span><span class="logo-mobile">World Monitor</span><span class="version">v${__APP_VERSION__}</span>${BETA_MODE ? '<span class="beta-badge">BETA</span>' : ''}
-          <a href="https://x.com/eliehabib" target="_blank" rel="noopener" class="credit-link">
-            <svg class="x-logo" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-            <span class="credit-text">@eliehabib</span>
-          </a>
-          <a href="https://github.com/koala73/worldmonitor" target="_blank" rel="noopener" class="github-link" title="${t('header.viewOnGitHub')}">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
-          </a>
           <button class="mobile-settings-btn" id="mobileSettingsBtn" title="${t('header.settings')}">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
@@ -233,8 +226,9 @@ export class PanelLayoutManager implements AppModule {
           { key: 'full', icon: '🌍', label: t('header.world') },
           { key: 'tech', icon: '💻', label: t('header.tech') },
           { key: 'finance', icon: '📈', label: t('header.finance') },
+          { key: 'commodity', icon: '⛏️', label: t('header.commodity') },
+          { key: 'happy', icon: '☀️', label: 'Good News' },
         ];
-        if (SITE_VARIANT === 'happy') variants.push({ key: 'happy', icon: '☀️', label: 'Good News' });
         return variants.map(v =>
           `<button class="mobile-menu-item mobile-menu-variant ${v.key === SITE_VARIANT ? 'active' : ''}" data-variant="${v.key}">
             <span class="mobile-menu-item-icon">${v.icon}</span>
@@ -258,10 +252,6 @@ export class PanelLayoutManager implements AppModule {
           <span class="mobile-menu-item-icon">${getCurrentTheme() === 'dark' ? '☀️' : '🌙'}</span>
           <span class="mobile-menu-item-label">${getCurrentTheme() === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
         </button>
-        <a class="mobile-menu-item" href="https://x.com/eliehabib" target="_blank" rel="noopener">
-          <span class="mobile-menu-item-icon"><svg class="x-logo" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></span>
-          <span class="mobile-menu-item-label">@eliehabib</span>
-        </a>
         <div class="mobile-menu-divider"></div>
         <div class="mobile-menu-version">v${__APP_VERSION__}</div>
       </nav>
@@ -297,6 +287,9 @@ export class PanelLayoutManager implements AppModule {
                 <button class="map-dim-btn${loadFromStorage<string>(STORAGE_KEYS.mapMode, 'flat') === 'globe' ? '' : ' active'}" data-mode="flat" title="2D Map">2D</button>
                 <button class="map-dim-btn${loadFromStorage<string>(STORAGE_KEYS.mapMode, 'flat') === 'globe' ? ' active' : ''}" data-mode="globe" title="3D Globe">3D</button>
               </div>
+              <button class="map-pin-btn" id="layoutToggleBtn" title="Toggle panel layout">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+              </button>
               <button class="map-pin-btn" id="mapFullscreenBtn" title="Fullscreen">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
               </button>
@@ -968,6 +961,189 @@ export class PanelLayoutManager implements AppModule {
 
     this.applyPanelSettings();
     this.applyInitialUrlState();
+
+    // Remove button delegation
+    panelsGrid.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('.panel-remove-btn');
+      if (!btn) return;
+      e.stopPropagation();
+      const panelEl = btn.closest('[data-panel]') as HTMLElement;
+      const key = panelEl?.dataset.panel;
+      if (key) this.removePanel(key);
+    });
+
+    this.mountAddWidgetBtn(panelsGrid);
+    this.setupLayoutToggle();
+  }
+
+  private layoutMode: 'bottom' | 'side' | 'collapsed' = 'bottom';
+
+  private buildLayoutIcon(mode: 'bottom' | 'side' | 'collapsed'): SVGElement {
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('width', '14');
+    svg.setAttribute('height', '14');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2.5');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    const rect = document.createElementNS(NS, 'rect');
+    rect.setAttribute('x', '3'); rect.setAttribute('y', '3');
+    rect.setAttribute('width', '18'); rect.setAttribute('height', '18');
+    rect.setAttribute('rx', '2');
+    svg.appendChild(rect);
+    if (mode === 'side') {
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', '12'); line.setAttribute('y1', '3');
+      line.setAttribute('x2', '12'); line.setAttribute('y2', '21');
+      svg.appendChild(line);
+    } else if (mode === 'bottom') {
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', '3'); line.setAttribute('y1', '14');
+      line.setAttribute('x2', '21'); line.setAttribute('y2', '14');
+      svg.appendChild(line);
+    }
+    // collapsed: just the rect (no divider line) = fullscreen
+    return svg;
+  }
+
+  private static readonly LAYOUT_TITLES: Record<string, string> = {
+    side: 'Side layout (click for fullscreen map)',
+    collapsed: 'Fullscreen map (click for bottom layout)',
+    bottom: 'Bottom layout (click for side layout)',
+  };
+
+  private setupLayoutToggle(): void {
+    const btn = document.getElementById('layoutToggleBtn');
+    const mainContent = document.querySelector('.main-content') as HTMLElement | null;
+    if (!btn || !mainContent) return;
+
+    const applyMode = (mode: 'bottom' | 'side' | 'collapsed') => {
+      this.layoutMode = mode;
+      mainContent.classList.remove('layout-side', 'layout-collapsed');
+      btn.classList.remove('active');
+      if (mode === 'side') {
+        mainContent.classList.add('layout-side');
+        btn.classList.add('active');
+      } else if (mode === 'collapsed') {
+        mainContent.classList.add('layout-collapsed');
+        btn.classList.add('active');
+      }
+      // Replace icon
+      while (btn.firstChild) btn.removeChild(btn.firstChild);
+      btn.appendChild(this.buildLayoutIcon(mode));
+      btn.title = PanelLayoutManager.LAYOUT_TITLES[mode] || 'Toggle panel layout';
+      try { localStorage.setItem(STORAGE_KEYS.layoutMode, mode); } catch { /* noop */ }
+      setTimeout(() => this.ctx.map?.setIsResizing(false), 320);
+    };
+
+    // Restore saved preference
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.layoutMode);
+      if (saved === 'side' || saved === 'collapsed') applyMode(saved);
+    } catch { /* noop */ }
+
+    btn.addEventListener('click', () => {
+      const next = this.layoutMode === 'bottom' ? 'side'
+        : this.layoutMode === 'side' ? 'collapsed'
+        : 'bottom';
+      applyMode(next);
+    });
+  }
+
+  private addWidgetBtn: HTMLButtonElement | null = null;
+
+  private removePanel(key: string): void {
+    const config = this.ctx.panelSettings[key];
+    if (!config) return;
+    config.enabled = false;
+    saveToStorage(STORAGE_KEYS.panels, this.ctx.panelSettings);
+    this.ctx.panels[key]?.hide();
+    this.refreshAddWidgetBtn();
+  }
+
+  private mountAddWidgetBtn(panelsGrid: HTMLElement): void {
+    const plus = document.createElement('span');
+    plus.className = 'add-widget-plus';
+    plus.textContent = '+';
+    const label = document.createElement('span');
+    label.textContent = 'Add Widget';
+    this.addWidgetBtn = document.createElement('button');
+    this.addWidgetBtn.className = 'add-widget-btn';
+    this.addWidgetBtn.appendChild(plus);
+    this.addWidgetBtn.appendChild(label);
+    this.addWidgetBtn.addEventListener('click', () => this.showAddWidgetOverlay());
+    panelsGrid.appendChild(this.addWidgetBtn);
+    this.refreshAddWidgetBtn();
+  }
+
+  private refreshAddWidgetBtn(): void {
+    if (!this.addWidgetBtn) return;
+    const hasHidden = Object.entries(this.ctx.panelSettings)
+      .some(([k, c]) => k !== 'map' && !c.enabled);
+    this.addWidgetBtn.style.display = hasHidden ? '' : 'none';
+  }
+
+  private showAddWidgetOverlay(): void {
+    document.querySelector('.add-widget-overlay')?.remove();
+    const hidden = Object.entries(this.ctx.panelSettings)
+      .filter(([k, c]) => k !== 'map' && !c.enabled);
+    if (!hidden.length) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'add-widget-overlay';
+
+    const header = document.createElement('div');
+    header.className = 'add-widget-header';
+    const headerTitle = document.createElement('span');
+    headerTitle.textContent = 'Add Widget';
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'add-widget-close';
+    closeBtn.textContent = '\u00d7';
+    closeBtn.addEventListener('click', () => overlay.remove());
+    header.appendChild(headerTitle);
+    header.appendChild(closeBtn);
+
+    const list = document.createElement('div');
+    list.className = 'add-widget-list';
+    hidden.forEach(([key, cfg]) => {
+      const item = document.createElement('button');
+      item.className = 'add-widget-item';
+      const nameEl = document.createElement('span');
+      nameEl.textContent = cfg.name;
+      const plusEl = document.createElement('span');
+      plusEl.className = 'add-widget-item-plus';
+      plusEl.textContent = '+';
+      item.appendChild(nameEl);
+      item.appendChild(plusEl);
+      item.addEventListener('click', () => {
+        const config = this.ctx.panelSettings[key];
+        if (config) {
+          config.enabled = true;
+          saveToStorage(STORAGE_KEYS.panels, this.ctx.panelSettings);
+          this.ctx.panels[key]?.show();
+          item.remove();
+          this.refreshAddWidgetBtn();
+          if (!list.querySelector('.add-widget-item')) overlay.remove();
+        }
+      });
+      list.appendChild(item);
+    });
+
+    overlay.appendChild(header);
+    overlay.appendChild(list);
+    document.body.appendChild(overlay);
+
+    setTimeout(() => {
+      document.addEventListener('click', function close(e) {
+        if (!overlay.contains(e.target as Node)) {
+          overlay.remove();
+          document.removeEventListener('click', close);
+        }
+      });
+    }, 0);
   }
 
   private applyTimeRangeFilterToNewsPanels(): void {
