@@ -166,9 +166,18 @@ export class PanelLayoutManager implements AppModule {
                title="Good News${SITE_VARIANT === 'happy' ? ` ${t('common.currentVariant')}` : ''}">
               <span class="variant-icon">☀️</span>
               <span class="variant-label">Good News</span>
+            </a>
+            <span class="variant-divider"></span>
+            <a href="${vHref('conflicts', 'https://conflicts.worldmonitor.app')}"
+               class="variant-option ${SITE_VARIANT === 'conflicts' ? 'active' : ''}"
+               data-variant="conflicts"
+               ${vTarget('conflicts')}
+               title="${t('header.conflicts')}${SITE_VARIANT === 'conflicts' ? ` ${t('common.currentVariant')}` : ''}">
+              <span class="variant-icon">⚔️</span>
+              <span class="variant-label">${t('header.conflicts')}</span>
             </a>`;
       })()}</div>
-          <span class="logo">MONITOR</span><span class="logo-mobile">World Monitor</span><span class="version">v${__APP_VERSION__}</span>${BETA_MODE ? '<span class="beta-badge">BETA</span>' : ''}
+          <span class="logo-mobile">World Monitor</span><span class="version">v${__APP_VERSION__}</span>${BETA_MODE ? '<span class="beta-badge">BETA</span>' : ''}
           <button class="mobile-settings-btn" id="mobileSettingsBtn" title="${t('header.settings')}">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
@@ -193,13 +202,6 @@ export class PanelLayoutManager implements AppModule {
           </button>
         </div>
         <div class="header-right">
-          ${this.ctx.isDesktopApp ? '' : `<div class="download-wrapper" id="downloadWrapper">
-            <button class="download-btn" id="downloadBtn" title="${t('header.downloadApp')}">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              <span id="downloadBtnLabel">${t('header.downloadApp')}</span>
-            </button>
-            <div class="download-dropdown" id="downloadDropdown"></div>
-          </div>`}
           <button class="search-btn" id="searchBtn"><kbd>⌘K</kbd> ${t('header.search')}</button>
           ${this.ctx.isDesktopApp ? '' : `<button class="copy-link-btn" id="copyLinkBtn">${t('header.copyLink')}</button>`}
           <button class="theme-toggle-btn" id="headerThemeToggle" title="${t('header.toggleTheme')}">
@@ -228,6 +230,7 @@ export class PanelLayoutManager implements AppModule {
           { key: 'finance', icon: '📈', label: t('header.finance') },
           { key: 'commodity', icon: '⛏️', label: t('header.commodity') },
           { key: 'happy', icon: '☀️', label: 'Good News' },
+          { key: 'conflicts', icon: '⚔️', label: t('header.conflicts') },
         ];
         return variants.map(v =>
           `<button class="mobile-menu-item mobile-menu-variant ${v.key === SITE_VARIANT ? 'active' : ''}" data-variant="${v.key}">
@@ -279,7 +282,7 @@ export class PanelLayoutManager implements AppModule {
         <div class="map-section" id="mapSection">
           <div class="panel-header">
             <div class="panel-header-left">
-              <span class="panel-title">${SITE_VARIANT === 'tech' ? t('panels.techMap') : SITE_VARIANT === 'happy' ? 'Good News Map' : t('panels.map')}</span>
+              <span class="panel-title"><span class="panel-title-edge">Edge</span><span class="panel-title-pannel">Pannel</span></span>
             </div>
             <span class="header-clock" id="headerClock" translate="no"></span>
             <div class="map-header-actions">
@@ -287,9 +290,6 @@ export class PanelLayoutManager implements AppModule {
                 <button class="map-dim-btn${loadFromStorage<string>(STORAGE_KEYS.mapMode, 'flat') === 'globe' ? '' : ' active'}" data-mode="flat" title="2D Map">2D</button>
                 <button class="map-dim-btn${loadFromStorage<string>(STORAGE_KEYS.mapMode, 'flat') === 'globe' ? ' active' : ''}" data-mode="globe" title="3D Globe">3D</button>
               </div>
-              <button class="map-pin-btn" id="layoutToggleBtn" title="Toggle panel layout">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
-              </button>
               <button class="map-pin-btn" id="mapFullscreenBtn" title="Fullscreen">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
               </button>
@@ -302,8 +302,9 @@ export class PanelLayoutManager implements AppModule {
           </div>
           <div class="map-container" id="mapContainer"></div>
           ${SITE_VARIANT === 'happy' ? '<button class="tv-exit-btn" id="tvExitBtn">Exit TV Mode</button>' : ''}
-          <div class="map-resize-handle" id="mapResizeHandle"></div>
+          <div class="bottom-grid-resize-handle" id="bottomGridResizeHandle"></div>
           <div class="map-bottom-grid" id="mapBottomGrid"></div>
+          <div class="map-resize-handle" id="mapResizeHandle"></div>
         </div>
         <div class="panels-grid" id="panelsGrid"></div>
         <button class="search-mobile-fab" id="searchMobileFab" aria-label="Search">\u{1F50D}</button>
@@ -973,84 +974,226 @@ export class PanelLayoutManager implements AppModule {
     });
 
     this.mountAddWidgetBtn(panelsGrid);
+    this.setupPanelCollapseHandle();
     this.setupLayoutToggle();
   }
 
-  private layoutMode: 'bottom' | 'side' | 'collapsed' = 'bottom';
+  private layoutMode: 'bottom' | 'side' = 'bottom';
+  private panelsHidden = false;
+  private bottomGridHidden = false;
+  private readonly panelsCollapsedStorageKey = 'worldmonitor-panels-collapsed';
+  private readonly bottomGridCollapsedStorageKey = 'worldmonitor-bottom-grid-collapsed';
 
-  private buildLayoutIcon(mode: 'bottom' | 'side' | 'collapsed'): SVGElement {
+  private buildLayoutIcon(mode: 'bottom' | 'side'): SVGElement {
     const NS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(NS, 'svg');
-    svg.setAttribute('width', '14');
-    svg.setAttribute('height', '14');
-    svg.setAttribute('viewBox', '0 0 24 24');
-    svg.setAttribute('fill', 'none');
-    svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('stroke-width', '2.5');
-    svg.setAttribute('stroke-linecap', 'round');
-    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('width', '14'); svg.setAttribute('height', '14');
+    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '2.5');
+    svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round');
     const rect = document.createElementNS(NS, 'rect');
     rect.setAttribute('x', '3'); rect.setAttribute('y', '3');
     rect.setAttribute('width', '18'); rect.setAttribute('height', '18');
     rect.setAttribute('rx', '2');
     svg.appendChild(rect);
+    const line = document.createElementNS(NS, 'line');
     if (mode === 'side') {
-      const line = document.createElementNS(NS, 'line');
       line.setAttribute('x1', '12'); line.setAttribute('y1', '3');
       line.setAttribute('x2', '12'); line.setAttribute('y2', '21');
-      svg.appendChild(line);
-    } else if (mode === 'bottom') {
-      const line = document.createElementNS(NS, 'line');
+    } else {
       line.setAttribute('x1', '3'); line.setAttribute('y1', '14');
       line.setAttribute('x2', '21'); line.setAttribute('y2', '14');
-      svg.appendChild(line);
     }
-    // collapsed: just the rect (no divider line) = fullscreen
+    svg.appendChild(line);
     return svg;
   }
-
-  private static readonly LAYOUT_TITLES: Record<string, string> = {
-    side: 'Side layout (click for fullscreen map)',
-    collapsed: 'Fullscreen map (click for bottom layout)',
-    bottom: 'Bottom layout (click for side layout)',
-  };
 
   private setupLayoutToggle(): void {
     const btn = document.getElementById('layoutToggleBtn');
     const mainContent = document.querySelector('.main-content') as HTMLElement | null;
     if (!btn || !mainContent) return;
 
-    const applyMode = (mode: 'bottom' | 'side' | 'collapsed') => {
+    const applyMode = (mode: 'bottom' | 'side') => {
       this.layoutMode = mode;
-      mainContent.classList.remove('layout-side', 'layout-collapsed');
-      btn.classList.remove('active');
-      if (mode === 'side') {
-        mainContent.classList.add('layout-side');
-        btn.classList.add('active');
-      } else if (mode === 'collapsed') {
-        mainContent.classList.add('layout-collapsed');
-        btn.classList.add('active');
-      }
-      // Replace icon
+      mainContent.classList.toggle('layout-side', mode === 'side');
+      btn.classList.toggle('active', mode === 'side');
       while (btn.firstChild) btn.removeChild(btn.firstChild);
       btn.appendChild(this.buildLayoutIcon(mode));
-      btn.title = PanelLayoutManager.LAYOUT_TITLES[mode] || 'Toggle panel layout';
+      btn.title = mode === 'side' ? 'Side layout — click for bottom' : 'Bottom layout — click for side';
       try { localStorage.setItem(STORAGE_KEYS.layoutMode, mode); } catch { /* noop */ }
       setTimeout(() => this.ctx.map?.setIsResizing(false), 320);
     };
 
-    // Restore saved preference
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.layoutMode);
-      if (saved === 'side' || saved === 'collapsed') applyMode(saved);
+      if (saved === 'side') applyMode('side');
     } catch { /* noop */ }
 
-    btn.addEventListener('click', () => {
-      const next = this.layoutMode === 'bottom' ? 'side'
-        : this.layoutMode === 'side' ? 'collapsed'
-        : 'bottom';
-      applyMode(next);
+    btn.addEventListener('click', () => applyMode(this.layoutMode === 'bottom' ? 'side' : 'bottom'));
+  }
+
+  private buildChevronSvg(dir: 'up' | 'down' | 'left' | 'right'): SVGElement {
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('width', '10'); svg.setAttribute('height', '10');
+    svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '2.5');
+    svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round');
+    const poly = document.createElementNS(NS, 'polyline');
+    const pts: Record<string, string> = {
+      up: '6 15 12 9 18 15', down: '6 9 12 15 18 9',
+      left: '15 18 9 12 15 6', right: '9 6 15 12 9 18',
+    };
+    poly.setAttribute('points', pts[dir]!);
+    svg.appendChild(poly);
+    return svg;
+  }
+
+  private setupPanelCollapseHandle(): void {
+    const mainContent = document.querySelector('.main-content') as HTMLElement | null;
+    const mapSection = document.getElementById('mapSection') as HTMLElement | null;
+    const bottomGrid = document.getElementById('mapBottomGrid') as HTMLElement | null;
+    const resizeHandle = document.getElementById('mapResizeHandle');
+    const bottomGridHandle = document.getElementById('bottomGridResizeHandle') as HTMLElement | null;
+    if (!mainContent || !resizeHandle) return;
+    const panelsGrid = document.getElementById('panelsGrid') as HTMLElement | null;
+
+    const btn = document.createElement('button');
+    btn.className = 'panels-collapse-btn';
+    btn.title = 'Collapse panels';
+    (panelsGrid ?? mapSection ?? mainContent).appendChild(btn);
+
+    const bottomBtn = document.createElement('button');
+    bottomBtn.className = 'bottom-grid-collapse-btn';
+    bottomBtn.title = 'Collapse bottom panels';
+    (bottomGridHandle ?? resizeHandle).appendChild(bottomBtn);
+
+    try {
+      this.panelsHidden = localStorage.getItem(this.panelsCollapsedStorageKey) === 'true';
+      this.bottomGridHidden = localStorage.getItem(this.bottomGridCollapsedStorageKey) === 'true';
+    } catch {
+      this.panelsHidden = false;
+      this.bottomGridHidden = false;
+    }
+    mainContent.classList.toggle('panels-hidden', this.panelsHidden);
+    if (mapSection) {
+      mapSection.classList.toggle('bottom-grid-hidden', this.bottomGridHidden);
+    }
+    mainContent.classList.toggle('bottom-grid-hidden', this.bottomGridHidden);
+
+    const placePanelsBtn = () => {
+      if (!btn.isConnected) return;
+      if (this.panelsHidden) {
+        if (mapSection && btn.parentElement !== mapSection) mapSection.appendChild(btn);
+        btn.classList.add('on-map');
+        btn.classList.remove('on-panels');
+      } else {
+        if (panelsGrid && btn.parentElement !== panelsGrid) panelsGrid.appendChild(btn);
+        btn.classList.add('on-panels');
+        btn.classList.remove('on-map');
+      }
+    };
+
+    const updateIcon = () => {
+      while (btn.firstChild) btn.removeChild(btn.firstChild);
+      const isSide = window.innerWidth >= 1600 || mainContent.classList.contains('layout-side');
+      if (this.panelsHidden) {
+        btn.appendChild(this.buildChevronSvg(isSide ? 'left' : 'up'));
+        btn.title = 'Expand panels';
+      } else {
+        btn.appendChild(this.buildChevronSvg(isSide ? 'right' : 'down'));
+        btn.title = 'Collapse panels';
+      }
+      placePanelsBtn();
+    };
+
+    const updateBottomIcon = () => {
+      while (bottomBtn.firstChild) bottomBtn.removeChild(bottomBtn.firstChild);
+      bottomBtn.appendChild(this.buildChevronSvg(this.bottomGridHidden ? 'up' : 'down'));
+      bottomBtn.title = this.bottomGridHidden ? 'Expand bottom panels' : 'Collapse bottom panels';
+    };
+
+    const placeBottomBtn = () => {
+      if (!bottomBtn.isConnected) return;
+      if (this.bottomGridHidden) {
+        if (mapSection && bottomBtn.parentElement !== mapSection) mapSection.appendChild(bottomBtn);
+        bottomBtn.classList.add('floating');
+      } else {
+        const targetParent = (bottomGridHandle ?? resizeHandle) as HTMLElement | null;
+        if (targetParent && bottomBtn.parentElement !== targetParent) targetParent.appendChild(bottomBtn);
+        bottomBtn.classList.remove('floating');
+      }
+    };
+
+    const syncBottomButtonVisibility = () => {
+      const hasBottomPanels = !!bottomGrid && bottomGrid.childElementCount > 0;
+      bottomBtn.style.display = hasBottomPanels ? '' : 'none';
+      if (!hasBottomPanels) {
+        this.bottomGridHidden = false;
+        mapSection?.classList.remove('bottom-grid-hidden');
+        mainContent.classList.remove('bottom-grid-hidden');
+        try { localStorage.removeItem(this.bottomGridCollapsedStorageKey); } catch { /* noop */ }
+      }
+      updateBottomIcon();
+      placeBottomBtn();
+    };
+
+    // Also update icon when layout mode changes
+    const origToggle = document.getElementById('layoutToggleBtn');
+    origToggle?.addEventListener('click', () => setTimeout(updateIcon, 0));
+    const onWindowResize = () => updateIcon();
+    window.addEventListener('resize', onWindowResize);
+    this.panelDragCleanupHandlers.push(() => window.removeEventListener('resize', onWindowResize));
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation(); // don't trigger resize handle mousedown
+      this.panelsHidden = !this.panelsHidden;
+      mainContent.classList.toggle('panels-hidden', this.panelsHidden);
+      try { localStorage.setItem(this.panelsCollapsedStorageKey, String(this.panelsHidden)); } catch { /* noop */ }
+      updateIcon();
+      setTimeout(() => this.ctx.map?.setIsResizing(false), 320);
     });
+
+    bottomBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.bottomGridHidden = !this.bottomGridHidden;
+      if (mapSection) {
+        mapSection.classList.toggle('bottom-grid-hidden', this.bottomGridHidden);
+      }
+      if (mainContent) {
+        mainContent.classList.toggle('bottom-grid-hidden', this.bottomGridHidden);
+      }
+      try { localStorage.setItem(this.bottomGridCollapsedStorageKey, String(this.bottomGridHidden)); } catch { /* noop */ }
+      // When collapsing bottom grid, reset any manual map height so the map
+      // can grow to use the freed space fully.
+      if (this.bottomGridHidden) {
+        const mapContainer = document.getElementById('mapContainer') as HTMLElement | null;
+        if (mapContainer) {
+          mapContainer.style.height = '';
+          mapContainer.style.flex = '';
+        }
+        if (mapSection) {
+          mapSection.style.height = '';
+        }
+        try {
+          localStorage.removeItem('map-height');
+        } catch {
+          /* noop */
+        }
+      }
+      updateBottomIcon();
+      placeBottomBtn();
+      setTimeout(() => window.dispatchEvent(new Event('resize')), 0);
+    });
+
+    updateIcon();
+    syncBottomButtonVisibility();
+
+    if (bottomGrid) {
+      const obs = new MutationObserver(() => syncBottomButtonVisibility());
+      obs.observe(bottomGrid, { childList: true });
+      this.panelDragCleanupHandlers.push(() => obs.disconnect());
+    }
   }
 
   private addWidgetBtn: HTMLButtonElement | null = null;

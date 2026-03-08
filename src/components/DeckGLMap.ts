@@ -3512,11 +3512,51 @@ export class DeckGLMap {
 
     this.container.appendChild(slider);
 
+    // Build layers row: [LAYERS toggle btn] [? help btn]
+    const layersRow = document.createElement('div');
+    layersRow.className = 'layers-row';
+
+    const layersToggleBtn = document.createElement('button');
+    layersToggleBtn.className = 'layers-toggle-btn';
+    layersToggleBtn.id = 'layersToggleBtn';
+    layersToggleBtn.title = 'Toggle Layers';
+    layersToggleBtn.textContent = 'LAYERS';
+
+    const layersHelpBtn = document.createElement('button');
+    layersHelpBtn.className = 'layer-help-btn layers-row-help';
+    layersHelpBtn.title = t('components.deckgl.layerGuide');
+    layersHelpBtn.textContent = '?';
+    layersHelpBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.showLayerHelp();
+    });
+
+    layersRow.appendChild(layersToggleBtn);
+    layersRow.appendChild(layersHelpBtn);
+    slider.appendChild(layersRow);
+
+    // Add layers panel container (will be populated by createLayerToggles)
+    const layersPanel = document.createElement('div');
+    layersPanel.className = 'layers-panel deckgl-layers-panel deckgl-layer-toggles';
+    layersPanel.id = 'layersPanel';
+    layersPanel.style.display = 'none';
+    slider.appendChild(layersPanel);
+
     slider.querySelectorAll('.time-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const range = (btn as HTMLElement).dataset.range as TimeRange;
         this.setTimeRange(range);
       });
+    });
+
+    layersToggleBtn.addEventListener('click', () => {
+      const panel = slider.querySelector('.layers-panel') as HTMLElement;
+      if (panel) {
+        const open = panel.style.display === 'none';
+        panel.style.display = open ? 'block' : 'none';
+        layersToggleBtn.classList.toggle('active', open);
+        layersRow.classList.toggle('active', open);
+      }
     });
   }
 
@@ -3530,8 +3570,8 @@ export class DeckGLMap {
   }
 
   private createLayerToggles(): void {
-    const toggles = document.createElement('div');
-    toggles.className = 'layer-toggles deckgl-layer-toggles';
+    const layersPanel = this.container.querySelector('#layersPanel') as HTMLElement;
+    if (!layersPanel) return;
 
     const layerDefs = getLayersForVariant((SITE_VARIANT || 'full') as MapVariant, 'flat');
     const _wmKey = getSecretState('WORLDMONITOR_API_KEY').present;
@@ -3542,27 +3582,54 @@ export class DeckGLMap {
       premium: def.premium,
     }));
 
-    toggles.innerHTML = `
-      <div class="toggle-header">
-        <span>${t('components.deckgl.layersTitle')}</span>
-        <button class="layer-help-btn" title="${t('components.deckgl.layerGuide')}">?</button>
-        <button class="toggle-collapse">&#9660;</button>
-      </div>
-      <div class="toggle-list" style="max-height: 32vh; overflow-y: auto; scrollbar-width: thin;">
-        ${layerConfig.map(({ key, label, icon, premium }) => {
-          const isLocked = premium === 'locked' && !_wmKey;
-          const isEnhanced = premium === 'enhanced' && !_wmKey;
-          return `
-          <label class="layer-toggle${isLocked ? ' layer-toggle-locked' : ''}" data-layer="${key}">
-            <input type="checkbox" ${this.state.layers[key as keyof MapLayers] ? 'checked' : ''}${isLocked ? ' disabled' : ''}>
-            <span class="toggle-icon">${icon}</span>
-            <span class="toggle-label">${label}${isLocked ? ' \uD83D\uDD12' : ''}${isEnhanced ? ' <span class="layer-pro-badge">PRO</span>' : ''}</span>
-          </label>`;
-        }).join('')}
-      </div>
-    `;
+    // Build layer list
+    const list = document.createElement('div');
+    list.className = 'toggle-list';
+    list.style.maxHeight = '32vh';
+    list.style.overflowY = 'auto';
+    list.style.scrollbarWidth = 'thin';
 
-    this.container.appendChild(toggles);
+    layerConfig.forEach(({ key, label, icon, premium }) => {
+      const isLocked = premium === 'locked' && !_wmKey;
+      const isEnhanced = premium === 'enhanced' && !_wmKey;
+
+      const toggle = document.createElement('label');
+      toggle.className = `layer-toggle${isLocked ? ' layer-toggle-locked' : ''}`;
+      toggle.dataset.layer = key;
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = this.state.layers[key as keyof MapLayers] || false;
+      if (isLocked) checkbox.disabled = true;
+      toggle.appendChild(checkbox);
+
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'toggle-icon';
+      // Decode HTML entities (icons stored as e.g. '&#127919;')
+      const tmp = document.createElement('textarea');
+      tmp.innerHTML = icon;
+      iconSpan.textContent = tmp.value;
+      toggle.appendChild(iconSpan);
+
+      const labelSpan = document.createElement('span');
+      labelSpan.className = 'toggle-label';
+      labelSpan.textContent = label;
+      if (isLocked) labelSpan.textContent += ' 🔒';
+      if (isEnhanced) {
+        const badge = document.createElement('span');
+        badge.className = 'layer-pro-badge';
+        badge.textContent = 'PRO';
+        labelSpan.appendChild(badge);
+      }
+      toggle.appendChild(labelSpan);
+
+      list.appendChild(toggle);
+    });
+
+    layersPanel.appendChild(list);
+
+    // Keep reference for event binding below
+    const toggles = layersPanel;
 
     // Bind toggle events
     toggles.querySelectorAll('.layer-toggle input').forEach(input => {
@@ -3583,15 +3650,8 @@ export class DeckGLMap {
     });
     this.enforceLayerLimit();
 
-    // Help button
-    const helpBtn = toggles.querySelector('.layer-help-btn');
-    helpBtn?.addEventListener('click', () => this.showLayerHelp());
-
-    // Collapse toggle
-    const collapseBtn = toggles.querySelector('.toggle-collapse');
-    const toggleList = toggles.querySelector('.toggle-list');
-
     // Manual scroll: intercept wheel, prevent map zoom, scroll the list ourselves
+    const toggleList = toggles.querySelector('.toggle-list');
     if (toggleList) {
       toggles.addEventListener('wheel', (e) => {
         e.stopPropagation();
@@ -3600,10 +3660,6 @@ export class DeckGLMap {
       }, { passive: false });
       toggles.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false });
     }
-    collapseBtn?.addEventListener('click', () => {
-      toggleList?.classList.toggle('collapsed');
-      if (collapseBtn) collapseBtn.innerHTML = toggleList?.classList.contains('collapsed') ? '&#9654;' : '&#9660;';
-    });
   }
 
   /** Show layer help popup explaining each layer */

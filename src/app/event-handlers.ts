@@ -7,7 +7,6 @@ import type { DashboardSnapshot } from '@/services/storage';
 import {
   PlaybackControl,
   StatusPanel,
-  PizzIntIndicator,
   CIIPanel,
   PredictionPanel,
 } from '@/components';
@@ -40,10 +39,7 @@ import {
   trackMapViewChange,
   trackMapLayerToggle,
   trackPanelToggled,
-  trackDownloadClicked,
 } from '@/services/analytics';
-import { detectPlatform, allButtons, buttonsForPlatform } from '@/components/DownloadBanner';
-import type { Platform } from '@/components/DownloadBanner';
 import { invokeTauri } from '@/services/tauri-bridge';
 import { dataFreshness } from '@/services/data-freshness';
 import { mlWorker } from '@/services/ml-worker';
@@ -76,8 +72,6 @@ export class EventHandlerManager implements AppModule {
   private boundTvKeydownHandler: ((e: KeyboardEvent) => void) | null = null;
   private boundFocalPointsReadyHandler: (() => void) | null = null;
   private boundThemeChangedHandler: (() => void) | null = null;
-  private boundDropdownClickHandler: ((e: MouseEvent) => void) | null = null;
-  private boundDropdownKeydownHandler: ((e: KeyboardEvent) => void) | null = null;
   private boundMapResizeMoveHandler: ((e: MouseEvent) => void) | null = null;
   private boundMapEndResizeHandler: (() => void) | null = null;
   private boundMapResizeVisChangeHandler: (() => void) | null = null;
@@ -199,14 +193,6 @@ export class EventHandlerManager implements AppModule {
       window.removeEventListener('theme-changed', this.boundThemeChangedHandler);
       this.boundThemeChangedHandler = null;
     }
-    if (this.boundDropdownClickHandler) {
-      document.removeEventListener('click', this.boundDropdownClickHandler);
-      this.boundDropdownClickHandler = null;
-    }
-    if (this.boundDropdownKeydownHandler) {
-      document.removeEventListener('keydown', this.boundDropdownKeydownHandler);
-      this.boundDropdownKeydownHandler = null;
-    }
     if (this.boundMapResizeMoveHandler) {
       document.removeEventListener('mousemove', this.boundMapResizeMoveHandler);
       this.boundMapResizeMoveHandler = null;
@@ -255,8 +241,6 @@ export class EventHandlerManager implements AppModule {
         this.setCopyLinkFeedback(button, 'Copy failed');
       }
     });
-
-    this.initDownloadDropdown();
 
     this.boundStorageHandler = (e: StorageEvent) => {
       if (e.key === STORAGE_KEYS.panels && e.newValue) {
@@ -407,7 +391,9 @@ export class EventHandlerManager implements AppModule {
               full: 'https://worldmonitor.app',
               tech: 'https://tech.worldmonitor.app',
               finance: 'https://finance.worldmonitor.app',
+              commodity: 'https://commodity.worldmonitor.app',
               happy: 'https://happy.worldmonitor.app',
+              conflicts: 'https://conflicts.worldmonitor.app',
             };
             if (hosts[variant]) window.location.href = hosts[variant];
           }
@@ -587,87 +573,6 @@ export class EventHandlerManager implements AppModule {
     document.body.removeChild(textarea);
   }
 
-  private platformLabel(p: Platform): string {
-    switch (p) {
-      case 'macos-arm64': return '\uF8FF Silicon';
-      case 'macos-x64': return '\uF8FF Intel';
-      case 'macos': return '\uF8FF macOS';
-      case 'windows': return 'Windows';
-      case 'linux': return 'Linux';
-      default: return t('header.downloadApp');
-    }
-  }
-
-  private initDownloadDropdown(): void {
-    const btn = document.getElementById('downloadBtn');
-    const dropdown = document.getElementById('downloadDropdown');
-    const label = document.getElementById('downloadBtnLabel');
-    if (!btn || !dropdown) return;
-
-    const platform = detectPlatform();
-    if (label) label.textContent = this.platformLabel(platform);
-
-    const primary = buttonsForPlatform(platform);
-    const all = allButtons();
-    const others = all.filter(b => !primary.some(p => p.href === b.href));
-
-    const renderDropdown = () => {
-      const primaryHtml = primary.map(b =>
-        `<a class="dl-dd-btn ${b.cls} primary" href="${b.href}">${b.label}</a>`
-      ).join('');
-      const othersHtml = others.map(b =>
-        `<a class="dl-dd-btn ${b.cls}" href="${b.href}">${b.label}</a>`
-      ).join('');
-
-      dropdown.innerHTML = `
-        <div class="dl-dd-tagline">${t('modals.downloadBanner.description')}</div>
-        <div class="dl-dd-buttons">${primaryHtml}</div>
-        ${others.length ? `<button class="dl-dd-toggle" id="dlDdToggle">${t('modals.downloadBanner.showAllPlatforms')}</button>
-        <div class="dl-dd-others" id="dlDdOthers">${othersHtml}</div>` : ''}
-      `;
-
-      dropdown.querySelectorAll<HTMLAnchorElement>('.dl-dd-btn').forEach(a => {
-        a.addEventListener('click', (e) => {
-          e.preventDefault();
-          const plat = new URL(a.href, location.origin).searchParams.get('platform') || 'unknown';
-          trackDownloadClicked(plat);
-          window.open(a.href, '_blank');
-          dropdown.classList.remove('open');
-        });
-      });
-
-      const toggle = dropdown.querySelector('#dlDdToggle');
-      const othersEl = dropdown.querySelector('#dlDdOthers') as HTMLElement | null;
-      if (toggle && othersEl) {
-        toggle.addEventListener('click', () => {
-          const showing = othersEl.classList.toggle('show');
-          toggle.textContent = showing
-            ? t('modals.downloadBanner.showLess')
-            : t('modals.downloadBanner.showAllPlatforms');
-        });
-      }
-    };
-
-    renderDropdown();
-
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      dropdown.classList.toggle('open');
-    });
-
-    this.boundDropdownClickHandler = (e: MouseEvent) => {
-      if (!dropdown.contains(e.target as Node) && !btn.contains(e.target as Node)) {
-        dropdown.classList.remove('open');
-      }
-    };
-    document.addEventListener('click', this.boundDropdownClickHandler);
-
-    this.boundDropdownKeydownHandler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') dropdown.classList.remove('open');
-    };
-    document.addEventListener('keydown', this.boundDropdownKeydownHandler);
-  }
-
   private setCopyLinkFeedback(button: HTMLElement | null, message: string): void {
     if (!button) return;
     const originalText = button.textContent ?? '';
@@ -780,6 +685,9 @@ export class EventHandlerManager implements AppModule {
         localStorage.removeItem(this.ctx.PANEL_ORDER_KEY + '-bottom');
         localStorage.removeItem(this.ctx.PANEL_ORDER_KEY + '-bottom-set');
         localStorage.removeItem('map-height');
+        localStorage.removeItem('worldmonitor-sidebar-split');
+        localStorage.removeItem('worldmonitor-panels-collapsed');
+        localStorage.removeItem('worldmonitor-bottom-grid-collapsed');
         window.location.reload();
       },
       isDesktopApp: this.ctx.isDesktopApp,
@@ -947,10 +855,50 @@ export class EventHandlerManager implements AppModule {
   }
 
   setupMapResize(): void {
-    const mapSection = document.getElementById('mapSection');
-    const mapContainer = document.getElementById('mapContainer');
-    const resizeHandle = document.getElementById('mapResizeHandle');
-    if (!mapSection || !resizeHandle || !mapContainer) return;
+    const mainContent = document.querySelector('.main-content') as HTMLElement | null;
+    const mapSection = document.getElementById('mapSection') as HTMLElement | null;
+    const mapContainer = document.getElementById('mapContainer') as HTMLElement | null;
+    const rightHandle = document.getElementById('mapResizeHandle') as HTMLElement | null;
+    const bottomHandle = document.getElementById('bottomGridResizeHandle') as HTMLElement | null;
+    if (!mainContent || !mapSection || !mapContainer || (!rightHandle && !bottomHandle)) return;
+
+    const MAP_HEIGHT_KEY = 'map-height';
+    const SIDEBAR_SPLIT_KEY = 'worldmonitor-sidebar-split';
+    const DEFAULT_SIDEBAR_SPLIT = 60;
+    const MIN_RIGHT_COLUMN_PX = 320;
+    const MIN_MAP_COLUMN_PX = 460;
+
+    const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+    const isSideLikeLayout = () => window.innerWidth >= 1600 || mainContent.classList.contains('layout-side');
+
+    const clampSidebarSplit = (percent: number) => {
+      const totalWidth = mainContent.getBoundingClientRect().width;
+      if (totalWidth <= 0) return DEFAULT_SIDEBAR_SPLIT;
+      const minPercent = (MIN_MAP_COLUMN_PX / totalWidth) * 100;
+      const maxPercent = ((totalWidth - MIN_RIGHT_COLUMN_PX) / totalWidth) * 100;
+      if (maxPercent <= minPercent) return clamp(percent, 45, 70);
+      return clamp(percent, minPercent, maxPercent);
+    };
+
+    const applySidebarSplit = (percent: number, persist: boolean) => {
+      const clamped = clampSidebarSplit(percent);
+      mainContent.style.setProperty('--map-sidebar-split', `${clamped}%`);
+      if (persist) {
+        localStorage.setItem(SIDEBAR_SPLIT_KEY, String(clamped));
+      }
+      return clamped;
+    };
+
+    const hydrateSidebarSplit = () => {
+      if (!isSideLikeLayout()) return;
+      const stored = localStorage.getItem(SIDEBAR_SPLIT_KEY);
+      const parsed = stored ? Number.parseFloat(stored) : Number.NaN;
+      if (Number.isFinite(parsed)) {
+        applySidebarSplit(parsed, false);
+      } else {
+        applySidebarSplit(DEFAULT_SIDEBAR_SPLIT, false);
+      }
+    };
 
     const getMinHeight = () => (window.innerWidth >= 1600 ? 280 : 350);
     const getMaxHeight = () => {
@@ -961,18 +909,16 @@ export class EventHandlerManager implements AppModule {
       const headerHeight = 60;
       const totalAvailable = window.innerHeight - headerHeight;
 
-      if (isEmpty) {
-        return totalAvailable - 25;
-      } else {
-        return totalAvailable - 300;
-      }
+      return isEmpty ? totalAvailable - 25 : totalAvailable - 300;
     };
 
-    const savedHeight = localStorage.getItem('map-height');
+    const getBottomResizeTarget = () => (window.innerWidth >= 1600 ? mapContainer : mapSection);
+
+    const savedHeight = localStorage.getItem(MAP_HEIGHT_KEY);
     if (savedHeight) {
       const numeric = Number.parseInt(savedHeight, 10);
       if (Number.isFinite(numeric)) {
-        const clamped = Math.max(getMinHeight(), Math.min(numeric, getMaxHeight()));
+        const clamped = clamp(numeric, getMinHeight(), getMaxHeight());
         if (window.innerWidth >= 1600) {
           mapContainer.style.flex = 'none';
           mapContainer.style.height = `${clamped}px`;
@@ -980,83 +926,132 @@ export class EventHandlerManager implements AppModule {
           mapSection.style.height = `${clamped}px`;
         }
         if (clamped !== numeric) {
-          localStorage.setItem('map-height', `${clamped}px`);
+          localStorage.setItem(MAP_HEIGHT_KEY, `${clamped}px`);
         }
       } else {
-        localStorage.removeItem('map-height');
+        localStorage.removeItem(MAP_HEIGHT_KEY);
       }
     }
+    hydrateSidebarSplit();
 
-    let isResizing = false;
+    type ResizeMode = 'none' | 'bottom' | 'right';
+    let resizeMode: ResizeMode = 'none';
     let startY = 0;
+    let startX = 0;
     let startHeight = 0;
-
-    const getTarget = () => (window.innerWidth >= 1600 ? mapContainer : mapSection);
+    let startMapWidth = 0;
 
     this.boundMapEndResizeHandler = () => {
-      if (!isResizing) return;
-      isResizing = false;
+      if (resizeMode === 'none') return;
+      const endedMode = resizeMode;
+      resizeMode = 'none';
       this.ctx.map?.setIsResizing(false);
       this.ctx.map?.resize();
       mapSection.classList.remove('resizing');
       document.body.style.cursor = '';
-      localStorage.setItem('map-height', getTarget().style.height);
+      document.body.style.userSelect = '';
+      if (endedMode === 'bottom') {
+        const target = getBottomResizeTarget();
+        if (target.style.height) {
+          localStorage.setItem(MAP_HEIGHT_KEY, target.style.height);
+        }
+      } else if (endedMode === 'right') {
+        const current = Number.parseFloat(
+          mainContent.style.getPropertyValue('--map-sidebar-split')
+        );
+        if (Number.isFinite(current)) {
+          localStorage.setItem(SIDEBAR_SPLIT_KEY, String(current));
+        }
+      }
     };
     const endResize = this.boundMapEndResizeHandler;
 
-    resizeHandle.addEventListener('mousedown', (e) => {
-      isResizing = true;
-      startY = e.clientY;
-      const target = getTarget();
-      startHeight = target.offsetHeight;
-      this.ctx.map?.setIsResizing(true);
-      mapSection.classList.add('resizing');
-      document.body.style.cursor = 'ns-resize';
-      e.preventDefault();
-    });
+    if (bottomHandle) {
+      bottomHandle.addEventListener('mousedown', (e) => {
+        resizeMode = 'bottom';
+        startY = e.clientY;
+        const target = getBottomResizeTarget();
+        startHeight = target.offsetHeight;
+        this.ctx.map?.setIsResizing(true);
+        mapSection.classList.add('resizing');
+        document.body.style.cursor = 'ns-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      });
 
-    resizeHandle.addEventListener('dblclick', () => {
-      const isWide = window.innerWidth >= 1600;
-      const target = isWide ? mapContainer : mapSection;
+      bottomHandle.addEventListener('dblclick', () => {
+        const isWide = window.innerWidth >= 1600;
+        const target = isWide ? mapContainer : mapSection;
+        const targetHeight = window.innerHeight * 0.5;
+        const finalHeight = clamp(targetHeight, getMinHeight(), getMaxHeight());
 
-      const targetHeight = window.innerHeight * 0.5;
-      const finalHeight = Math.max(getMinHeight(), Math.min(targetHeight, getMaxHeight()));
+        this.ctx.map?.setIsResizing(true);
+        target.classList.add('map-section-smooth');
 
-      this.ctx.map?.setIsResizing(true);
-      target.classList.add('map-section-smooth');
+        if (isWide) target.style.flex = 'none';
+        target.style.height = `${finalHeight}px`;
 
-      if (isWide) target.style.flex = 'none';
-      target.style.height = `${finalHeight}px`;
+        let fired = false;
+        const onEnd = () => {
+          if (fired) return;
+          fired = true;
+          target.classList.remove('map-section-smooth');
+          target.removeEventListener('transitionend', onEnd);
+          localStorage.setItem(MAP_HEIGHT_KEY, `${finalHeight}px`);
+          this.ctx.map?.setIsResizing(false);
+          this.ctx.map?.resize();
+        };
 
-      let fired = false;
-      const onEnd = () => {
-        if (fired) return;
-        fired = true;
-
-        target.classList.remove('map-section-smooth');
-        target.removeEventListener('transitionend', onEnd);
-        localStorage.setItem('map-height', `${finalHeight}px`);
-        this.ctx.map?.setIsResizing(false);
+        target.addEventListener('transitionend', onEnd);
         this.ctx.map?.resize();
-      };
+        setTimeout(onEnd, 500);
+      });
+    }
 
-      target.addEventListener('transitionend', onEnd);
-      this.ctx.map?.resize();
-      setTimeout(onEnd, 500);
-    });
+    if (rightHandle) {
+      rightHandle.addEventListener('mousedown', (e) => {
+        if (!isSideLikeLayout()) return;
+        resizeMode = 'right';
+        startX = e.clientX;
+        startMapWidth = mapSection.getBoundingClientRect().width;
+        this.ctx.map?.setIsResizing(true);
+        mapSection.classList.add('resizing');
+        document.body.style.cursor = 'ew-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+      });
+
+      rightHandle.addEventListener('dblclick', () => {
+        if (!isSideLikeLayout()) return;
+        applySidebarSplit(DEFAULT_SIDEBAR_SPLIT, true);
+        this.ctx.map?.resize();
+      });
+    }
 
     this.boundMapResizeMoveHandler = (e: MouseEvent) => {
-      if (!isResizing) return;
-      const isWide = window.innerWidth >= 1600;
-      const target = isWide ? mapContainer : mapSection;
+      if (resizeMode === 'none') return;
 
-      const deltaY = e.clientY - startY;
-      const newHeight = Math.max(getMinHeight(), Math.min(startHeight + deltaY, getMaxHeight()));
+      if (resizeMode === 'bottom') {
+        const isWide = window.innerWidth >= 1600;
+        const target = isWide ? mapContainer : mapSection;
+        const deltaY = e.clientY - startY;
+        const newHeight = clamp(startHeight + deltaY, getMinHeight(), getMaxHeight());
 
-      if (isWide) target.style.flex = 'none';
-      target.style.height = `${newHeight}px`;
+        if (isWide) target.style.flex = 'none';
+        target.style.height = `${newHeight}px`;
+        this.ctx.map?.resize();
+        return;
+      }
 
-      this.ctx.map?.resize();
+      if (resizeMode === 'right') {
+        if (!isSideLikeLayout()) return;
+        const totalWidth = mainContent.getBoundingClientRect().width;
+        if (totalWidth <= 0) return;
+        const deltaX = e.clientX - startX;
+        const desiredPercent = ((startMapWidth + deltaX) / totalWidth) * 100;
+        applySidebarSplit(desiredPercent, false);
+        this.ctx.map?.resize();
+      }
     };
     document.addEventListener('mousemove', this.boundMapResizeMoveHandler);
 
