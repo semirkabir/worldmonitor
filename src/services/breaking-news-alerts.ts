@@ -146,12 +146,49 @@ function isGlobalCooldown(candidateLevel: 'critical' | 'high'): boolean {
   return true;
 }
 
+function sendDesktopNotification(alert: BreakingAlert): void {
+  const settings = getAlertSettings();
+  if (!settings.desktopNotificationsEnabled) return;
+  if (typeof Notification === 'undefined') return;
+  if (Notification.permission !== 'granted') return;
+  // Only notify when tab is hidden
+  if (document.visibilityState === 'visible') return;
+
+  const tag = `wm-alert-${alert.id}`;
+  const icon = alert.threatLevel === 'critical'
+    ? 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect fill="%23ef4444" width="64" height="64" rx="12"/><text x="32" y="44" text-anchor="middle" fill="white" font-size="36">⚠</text></svg>'
+    : 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect fill="%23f97316" width="64" height="64" rx="12"/><text x="32" y="44" text-anchor="middle" fill="white" font-size="36">!</text></svg>';
+
+  try {
+    const n = new Notification(`World Monitor — ${alert.threatLevel.toUpperCase()}`, {
+      body: alert.headline,
+      tag,
+      icon,
+      requireInteraction: alert.threatLevel === 'critical',
+    });
+    if (alert.link) {
+      n.onclick = () => { window.focus(); window.open(alert.link, '_blank', 'noopener'); n.close(); };
+    } else {
+      n.onclick = () => { window.focus(); n.close(); };
+    }
+  } catch { /* mobile Safari, etc. */ }
+}
+
+/** Request notification permission if not already granted. Called from settings UI. */
+export function requestNotificationPermission(): Promise<NotificationPermission | 'unsupported'> {
+  if (typeof Notification === 'undefined') return Promise.resolve('unsupported');
+  if (Notification.permission === 'granted') return Promise.resolve('granted');
+  if (Notification.permission === 'denied') return Promise.resolve('denied');
+  return Notification.requestPermission();
+}
+
 function dispatchAlert(alert: BreakingAlert): void {
   pruneDedupeMap();
   dedupeMap.set(alert.id, Date.now());
   lastGlobalAlertMs = Date.now();
   lastGlobalAlertLevel = alert.threatLevel;
   saveDedupeMap();
+  sendDesktopNotification(alert);
   document.dispatchEvent(new CustomEvent('wm:breaking-news', { detail: alert }));
 }
 

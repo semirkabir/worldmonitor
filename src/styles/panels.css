@@ -2145,3 +2145,35 @@
   height: 100%;
   min-height: 150px;
 }
+
+/* ----------------------------------------------------------
+   Panel Freshness Indicator Dot
+   ---------------------------------------------------------- */
+.panel-freshness-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background-color 0.4s ease;
+}
+
+.panel-freshness-dot.freshness-fresh {
+  background-color: var(--status-live);
+}
+
+.panel-freshness-dot.freshness-stale {
+  background-color: var(--semantic-elevated);
+}
+
+.panel-freshness-dot.freshness-very_stale {
+  background-color: var(--semantic-high);
+}
+
+.panel-freshness-dot.freshness-error {
+  background-color: var(--semantic-critical);
+}
+
+.panel-freshness-dot.freshness-no_data {
+  background-color: var(--text-dim);
+}

@@ -5,6 +5,7 @@ import { h, replaceChildren, safeHtml } from '../utils/dom-utils';
 import { trackPanelResized } from '@/services/analytics';
 import { getAiFlowSettings } from '@/services/ai-flow-settings';
 import { getSecretState } from '@/services/runtime-config';
+import { dataFreshness, type FreshnessStatus } from '@/services/data-freshness';
 
 export interface PanelOptions {
   id: string;
@@ -201,6 +202,9 @@ export class Panel {
   private retryAttempt = 0;
   private _fetching = false;
   private _locked = false;
+  private freshnessEl: HTMLElement | null = null;
+  private freshnessUnsubscribe: (() => void) | null = null;
+  private lastFreshnessStatus: FreshnessStatus | null = null;
 
   constructor(options: PanelOptions) {
     this.panelId = options.id;
@@ -218,6 +222,13 @@ export class Panel {
     title.className = 'panel-title';
     title.textContent = options.title;
     headerLeft.appendChild(title);
+
+    // Data freshness indicator dot
+    this.freshnessEl = document.createElement('span');
+    this.freshnessEl.className = 'panel-freshness-dot';
+    this.freshnessEl.style.display = 'none';
+    headerLeft.appendChild(this.freshnessEl);
+    this.setupFreshnessTracking();
 
     if (options.infoTooltip) {
       const infoBtn = h('button', { className: 'panel-info-btn', 'aria-label': t('components.panel.showMethodologyInfo') }, '?');
@@ -623,6 +634,31 @@ export class Panel {
   }
 
 
+  private setupFreshnessTracking(): void {
+    const update = () => {
+      if (!this.freshnessEl) return;
+      const status = dataFreshness.getStatusForPanel(this.panelId);
+      if (status === this.lastFreshnessStatus) return;
+      this.lastFreshnessStatus = status;
+
+      // Hide for panels with no mapped data sources
+      if (status === 'disabled') {
+        this.freshnessEl.style.display = 'none';
+        return;
+      }
+
+      this.freshnessEl.style.display = '';
+      this.freshnessEl.className = `panel-freshness-dot freshness-${status}`;
+      this.freshnessEl.title = dataFreshness.getFreshnessTooltipForPanel(this.panelId);
+    };
+
+    // Initial update after a short delay to let data load
+    setTimeout(update, 3000);
+
+    // Subscribe to changes
+    this.freshnessUnsubscribe = dataFreshness.subscribe(update);
+  }
+
   protected setDataBadge(state: 'live' | 'cached' | 'unavailable', detail?: string): void {
     if (!this.statusBadgeEl) return;
     const labels = {
@@ -938,6 +974,10 @@ export class Panel {
   public destroy(): void {
     this.abortController.abort();
     this.clearRetryCountdown();
+    if (this.freshnessUnsubscribe) {
+      this.freshnessUnsubscribe();
+      this.freshnessUnsubscribe = null;
+    }
     if (this.colSpanReconcileRaf !== null) {
       cancelAnimationFrame(this.colSpanReconcileRaf);
       this.colSpanReconcileRaf = null;

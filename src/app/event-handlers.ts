@@ -44,6 +44,7 @@ import { invokeTauri } from '@/services/tauri-bridge';
 import { dataFreshness } from '@/services/data-freshness';
 import { mlWorker } from '@/services/ml-worker';
 import { UnifiedSettings } from '@/components/UnifiedSettings';
+import { NotificationCenter } from '@/components/NotificationCenter';
 import { t } from '@/services/i18n';
 import { TvModeController } from '@/services/tv-mode';
 
@@ -704,6 +705,17 @@ export class EventHandlerManager implements AppModule {
     const mobileBtn = document.getElementById('mobileSettingsBtn');
     if (mobileBtn) {
       mobileBtn.addEventListener('click', () => this.ctx.unifiedSettings?.open());
+    }
+  }
+
+  setupNotificationCenter(): void {
+    const nc = new NotificationCenter();
+    nc.setLocationClickHandler((lat, lon) => {
+      this.ctx.map?.setCenter(lat, lon, 6);
+    });
+    const settingsMount = document.getElementById('unifiedSettingsMount');
+    if (settingsMount) {
+      settingsMount.parentElement?.insertBefore(nc['el'], settingsMount);
     }
   }
 

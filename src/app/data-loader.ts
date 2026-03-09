@@ -395,21 +395,40 @@ export class DataLoaderManager implements AppModule {
       tasks.push({ name: 'techReadiness', task: runGuarded('techReadiness', () => (this.ctx.panels['tech-readiness'] as TechReadinessPanel)?.refresh()) });
     }
 
-    // Stagger startup: run tasks in small batches to avoid hammering upstreams
-    const BATCH_SIZE = 4;
-    const BATCH_DELAY_MS = 300;
-    for (let i = 0; i < tasks.length; i += BATCH_SIZE) {
-      const batch = tasks.slice(i, i + BATCH_SIZE);
-      const results = await Promise.allSettled(batch.map(t => t.task));
-      results.forEach((result, idx) => {
-        if (result.status === 'rejected') {
-          console.error(`[App] ${batch[idx]?.name} load failed:`, result.reason);
+    // Progress bar: track completions reactively (tasks already started above)
+    const progressEl = document.getElementById('loading-progress');
+    const totalTasks = tasks.length;
+    let completedTasks = 0;
+    let progressDone = false;
+
+    const dismissProgress = () => {
+      if (progressDone || !progressEl) return;
+      progressDone = true;
+      progressEl.style.width = '100%';
+      setTimeout(() => {
+        progressEl.style.opacity = '0';
+        progressEl.style.transition = 'width 0.4s ease, opacity 0.3s ease';
+        setTimeout(() => progressEl.remove(), 300);
+      }, 400);
+    };
+
+    const trackedTasks = tasks.map(t =>
+      t.task.finally(() => {
+        completedTasks++;
+        if (progressEl && !progressDone) {
+          progressEl.style.width = `${Math.round((completedTasks / totalTasks) * 100)}%`;
         }
-      });
-      if (i + BATCH_SIZE < tasks.length) {
-        await new Promise(r => setTimeout(r, BATCH_DELAY_MS));
-      }
-    }
+        if (completedTasks >= totalTasks) dismissProgress();
+      }),
+    );
+
+    // Force-dismiss after 15s even if some tasks hang
+    const progressTimeout = setTimeout(dismissProgress, 15_000);
+
+    await Promise.allSettled(trackedTasks);
+
+    clearTimeout(progressTimeout);
+    dismissProgress();
 
     this.updateSearchIndex();
 

@@ -261,6 +261,53 @@ class DataFreshnessTracker {
   }
 
   /**
+   * Get the best (most-fresh) status among all sources for a given panel.
+   * If any source is fresh, the panel is fresh. Falls through stale, very_stale, error, no_data.
+   */
+  getStatusForPanel(panelId: string): FreshnessStatus {
+    const STATUS_PRIORITY: Record<FreshnessStatus, number> = {
+      fresh: 0, stale: 1, very_stale: 2, error: 3, no_data: 4, disabled: 5,
+    };
+
+    let best: FreshnessStatus = 'no_data';
+    let found = false;
+
+    for (const [id, meta] of Object.entries(SOURCE_METADATA)) {
+      if (meta.panelId !== panelId) continue;
+      found = true;
+      const source = this.sources.get(id as DataSourceId);
+      if (!source) continue;
+      const status = source.enabled ? this.calculateStatus(source) : 'disabled';
+      if (STATUS_PRIORITY[status] < STATUS_PRIORITY[best]) {
+        best = status;
+      }
+    }
+
+    // Panels with no mapped data source don't show a freshness dot
+    return found ? best : 'disabled';
+  }
+
+  /**
+   * Get human-readable freshness tooltip for a panel.
+   */
+  getFreshnessTooltipForPanel(panelId: string): string {
+    const sources: { name: string; timeSince: string; status: FreshnessStatus }[] = [];
+
+    for (const [id, meta] of Object.entries(SOURCE_METADATA)) {
+      if (meta.panelId !== panelId) continue;
+      const sourceState = this.sources.get(id as DataSourceId);
+      if (!sourceState || !sourceState.enabled) continue;
+      const status = this.calculateStatus(sourceState);
+      const timeSince = this.getTimeSince(id as DataSourceId);
+      sources.push({ name: meta.name, timeSince, status });
+    }
+
+    if (sources.length === 0) return '';
+    if (sources.length === 1) return `${sources[0]!.name}: ${sources[0]!.timeSince}`;
+    return sources.map(s => `${s.name}: ${s.timeSince}`).join('\n');
+  }
+
+  /**
    * Subscribe to changes
    */
   subscribe(listener: () => void): () => void {
