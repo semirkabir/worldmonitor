@@ -1380,6 +1380,19 @@ body.panel-resize-active iframe {
   gap: 8px;
 }
 
+/* Keep Live News header controls right-aligned even when the remove button is hidden. */
+.panel[data-panel="live-news"] .panel-header {
+  justify-content: flex-start;
+}
+
+.panel[data-panel="live-news"] .panel-header-left {
+  margin-right: auto;
+}
+
+.panel[data-panel="live-news"] .panel-remove-btn {
+  margin-left: 0;
+}
+
 .panel-title {
   color: var(--text);
   display: inline-flex;

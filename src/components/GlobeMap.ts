@@ -9,7 +9,7 @@
  *  - Earth texture: /textures/earth-topo-bathy.jpg
  *  - Night sky background: /textures/night-sky.png
  *  - Specular/water map: /textures/earth-water.png
- *  - Atmosphere: #4466cc glow via built-in Fresnel shader
+ *  - Atmosphere: black (no blue tint) via built-in Fresnel shader
  *  - All markers via htmlElementsData (single merged array with _kind discriminator)
  *  - Auto-rotate after 60 s of inactivity
  */
@@ -22,7 +22,7 @@ import { PIPELINES } from '@/config/pipelines';
 import { t } from '@/services/i18n';
 import { SITE_VARIANT } from '@/config/variant';
 import { getGlobeRenderScale, resolveGlobePixelRatio, resolvePerformanceProfile, subscribeGlobeRenderScaleChange, getGlobeTexture, GLOBE_TEXTURE_URLS, subscribeGlobeTextureChange, getGlobeVisualPreset, subscribeGlobeVisualPresetChange, type GlobeRenderScale, type GlobePerformanceProfile, type GlobeVisualPreset } from '@/services/globe-render-settings';
-import { getLayersForVariant, resolveLayerLabel, resolveLayerAccentColor, type MapVariant } from '@/config/map-layer-definitions';
+import { getLayersForVariant, resolveLayerLabel, resolveLayerAccentColor, resolveLayerIcon, type MapVariant } from '@/config/map-layer-definitions';
 import { getSecretState } from '@/services/runtime-config';
 import { resolveTradeRouteSegments, type TradeRouteSegment } from '@/config/trade-routes';
 import { GAMMA_IRRADIATORS } from '@/config/irradiators';
@@ -439,6 +439,10 @@ export class GlobeMap {
       return;
     }
 
+    // Force opaque black clear color so "space" stays black across themes.
+    const renderer = globe.renderer();
+    renderer.setClearColor(0x000000, 1);
+
     this.unsubscribeGlobeQuality?.();
     this.unsubscribeGlobeQuality = subscribeGlobeRenderScaleChange((scale) => {
       this.applyRenderQuality(scale);
@@ -453,7 +457,7 @@ export class GlobeMap {
     globe
       .globeImageUrl(GLOBE_TEXTURE_URLS[initialTexture])
       .backgroundImageUrl('')
-      .atmosphereColor('#4466cc')
+      .atmosphereColor('#000000')
       .atmosphereAltitude(0.18)
       .width(initW)
       .height(initH)
@@ -662,6 +666,10 @@ export class GlobeMap {
     return this._pulseEnabled ? `animation:globe-pulse ${duration} ease-out infinite;` : 'animation:none;';
   }
 
+  private buildLayerIconGlyph(layer: keyof MapLayers, color: string, size = 12): string {
+    return `<div class="map-shared-icon" style="width:${size}px;height:${size}px;color:${color};filter:drop-shadow(0 0 4px ${color}88);">${resolveLayerIcon(layer)}</div>`;
+  }
+
   private buildMarkerElement(d: GlobeMarker): HTMLElement {
     const el = document.createElement('div');
     el.style.cssText = 'pointer-events:auto;cursor:pointer;user-select:none;';
@@ -686,14 +694,7 @@ export class GlobeMap {
     } else if (d._kind === 'hotspot') {
       const colors: Record<number, string> = { 5: '#ff2020', 4: '#ff6600', 3: '#ffaa00', 2: '#ffdd00', 1: '#88ff44' };
       const c = colors[d.escalationScore] ?? '#ffaa00';
-      el.innerHTML = `
-        <div style="
-          width:10px;height:10px;
-          background:${c};
-          border:1.5px solid rgba(255,255,255,0.6);
-          clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);
-          box-shadow:0 0 8px 2px ${c}88;
-        "></div>`;
+      el.innerHTML = this.buildLayerIconGlyph('hotspots', c, 11);
       el.title = d.name;
     } else if (d._kind === 'flight') {
       const heading = d.heading ?? 0;
@@ -804,14 +805,7 @@ export class GlobeMap {
         other: '#aaaaaa',
       };
       const c = typeColors[d.type] ?? '#aaaaaa';
-      el.innerHTML = `
-        <div style="
-          width:0;height:0;
-          border-left:5px solid transparent;
-          border-right:5px solid transparent;
-          border-bottom:9px solid ${c};
-          filter:drop-shadow(0 0 3px ${c}88);
-        "></div>`;
+      el.innerHTML = this.buildLayerIconGlyph('bases', c, 12);
       el.title = `${d.name}${d.country ? ' · ' + d.country : ''}`;
     } else if (d._kind === 'nuclearSite') {
       el.innerHTML = `<div style="font-size:11px;color:#ffd700;text-shadow:0 0 4px #ffd70088;">☢</div>`;

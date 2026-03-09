@@ -1,68 +1,28 @@
+import maplibregl, { type StyleSpecification } from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
-import maplibregl from 'maplibre-gl';
 import { layers, namedFlavor } from '@protomaps/basemaps';
-import type { StyleSpecification } from 'maplibre-gl';
 
-const R2_PROXY = import.meta.env.VITE_PMTILES_URL ?? '';
-const R2_PUBLIC = import.meta.env.VITE_PMTILES_URL_PUBLIC ?? '';
-const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
-const R2_BASE = isTauri && R2_PUBLIC ? R2_PUBLIC : R2_PROXY;
+type Option<T extends string> = {
+  value: T;
+  label: string;
+};
 
-const hasTilesUrl = !!R2_BASE;
-
-let registered = false;
-
-export function registerPMTilesProtocol(): void {
-  if (registered) return;
-  registered = true;
-  const protocol = new Protocol();
-  maplibregl.addProtocol('pmtiles', protocol.tile);
-}
-
-export type PMTilesTheme = 'black' | 'dark' | 'grayscale' | 'light' | 'white';
+export type PmtilesTheme = 'black' | 'dark' | 'grayscale' | 'light' | 'white';
 export type OpenFreeMapTheme = 'dark' | 'positron';
 export type CartoTheme = 'dark-matter' | 'voyager' | 'positron';
+export type MapTheme = PmtilesTheme | OpenFreeMapTheme | CartoTheme;
+export type MapProvider = 'pmtiles' | 'auto' | 'openfreemap' | 'carto';
 
-export function buildPMTilesStyle(flavor: PMTilesTheme): StyleSpecification | null {
-  if (!hasTilesUrl) return null;
-  const spriteName = ['light', 'white'].includes(flavor) ? 'light' : 'dark';
-  return {
-    version: 8,
-    glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
-    sprite: `https://protomaps.github.io/basemaps-assets/sprites/v4/${spriteName}`,
-    sources: {
-      basemap: {
-        type: 'vector',
-        url: `pmtiles://${R2_BASE}`,
-        attribution: '<a href="https://protomaps.com">Protomaps</a> | <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
-      },
-    },
-    layers: layers('basemap', namedFlavor(flavor), { lang: 'en' }) as StyleSpecification['layers'],
-  };
-}
+const PMTILES_URL = (import.meta.env.VITE_PMTILES_URL ?? '').trim();
+const HAS_PMTILES_URL = PMTILES_URL.length > 0;
+
+const MAP_PROVIDER_STORAGE_KEY = 'wm-map-provider';
+const MAP_THEME_STORAGE_PREFIX = 'wm-map-theme:';
 
 export const FALLBACK_DARK_STYLE = 'https://tiles.openfreemap.org/styles/dark';
 export const FALLBACK_LIGHT_STYLE = 'https://tiles.openfreemap.org/styles/positron';
 
-export type MapProvider = 'auto' | 'pmtiles' | 'openfreemap' | 'carto';
-
-const STORAGE_KEY = 'wm-map-provider';
-const THEME_STORAGE_PREFIX = 'wm-map-theme:';
-
-export { hasTilesUrl as hasPMTilesUrl };
-
-export const MAP_PROVIDER_OPTIONS: { value: MapProvider; label: string }[] = (() => {
-  const opts: { value: MapProvider; label: string }[] = [];
-  if (hasTilesUrl) {
-    opts.push({ value: 'auto', label: 'Auto (PMTiles → OpenFreeMap fallback)' });
-    opts.push({ value: 'pmtiles', label: 'PMTiles (self-hosted)' });
-  }
-  opts.push({ value: 'openfreemap', label: 'OpenFreeMap' });
-  opts.push({ value: 'carto', label: 'CARTO' });
-  return opts;
-})();
-
-const PMTILES_THEMES: { value: string; label: string }[] = [
+const PMTILES_THEME_OPTIONS: Option<PmtilesTheme>[] = [
   { value: 'black', label: 'Black (deepest dark)' },
   { value: 'dark', label: 'Dark' },
   { value: 'grayscale', label: 'Grayscale' },
@@ -70,9 +30,23 @@ const PMTILES_THEMES: { value: string; label: string }[] = [
   { value: 'white', label: 'White' },
 ];
 
-export const MAP_THEME_OPTIONS: Record<MapProvider, { value: string; label: string }[]> = {
-  pmtiles: PMTILES_THEMES,
-  auto: PMTILES_THEMES,
+export const MAP_PROVIDER_OPTIONS: Option<MapProvider>[] = HAS_PMTILES_URL
+  ? [
+      { value: 'pmtiles', label: 'PMTiles (self-hosted)' },
+      { value: 'auto', label: 'Auto (PMTiles -> OpenFreeMap)' },
+      { value: 'openfreemap', label: 'OpenFreeMap' },
+      { value: 'carto', label: 'CARTO' },
+    ]
+  : [
+      { value: 'openfreemap', label: 'OpenFreeMap' },
+      { value: 'carto', label: 'CARTO' },
+    ];
+
+const AVAILABLE_PROVIDERS = new Set<MapProvider>(MAP_PROVIDER_OPTIONS.map((option) => option.value));
+
+export const MAP_THEME_OPTIONS: Record<MapProvider, Option<MapTheme>[]> = {
+  pmtiles: PMTILES_THEME_OPTIONS,
+  auto: PMTILES_THEME_OPTIONS,
   openfreemap: [
     { value: 'dark', label: 'Dark' },
     { value: 'positron', label: 'Positron (light)' },
@@ -84,76 +58,136 @@ export const MAP_THEME_OPTIONS: Record<MapProvider, { value: string; label: stri
   ],
 };
 
-const DEFAULT_THEME: Record<MapProvider, string> = {
+const DEFAULT_MAP_THEME: Record<MapProvider, MapTheme> = {
   pmtiles: 'black',
   auto: 'black',
   openfreemap: 'dark',
   carto: 'dark-matter',
 };
 
+const LIGHT_MAP_THEMES = new Set<MapTheme>(['light', 'white', 'positron', 'voyager']);
+
+const CARTO_DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const CARTO_VOYAGER_STYLE = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
+const CARTO_POSITRON_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+
+const CARTO_STYLE_MAP: Record<CartoTheme, string> = {
+  'dark-matter': CARTO_DARK_STYLE,
+  voyager: CARTO_VOYAGER_STYLE,
+  positron: CARTO_POSITRON_STYLE,
+};
+
+let pmtilesProtocolRegistered = false;
+
+function readStorage(key: string): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStorage(key: string, value: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Ignore storage write failures (private mode, quota errors).
+  }
+}
+
+function isMapProvider(value: string): value is MapProvider {
+  return value === 'pmtiles' || value === 'auto' || value === 'openfreemap' || value === 'carto';
+}
+
+function isValidThemeForProvider(provider: MapProvider, theme: string): theme is MapTheme {
+  return MAP_THEME_OPTIONS[provider].some((option) => option.value === theme);
+}
+
+function isPmtilesTheme(value: string): value is PmtilesTheme {
+  return PMTILES_THEME_OPTIONS.some((option) => option.value === value);
+}
+
+function normalizePmtilesTheme(theme: string): PmtilesTheme {
+  return isPmtilesTheme(theme) ? theme : 'black';
+}
+
+function getPmtilesStyle(theme: PmtilesTheme): StyleSpecification | null {
+  if (!HAS_PMTILES_URL) return null;
+  const spriteTheme = theme === 'light' || theme === 'white' ? 'light' : 'dark';
+  return {
+    version: 8,
+    glyphs: 'https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf',
+    sprite: `https://protomaps.github.io/basemaps-assets/sprites/v4/${spriteTheme}`,
+    sources: {
+      protomaps: {
+        type: 'vector',
+        url: `pmtiles://${PMTILES_URL}`,
+      },
+    },
+    layers: layers('protomaps', namedFlavor(theme), { lang: 'en' }),
+  };
+}
+
+export function registerPMTilesProtocol(): void {
+  if (pmtilesProtocolRegistered) return;
+  const protocol = new Protocol();
+  maplibregl.addProtocol('pmtiles', protocol.tile);
+  pmtilesProtocolRegistered = true;
+}
+
 export function getMapProvider(): MapProvider {
-  const stored = localStorage.getItem(STORAGE_KEY) as MapProvider | null;
-  if (stored) {
-    if (stored === 'pmtiles' || stored === 'auto') {
-      return hasTilesUrl ? stored : 'openfreemap';
-    }
+  const stored = readStorage(MAP_PROVIDER_STORAGE_KEY);
+  if (stored && isMapProvider(stored) && AVAILABLE_PROVIDERS.has(stored)) {
     return stored;
   }
-  return hasTilesUrl ? 'auto' : 'openfreemap';
+
+  if (!HAS_PMTILES_URL) return 'openfreemap';
+  return 'pmtiles';
 }
 
 export function setMapProvider(provider: MapProvider): void {
-  localStorage.setItem(STORAGE_KEY, provider);
+  if (!AVAILABLE_PROVIDERS.has(provider)) {
+    writeStorage(MAP_PROVIDER_STORAGE_KEY, 'openfreemap');
+    return;
+  }
+  writeStorage(MAP_PROVIDER_STORAGE_KEY, provider);
 }
 
-export function getMapTheme(provider: MapProvider): string {
-  const stored = localStorage.getItem(THEME_STORAGE_PREFIX + provider);
-  const options = MAP_THEME_OPTIONS[provider];
-  if (stored && options.some(o => o.value === stored)) return stored;
-  return DEFAULT_THEME[provider];
+export function getMapTheme(provider: MapProvider): MapTheme {
+  const stored = readStorage(`${MAP_THEME_STORAGE_PREFIX}${provider}`);
+  if (stored && isValidThemeForProvider(provider, stored)) {
+    return stored;
+  }
+  return DEFAULT_MAP_THEME[provider];
 }
 
 export function setMapTheme(provider: MapProvider, theme: string): void {
-  const options = MAP_THEME_OPTIONS[provider];
-  if (!options.some(o => o.value === theme)) return;
-  localStorage.setItem(THEME_STORAGE_PREFIX + provider, theme);
+  if (!isValidThemeForProvider(provider, theme)) return;
+  writeStorage(`${MAP_THEME_STORAGE_PREFIX}${provider}`, theme);
 }
 
-export function isLightMapTheme(mapTheme: string): boolean {
-  return ['light', 'white', 'positron', 'voyager'].includes(mapTheme);
+export function isLightMapTheme(theme: string): boolean {
+  return LIGHT_MAP_THEMES.has(theme as MapTheme);
 }
 
-const CARTO_DARK = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
-const CARTO_VOYAGER = 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json';
-const CARTO_POSITRON = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+export function getStyleForProvider(provider: MapProvider, mapTheme: string): string | StyleSpecification {
+  const prefersLight = isLightMapTheme(mapTheme);
 
-const CARTO_STYLES: Record<string, string> = {
-  'dark-matter': CARTO_DARK,
-  'voyager': CARTO_VOYAGER,
-  'positron': CARTO_POSITRON,
-};
-
-function asPMTilesTheme(mapTheme: string): PMTilesTheme {
-  const valid = PMTILES_THEMES.some(o => o.value === mapTheme);
-  return (valid ? mapTheme : 'black') as PMTilesTheme;
-}
-
-export function getStyleForProvider(provider: MapProvider, mapTheme: string): StyleSpecification | string {
-  const lightFallback = isLightMapTheme(mapTheme);
   switch (provider) {
     case 'pmtiles': {
-      const style = buildPMTilesStyle(asPMTilesTheme(mapTheme));
-      if (style) return style;
-      return lightFallback ? FALLBACK_LIGHT_STYLE : FALLBACK_DARK_STYLE;
+      const style = getPmtilesStyle(normalizePmtilesTheme(mapTheme));
+      return style ?? (prefersLight ? FALLBACK_LIGHT_STYLE : FALLBACK_DARK_STYLE);
     }
     case 'openfreemap':
       return mapTheme === 'positron' ? FALLBACK_LIGHT_STYLE : FALLBACK_DARK_STYLE;
     case 'carto':
-      return CARTO_STYLES[mapTheme] ?? CARTO_DARK;
+      return CARTO_STYLE_MAP[mapTheme as CartoTheme] ?? CARTO_DARK_STYLE;
     case 'auto':
     default: {
-      const pmtiles = buildPMTilesStyle(asPMTilesTheme(mapTheme));
-      return pmtiles ?? (lightFallback ? FALLBACK_LIGHT_STYLE : FALLBACK_DARK_STYLE);
+      const style = getPmtilesStyle(normalizePmtilesTheme(mapTheme));
+      return style ?? (prefersLight ? FALLBACK_LIGHT_STYLE : FALLBACK_DARK_STYLE);
     }
   }
 }
