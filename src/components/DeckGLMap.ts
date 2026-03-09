@@ -87,7 +87,7 @@ import {
 } from '@/config';
 import type { GulfInvestment } from '@/types';
 import { resolveTradeRouteSegments, TRADE_ROUTES as TRADE_ROUTES_LIST, type TradeRouteSegment } from '@/config/trade-routes';
-import { getLayersForVariant, resolveLayerLabel, type MapVariant } from '@/config/map-layer-definitions';
+import { getLayersForVariant, resolveLayerLabel, resolveLayerAccentColor, resolveLayerIcon, type MapVariant } from '@/config/map-layer-definitions';
 import { getSecretState } from '@/services/runtime-config';
 import { MapPopup, type PopupType } from './MapPopup';
 import {
@@ -262,6 +262,28 @@ const BASES_ICON_MAPPING = { triangleUp: { x: 0, y: 0, width: 32, height: 32, ma
 const NUCLEAR_ICON_MAPPING = { hexagon: { x: 0, y: 0, width: 32, height: 32, mask: true } };
 const DATACENTER_ICON_MAPPING = { square: { x: 0, y: 0, width: 32, height: 32, mask: true } };
 const AIRCRAFT_ICON_MAPPING = { plane: { x: 0, y: 0, width: 32, height: 32, mask: true } };
+const SHARED_LAYER_ICON_MAPPING = { marker: { x: 0, y: 0, width: 32, height: 32, mask: false } };
+const SHARED_LAYER_ICON_ATLAS_CACHE = new Map<string, string>();
+
+function getThemeMode(): 'light' | 'dark' {
+  return getCurrentTheme() === 'light' ? 'light' : 'dark';
+}
+
+function getSharedLayerIconAtlas(layer: keyof MapLayers, theme: 'light' | 'dark' = getThemeMode()): string {
+  const cacheKey = `${layer}:${theme}`;
+  const cached = SHARED_LAYER_ICON_ATLAS_CACHE.get(cacheKey);
+  if (cached) return cached;
+
+  const color = resolveLayerAccentColor(layer, theme);
+  const markup = resolveLayerIcon(layer);
+  const svg = markup.replace(
+    '<svg ',
+    `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" style="color:${color}" `,
+  );
+  const atlas = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  SHARED_LAYER_ICON_ATLAS_CACHE.set(cacheKey, atlas);
+  return atlas;
+}
 
 const CONFLICT_ZONES_GEOJSON: GeoJSON.FeatureCollection = {
   type: 'FeatureCollection',
@@ -346,6 +368,8 @@ export class DeckGLMap {
   private onLayerChange?: (layer: keyof MapLayers, enabled: boolean, source: 'user' | 'programmatic') => void;
   private onStateChange?: (state: DeckMapState) => void;
   private onAircraftPositionsUpdate?: (positions: PositionSample[]) => void;
+  private legendEl: HTMLElement | null = null;
+  private ciiLegendEl: HTMLElement | null = null;
 
   // Highlighted assets
   private highlightedAssets: Record<AssetType, Set<string>> = {
@@ -422,6 +446,7 @@ export class DeckGLMap {
 
     this.handleThemeChange = () => {
       if (isHappyVariant) {
+        this.refreshLegend();
         this.switchBasemap();
         return;
       }
@@ -429,6 +454,7 @@ export class DeckGLMap {
       const mapTheme = getMapTheme(provider);
       const paintTheme = isLightMapTheme(mapTheme) ? 'light' as const : 'dark' as const;
       this.updateCountryLayerPaint(paintTheme);
+      this.refreshLegend();
       this.render();
     };
     window.addEventListener('theme-changed', this.handleThemeChange);
@@ -1781,28 +1807,19 @@ export class DeckGLMap {
     const highlightedDC = this.highlightedAssets.datacenter;
     const data = AI_DATA_CENTERS.filter(dc => dc.status !== 'decommissioned');
 
-    // Datacenters: SQUARE icons - purple color, semi-transparent for layering
     return new IconLayer({
       id: 'datacenters-layer',
       data,
       getPosition: (d) => [d.lon, d.lat],
-      getIcon: () => 'square',
-      iconAtlas: MARKER_ICONS.square,
-      iconMapping: DATACENTER_ICON_MAPPING,
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('datacenters'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
       getSize: (d) => highlightedDC.has(d.id) ? 14 : 10,
-      getColor: (d) => {
-        if (highlightedDC.has(d.id)) {
-          return [255, 100, 100, 200] as [number, number, number, number];
-        }
-        if (d.status === 'planned') {
-          return [136, 68, 255, 100] as [number, number, number, number]; // Transparent for planned
-        }
-        return [136, 68, 255, 140] as [number, number, number, number]; // ~55% opacity
-      },
       sizeScale: 1,
       sizeMinPixels: 6,
       sizeMaxPixels: 14,
       pickable: true,
+      billboard: true,
     });
   }
 
@@ -2124,84 +2141,83 @@ export class DeckGLMap {
     });
   }
 
-  private createEconomicCentersLayer(): ScatterplotLayer {
-    return new ScatterplotLayer({
+  private createEconomicCentersLayer(): IconLayer {
+    return new IconLayer({
       id: 'economic-centers-layer',
       data: ECONOMIC_CENTERS,
       getPosition: (d) => [d.lon, d.lat],
-      getRadius: 8000,
-      getFillColor: [255, 215, 0, 180] as [number, number, number, number],
-      radiusMinPixels: 4,
-      radiusMaxPixels: 10,
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('economic'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: () => 14,
+      sizeMinPixels: 8,
+      sizeMaxPixels: 18,
       pickable: true,
+      billboard: true,
     });
   }
 
-  private createStockExchangesLayer(): ScatterplotLayer {
-    return new ScatterplotLayer({
+  private createStockExchangesLayer(): IconLayer {
+    return new IconLayer({
       id: 'stock-exchanges-layer',
       data: STOCK_EXCHANGES,
       getPosition: (d) => [d.lon, d.lat],
-      getRadius: (d) => d.tier === 'mega' ? 18000 : d.tier === 'major' ? 14000 : 11000,
-      getFillColor: (d) => {
-        if (d.tier === 'mega') return [255, 215, 80, 220] as [number, number, number, number];
-        if (d.tier === 'major') return COLORS.stockExchange;
-        return [140, 210, 255, 190] as [number, number, number, number];
-      },
-      radiusMinPixels: 5,
-      radiusMaxPixels: 14,
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('stockExchanges'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: (d) => d.tier === 'mega' ? 17 : d.tier === 'major' ? 15 : 13,
+      sizeMinPixels: 8,
+      sizeMaxPixels: 20,
       pickable: true,
+      billboard: true,
     });
   }
 
-  private createFinancialCentersLayer(): ScatterplotLayer {
-    return new ScatterplotLayer({
+  private createFinancialCentersLayer(): IconLayer {
+    return new IconLayer({
       id: 'financial-centers-layer',
       data: FINANCIAL_CENTERS,
       getPosition: (d) => [d.lon, d.lat],
-      getRadius: (d) => d.type === 'global' ? 17000 : d.type === 'regional' ? 13000 : 10000,
-      getFillColor: (d) => {
-        if (d.type === 'global') return COLORS.financialCenter;
-        if (d.type === 'regional') return [0, 190, 130, 185] as [number, number, number, number];
-        return [0, 150, 110, 165] as [number, number, number, number];
-      },
-      radiusMinPixels: 4,
-      radiusMaxPixels: 12,
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('financialCenters'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: (d) => d.type === 'global' ? 16 : d.type === 'regional' ? 14 : 12,
+      sizeMinPixels: 8,
+      sizeMaxPixels: 18,
       pickable: true,
+      billboard: true,
     });
   }
 
-  private createCentralBanksLayer(): ScatterplotLayer {
-    return new ScatterplotLayer({
+  private createCentralBanksLayer(): IconLayer {
+    return new IconLayer({
       id: 'central-banks-layer',
       data: CENTRAL_BANKS,
       getPosition: (d) => [d.lon, d.lat],
-      getRadius: (d) => d.type === 'major' ? 15000 : d.type === 'supranational' ? 17000 : 12000,
-      getFillColor: (d) => {
-        if (d.type === 'major') return COLORS.centralBank;
-        if (d.type === 'supranational') return [255, 235, 140, 220] as [number, number, number, number];
-        return [235, 180, 80, 185] as [number, number, number, number];
-      },
-      radiusMinPixels: 4,
-      radiusMaxPixels: 12,
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('centralBanks'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: (d) => d.type === 'supranational' ? 17 : d.type === 'major' ? 15 : 13,
+      sizeMinPixels: 8,
+      sizeMaxPixels: 20,
       pickable: true,
+      billboard: true,
     });
   }
 
-  private createCommodityHubsLayer(): ScatterplotLayer {
-    return new ScatterplotLayer({
+  private createCommodityHubsLayer(): IconLayer {
+    return new IconLayer({
       id: 'commodity-hubs-layer',
       data: COMMODITY_HUBS,
       getPosition: (d) => [d.lon, d.lat],
-      getRadius: (d) => d.type === 'exchange' ? 14000 : d.type === 'port' ? 12000 : 10000,
-      getFillColor: (d) => {
-        if (d.type === 'exchange') return COLORS.commodityHub;
-        if (d.type === 'port') return [80, 170, 255, 190] as [number, number, number, number];
-        return [255, 110, 80, 185] as [number, number, number, number];
-      },
-      radiusMinPixels: 4,
-      radiusMaxPixels: 11,
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('commodityHubs'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: (d) => d.type === 'exchange' ? 15 : d.type === 'port' ? 14 : 13,
+      sizeMinPixels: 8,
+      sizeMaxPixels: 18,
       pickable: true,
+      billboard: true,
     });
   }
 
@@ -2320,42 +2336,51 @@ export class DeckGLMap {
   }
 
   // Tech variant layers
-  private createStartupHubsLayer(): ScatterplotLayer {
-    return new ScatterplotLayer({
+  private createStartupHubsLayer(): IconLayer {
+    return new IconLayer({
       id: 'startup-hubs-layer',
       data: STARTUP_HUBS,
       getPosition: (d) => [d.lon, d.lat],
-      getRadius: 10000,
-      getFillColor: COLORS.startupHub,
-      radiusMinPixels: 5,
-      radiusMaxPixels: 12,
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('startupHubs'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: (d) => d.tier === 'mega' ? 17 : d.tier === 'major' ? 15 : 13,
+      sizeMinPixels: 8,
+      sizeMaxPixels: 20,
       pickable: true,
+      billboard: true,
     });
   }
 
-  private createAcceleratorsLayer(): ScatterplotLayer {
-    return new ScatterplotLayer({
+  private createAcceleratorsLayer(): IconLayer {
+    return new IconLayer({
       id: 'accelerators-layer',
       data: ACCELERATORS,
       getPosition: (d) => [d.lon, d.lat],
-      getRadius: 6000,
-      getFillColor: COLORS.accelerator,
-      radiusMinPixels: 3,
-      radiusMaxPixels: 8,
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('accelerators'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: (d) => d.type === 'accelerator' ? 14 : d.type === 'incubator' ? 13 : 12,
+      sizeMinPixels: 7,
+      sizeMaxPixels: 16,
       pickable: true,
+      billboard: true,
     });
   }
 
-  private createCloudRegionsLayer(): ScatterplotLayer {
-    return new ScatterplotLayer({
+  private createCloudRegionsLayer(): IconLayer {
+    return new IconLayer({
       id: 'cloud-regions-layer',
       data: CLOUD_REGIONS,
       getPosition: (d) => [d.lon, d.lat],
-      getRadius: 12000,
-      getFillColor: COLORS.cloudRegion,
-      radiusMinPixels: 4,
-      radiusMaxPixels: 12,
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('cloudRegions'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: (d) => d.provider === 'aws' ? 16 : d.provider === 'azure' ? 15 : 14,
+      sizeMinPixels: 8,
+      sizeMaxPixels: 18,
       pickable: true,
+      billboard: true,
     });
   }
 
@@ -2428,20 +2453,19 @@ export class DeckGLMap {
     const layers: Layer[] = [];
     const zoom = this.maplibreMap?.getZoom() || 2;
 
-    layers.push(new ScatterplotLayer<MapTechHQCluster>({
+    layers.push(new IconLayer<MapTechHQCluster>({
       id: 'tech-hq-clusters-layer',
       data: this.techHQClusters,
       getPosition: d => [d.lon, d.lat],
-      getRadius: d => 10000 + d.count * 1500,
-      radiusMinPixels: 5,
-      radiusMaxPixels: 18,
-      getFillColor: d => {
-        if (d.primaryType === 'faang') return [0, 220, 120, 200] as [number, number, number, number];
-        if (d.primaryType === 'unicorn') return [255, 100, 200, 180] as [number, number, number, number];
-        return [80, 160, 255, 180] as [number, number, number, number];
-      },
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('techHQs'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: d => d.count > 1 ? Math.min(24, 13 + d.count) : d.primaryType === 'faang' ? 16 : d.primaryType === 'unicorn' ? 15 : 14,
+      sizeMinPixels: 8,
+      sizeMaxPixels: 24,
       pickable: true,
-      updateTriggers: { getRadius: this.lastSCZoom },
+      billboard: true,
+      updateTriggers: { getSize: this.lastSCZoom },
     }));
 
     const multiClusters = this.techHQClusters.filter(c => c.count > 1);
@@ -2488,19 +2512,19 @@ export class DeckGLMap {
     this.updateClusterData();
     const layers: Layer[] = [];
 
-    layers.push(new ScatterplotLayer<MapTechEventCluster>({
+    layers.push(new IconLayer<MapTechEventCluster>({
       id: 'tech-event-clusters-layer',
       data: this.techEventClusters,
       getPosition: d => [d.lon, d.lat],
-      getRadius: d => 10000 + d.count * 1500,
-      radiusMinPixels: 5,
-      radiusMaxPixels: 18,
-      getFillColor: d => {
-        if (d.soonestDaysUntil <= 14) return [255, 220, 50, 200] as [number, number, number, number];
-        return [80, 140, 255, 180] as [number, number, number, number];
-      },
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('techEvents'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: d => d.count > 1 ? Math.min(24, 13 + d.count) : d.soonestDaysUntil <= 14 ? 16 : 14,
+      sizeMinPixels: 8,
+      sizeMaxPixels: 24,
       pickable: true,
-      updateTriggers: { getRadius: this.lastSCZoom },
+      billboard: true,
+      updateTriggers: { getSize: this.lastSCZoom },
     }));
 
     const multiClusters = this.techEventClusters.filter(c => c.count > 1);
@@ -2530,19 +2554,19 @@ export class DeckGLMap {
     this.updateClusterData();
     const layers: Layer[] = [];
 
-    layers.push(new ScatterplotLayer<MapDatacenterCluster>({
+    layers.push(new IconLayer<MapDatacenterCluster>({
       id: 'datacenter-clusters-layer',
       data: this.datacenterClusters,
       getPosition: d => [d.lon, d.lat],
-      getRadius: d => 15000 + d.count * 2000,
-      radiusMinPixels: 6,
-      radiusMaxPixels: 20,
-      getFillColor: d => {
-        if (d.majorityExisting) return [160, 80, 255, 180] as [number, number, number, number];
-        return [80, 160, 255, 180] as [number, number, number, number];
-      },
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('datacenters'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: d => d.count > 1 ? Math.min(24, 14 + d.count) : 14,
+      sizeMinPixels: 8,
+      sizeMaxPixels: 24,
       pickable: true,
-      updateTriggers: { getRadius: this.lastSCZoom },
+      billboard: true,
+      updateTriggers: { getSize: this.lastSCZoom },
     }));
 
     const multiClusters = this.datacenterClusters.filter(c => c.count > 1);
@@ -2630,25 +2654,25 @@ export class DeckGLMap {
     return layers;
   }
 
-  private createGulfInvestmentsLayer(): ScatterplotLayer {
-    return new ScatterplotLayer<GulfInvestment>({
+  private createGulfInvestmentsLayer(): IconLayer<GulfInvestment> {
+    return new IconLayer<GulfInvestment>({
       id: 'gulf-investments-layer',
       data: GULF_INVESTMENTS,
       getPosition: (d: GulfInvestment) => [d.lon, d.lat],
-      getRadius: (d: GulfInvestment) => {
-        if (!d.investmentUSD) return 20000;
-        if (d.investmentUSD >= 50000) return 70000;
-        if (d.investmentUSD >= 10000) return 55000;
-        if (d.investmentUSD >= 1000) return 40000;
-        return 25000;
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('gulfInvestments'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: (d: GulfInvestment) => {
+        if (!d.investmentUSD) return 13;
+        if (d.investmentUSD >= 50000) return 20;
+        if (d.investmentUSD >= 10000) return 17;
+        if (d.investmentUSD >= 1000) return 15;
+        return 13;
       },
-      getFillColor: (d: GulfInvestment) =>
-        d.investingCountry === 'SA' ? COLORS.gulfInvestmentSA : COLORS.gulfInvestmentUAE,
-      getLineColor: [255, 255, 255, 80] as [number, number, number, number],
-      lineWidthMinPixels: 1,
-      radiusMinPixels: 5,
-      radiusMaxPixels: 28,
+      sizeMinPixels: 8,
+      sizeMaxPixels: 24,
       pickable: true,
+      billboard: true,
     });
   }
 
@@ -3605,10 +3629,8 @@ export class DeckGLMap {
 
       const iconSpan = document.createElement('span');
       iconSpan.className = 'toggle-icon';
-      // Decode HTML entities (icons stored as e.g. '&#127919;')
-      const tmp = document.createElement('textarea');
-      tmp.innerHTML = icon;
-      iconSpan.textContent = tmp.value;
+      iconSpan.style.color = resolveLayerAccentColor(key, getCurrentTheme());
+      iconSpan.innerHTML = icon;
       toggle.appendChild(iconSpan);
 
       const labelSpan = document.createElement('span');
@@ -3644,6 +3666,7 @@ export class DeckGLMap {
             const ciiLeg = this.container.querySelector('#ciiChoroplethLegend') as HTMLElement | null;
             if (ciiLeg) ciiLeg.style.display = (input as HTMLInputElement).checked ? 'block' : 'none';
           }
+          this.refreshLegend();
           this.enforceLayerLimit();
         }
       });
@@ -3826,56 +3849,9 @@ export class DeckGLMap {
   private createLegend(): void {
     const legend = document.createElement('div');
     legend.className = 'map-legend deckgl-legend';
-
-    // SVG shapes for different marker types
-    const shapes = {
-      circle: (color: string) => `<svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="${color}"/></svg>`,
-      triangle: (color: string) => `<svg width="12" height="12" viewBox="0 0 12 12"><polygon points="6,1 11,10 1,10" fill="${color}"/></svg>`,
-      square: (color: string) => `<svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="1" fill="${color}"/></svg>`,
-      hexagon: (color: string) => `<svg width="12" height="12" viewBox="0 0 12 12"><polygon points="6,1 10.5,3.5 10.5,8.5 6,11 1.5,8.5 1.5,3.5" fill="${color}"/></svg>`,
-    };
-
-    const isLight = getCurrentTheme() === 'light';
-    const legendItems = SITE_VARIANT === 'tech'
-      ? [
-        { shape: shapes.circle(isLight ? 'rgb(22, 163, 74)' : 'rgb(0, 255, 150)'), label: t('components.deckgl.legend.startupHub') },
-        { shape: shapes.circle('rgb(100, 200, 255)'), label: t('components.deckgl.legend.techHQ') },
-        { shape: shapes.circle(isLight ? 'rgb(180, 120, 0)' : 'rgb(255, 200, 0)'), label: t('components.deckgl.legend.accelerator') },
-        { shape: shapes.circle('rgb(150, 100, 255)'), label: t('components.deckgl.legend.cloudRegion') },
-        { shape: shapes.square('rgb(136, 68, 255)'), label: t('components.deckgl.legend.datacenter') },
-      ]
-      : SITE_VARIANT === 'finance'
-        ? [
-          { shape: shapes.circle('rgb(255, 215, 80)'), label: t('components.deckgl.legend.stockExchange') },
-          { shape: shapes.circle('rgb(0, 220, 150)'), label: t('components.deckgl.legend.financialCenter') },
-          { shape: shapes.hexagon('rgb(255, 210, 80)'), label: t('components.deckgl.legend.centralBank') },
-          { shape: shapes.square('rgb(255, 150, 80)'), label: t('components.deckgl.legend.commodityHub') },
-          { shape: shapes.triangle('rgb(80, 170, 255)'), label: t('components.deckgl.legend.waterway') },
-        ]
-        : SITE_VARIANT === 'happy'
-          ? [
-            { shape: shapes.circle('rgb(34, 197, 94)'), label: 'Positive Event' },
-            { shape: shapes.circle('rgb(234, 179, 8)'), label: 'Breakthrough' },
-            { shape: shapes.circle('rgb(74, 222, 128)'), label: 'Act of Kindness' },
-            { shape: shapes.circle('rgb(255, 100, 50)'), label: 'Natural Event' },
-            { shape: shapes.square('rgb(34, 180, 100)'), label: 'Happy Country' },
-            { shape: shapes.circle('rgb(74, 222, 128)'), label: 'Species Recovery Zone' },
-            { shape: shapes.circle('rgb(255, 200, 50)'), label: 'Renewable Installation' },
-            { shape: shapes.circle('rgb(160, 100, 255)'), label: t('components.deckgl.legend.aircraft') },
-          ]
-          : [
-            { shape: shapes.circle('rgb(255, 68, 68)'), label: t('components.deckgl.legend.highAlert') },
-            { shape: shapes.circle('rgb(255, 165, 0)'), label: t('components.deckgl.legend.elevated') },
-            { shape: shapes.circle(isLight ? 'rgb(180, 120, 0)' : 'rgb(255, 255, 0)'), label: t('components.deckgl.legend.monitoring') },
-            { shape: shapes.triangle('rgb(68, 136, 255)'), label: t('components.deckgl.legend.base') },
-            { shape: shapes.hexagon(isLight ? 'rgb(180, 120, 0)' : 'rgb(255, 220, 0)'), label: t('components.deckgl.legend.nuclear') },
-            { shape: shapes.square('rgb(136, 68, 255)'), label: t('components.deckgl.legend.datacenter') },
-            { shape: shapes.circle('rgb(160, 100, 255)'), label: t('components.deckgl.legend.aircraft') },
-          ];
-
     legend.innerHTML = `
       <span class="legend-label-title">${t('components.deckgl.legend.title')}</span>
-      ${legendItems.map(({ shape, label }) => `<span class="legend-item">${shape}<span class="legend-label">${label}</span></span>`).join('')}
+      <div class="legend-items"></div>
     `;
 
     // CII choropleth gradient legend (shown when layer is active)
@@ -3893,8 +3869,37 @@ export class DeckGLMap {
       </div>
     `;
     legend.appendChild(ciiLegend);
+    this.legendEl = legend;
+    this.ciiLegendEl = ciiLegend;
+    this.refreshLegend();
 
     this.container.appendChild(legend);
+  }
+
+  private refreshLegend(): void {
+    if (!this.legendEl) return;
+    const itemsRoot = this.legendEl.querySelector('.legend-items') as HTMLElement | null;
+    if (!itemsRoot) return;
+
+    const theme = getCurrentTheme() === 'light' ? 'light' : 'dark';
+    const layerDefs = getLayersForVariant((SITE_VARIANT || 'full') as MapVariant, 'flat');
+    const activeLayerDefs = layerDefs.filter(def => this.state.layers[def.key]);
+
+    if (activeLayerDefs.length === 0) {
+      itemsRoot.innerHTML = '<span class="legend-item"><span class="legend-label">No active layers</span></span>';
+    } else {
+      itemsRoot.innerHTML = activeLayerDefs
+        .map((def) => {
+          const color = resolveLayerAccentColor(def.key, theme);
+          const label = resolveLayerLabel(def, t);
+          return `<span class="legend-item"><span class="legend-icon" style="color:${color}">${def.icon}</span><span class="legend-label">${label}</span></span>`;
+        })
+        .join('');
+    }
+
+    if (this.ciiLegendEl) {
+      this.ciiLegendEl.style.display = this.state.layers.ciiChoropleth ? 'block' : 'none';
+    }
   }
 
   // Public API methods (matching MapComponent interface)
@@ -4031,6 +4036,7 @@ export class DeckGLMap {
       const toggle = this.container.querySelector(`.layer-toggle[data-layer="${key}"] input`) as HTMLInputElement;
       if (toggle) toggle.checked = value;
     });
+    this.refreshLegend();
   }
 
   public getState(): DeckMapState {

@@ -93,6 +93,23 @@ export class EventHandlerManager implements AppModule {
     this.callbacks = callbacks;
   }
 
+  private switchVariant(variant: string): void {
+    trackVariantSwitch(SITE_VARIANT, variant);
+    localStorage.setItem('worldmonitor-variant', variant);
+
+    // Clear persisted UI/map state so previous variant layers/panels cannot leak.
+    localStorage.removeItem(STORAGE_KEYS.mapLayers);
+    localStorage.removeItem(STORAGE_KEYS.panels);
+    localStorage.removeItem('panel-order');
+    localStorage.removeItem('panel-order-bottom');
+    localStorage.removeItem('panel-order-bottom-set');
+    localStorage.removeItem('worldmonitor-panel-spans');
+
+    // Drop query params like ?layers=... that can override variant defaults.
+    const cleanUrl = `${window.location.origin}${window.location.pathname}`;
+    window.location.assign(cleanUrl);
+  }
+
   init(): void {
     this.setupEventListeners();
     this.setupIdleDetection();
@@ -273,9 +290,7 @@ export class EventHandlerManager implements AppModule {
           const variant = link.dataset.variant;
           if (variant && variant !== SITE_VARIANT) {
             e.preventDefault();
-            trackVariantSwitch(SITE_VARIANT, variant);
-            localStorage.setItem('worldmonitor-variant', variant);
-            window.location.reload();
+            this.switchVariant(variant);
           }
         });
       });
@@ -383,9 +398,7 @@ export class EventHandlerManager implements AppModule {
         const variant = btn.dataset.variant;
         if (variant && variant !== SITE_VARIANT) {
           if (this.ctx.isDesktopApp || isLocalDev) {
-            trackVariantSwitch(SITE_VARIANT, variant);
-            localStorage.setItem('worldmonitor-variant', variant);
-            window.location.reload();
+            this.switchVariant(variant);
           } else {
             const hosts: Record<string, string> = {
               full: 'https://worldmonitor.app',

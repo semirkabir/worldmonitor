@@ -77,13 +77,26 @@ export class App {
     let mapLayers: MapLayers;
     let panelSettings: Record<string, PanelConfig>;
 
-    // Check if variant changed - reset all settings to variant defaults
-    const storedVariant = localStorage.getItem('worldmonitor-variant');
+    // Track which variant last initialized local settings.
+    // `worldmonitor-variant` is user preference (set before reload), so it
+    // cannot reliably indicate which variant produced the current settings.
+    const APPLIED_VARIANT_KEY = 'worldmonitor-applied-variant';
+    const appliedVariant = localStorage.getItem(APPLIED_VARIANT_KEY);
     const currentVariant = SITE_VARIANT;
-    console.log(`[App] Variant check: stored="${storedVariant}", current="${currentVariant}"`);
-    if (storedVariant !== currentVariant) {
+    const REQUIRED_VARIANT_LAYERS: Record<string, (keyof MapLayers)[]> = {
+      tech: ['startupHubs', 'cloudRegions', 'accelerators', 'techHQs', 'techEvents', 'datacenters', 'cables', 'outages', 'cyberThreats'],
+      finance: ['stockExchanges', 'financialCenters', 'centralBanks', 'commodityHubs', 'gulfInvestments'],
+      happy: ['positiveEvents', 'kindness', 'happiness', 'speciesRecovery', 'renewableInstallations'],
+      commodity: ['miningSites', 'processingPlants', 'commodityPorts', 'commodityHubs'],
+      conflicts: ['conflicts', 'bases', 'hotspots', 'military', 'ucdpEvents', 'displacement'],
+      full: [],
+    };
+    const requiredLayers = REQUIRED_VARIANT_LAYERS[currentVariant] ?? [];
+    console.log(`[App] Variant check: applied="${appliedVariant}", current="${currentVariant}"`);
+    if (appliedVariant !== currentVariant) {
       // Variant changed - use defaults for new variant, clear old settings
       console.log('[App] Variant changed - resetting to defaults');
+      localStorage.setItem(APPLIED_VARIANT_KEY, currentVariant);
       localStorage.setItem('worldmonitor-variant', currentVariant);
       localStorage.removeItem(STORAGE_KEYS.mapLayers);
       localStorage.removeItem(STORAGE_KEYS.panels);
@@ -94,6 +107,7 @@ export class App {
       mapLayers = { ...defaultLayers };
       panelSettings = { ...DEFAULT_PANELS };
     } else {
+      localStorage.setItem('worldmonitor-variant', currentVariant);
       mapLayers = loadFromStorage<MapLayers>(STORAGE_KEYS.mapLayers, defaultLayers);
       // Happy variant: force non-happy layers off even if localStorage has stale true values
       if (currentVariant === 'happy') {
@@ -158,6 +172,60 @@ export class App {
       }
     }
 
+    // Always enforce variant core defaults at startup so each page keeps its
+    // canonical layer/panel baseline.
+    requiredLayers.forEach((layer) => {
+      mapLayers[layer] = true;
+    });
+    for (const [key, config] of Object.entries(DEFAULT_PANELS)) {
+      if (!config.enabled) continue;
+      if (!panelSettings[key]) {
+        panelSettings[key] = { ...config };
+      } else if (!panelSettings[key]!.enabled) {
+        panelSettings[key] = { ...panelSettings[key]!, enabled: true };
+      }
+    }
+
+    // One-time migration per variant: ensure each variant's core layer group
+    // and default-enabled panels start active, even for older saved settings.
+    const REQUIRED_DEFAULTS_MIGRATION_KEY = `worldmonitor-required-defaults-${currentVariant}-v2`;
+    if (!localStorage.getItem(REQUIRED_DEFAULTS_MIGRATION_KEY)) {
+      let mapLayersChanged = false;
+      requiredLayers.forEach((layer) => {
+        if (!mapLayers[layer]) {
+          mapLayers[layer] = true;
+          mapLayersChanged = true;
+        }
+      });
+      if (mapLayersChanged) {
+        saveToStorage(STORAGE_KEYS.mapLayers, mapLayers);
+      }
+
+      const requiredPanels = Object.entries(DEFAULT_PANELS)
+        .filter(([, config]) => config.enabled)
+        .map(([key]) => key);
+      let panelSettingsChanged = false;
+      requiredPanels.forEach((key) => {
+        const defaultConfig = DEFAULT_PANELS[key];
+        if (!defaultConfig) return;
+        const current = panelSettings[key];
+        if (!current) {
+          panelSettings[key] = { ...defaultConfig };
+          panelSettingsChanged = true;
+          return;
+        }
+        if (!current.enabled) {
+          panelSettings[key] = { ...current, enabled: true };
+          panelSettingsChanged = true;
+        }
+      });
+      if (panelSettingsChanged) {
+        saveToStorage(STORAGE_KEYS.panels, panelSettings);
+      }
+
+      localStorage.setItem(REQUIRED_DEFAULTS_MIGRATION_KEY, 'done');
+    }
+
     // One-time migration: clear stale panel ordering and sizing state
     const LAYOUT_RESET_MIGRATION_KEY = 'worldmonitor-layout-reset-v2.5';
     if (!localStorage.getItem(LAYOUT_RESET_MIGRATION_KEY)) {
@@ -203,6 +271,10 @@ export class App {
         });
       }
       mapLayers = initialUrlState.layers;
+      // URL layer params must not disable the active variant's core layer set.
+      requiredLayers.forEach((layer) => {
+        mapLayers[layer] = true;
+      });
     }
     if (!CYBER_LAYER_ENABLED) {
       mapLayers.cyberThreats = false;

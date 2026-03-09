@@ -1,7 +1,7 @@
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
 import { escapeHtml } from '@/utils/sanitize';
-import { getCSSColor } from '@/utils';
+import { getCSSColor, getCurrentTheme } from '@/utils';
 import type { Topology, GeometryCollection } from 'topojson-specification';
 import type { Feature, Geometry } from 'geojson';
 import type { MapLayers, Hotspot, NewsItem, InternetOutage, RelatedAsset, AssetType, AisDisruptionEvent, AisDensityZone, CableAdvisory, RepairShip, SocialUnrestEvent, MilitaryFlight, MilitaryVessel, MilitaryFlightCluster, MilitaryVesselCluster, NaturalEvent, CyberThreat, CableHealthRecord } from '@/types';
@@ -58,6 +58,7 @@ import { getAlertsNearLocation } from '@/services/geo-convergence';
 import { getCountryAtCoordinates, getCountryBbox } from '@/services/country-geometry';
 import type { CountryClickPayload } from './DeckGLMap';
 import { t } from '@/services/i18n';
+import { LAYER_REGISTRY, resolveLayerAccentColor, resolveLayerIcon, resolveLayerLabel, type MapVariant } from '@/config/map-layer-definitions';
 
 export type TimeRange = '1h' | '6h' | '24h' | '48h' | '7d' | 'all';
 export type MapView = 'global' | 'america' | 'mena' | 'eu' | 'asia' | 'latam' | 'africa' | 'oceania';
@@ -165,6 +166,7 @@ export class MapComponent {
   private lastRenderTime = 0;
   private readonly MIN_RENDER_INTERVAL_MS = 100;
   private healthCheckLoop: SmartPollLoopHandle | null = null;
+  private legendEl: HTMLElement | null = null;
 
   constructor(container: HTMLElement, initialState: MapState) {
     this.container = container;
@@ -215,6 +217,7 @@ export class MapComponent {
 
     this.handleThemeChange = () => {
       this.baseRendered = false;
+      this.refreshLegend();
       this.render();
     };
     window.addEventListener('theme-changed', this.handleThemeChange);
@@ -357,79 +360,97 @@ export class MapComponent {
     return ranges[this.state.timeRange];
   }
 
+  private getThemeMode(): 'light' | 'dark' {
+    return getCurrentTheme() === 'light' ? 'light' : 'dark';
+  }
+
+  private getVariantLayerKeys(): (keyof MapLayers)[] {
+    const fullLayers: (keyof MapLayers)[] = [
+      'iranAttacks',
+      'conflicts', 'hotspots', 'sanctions', 'protests',
+      'bases', 'nuclear', 'irradiators',
+      'military',
+      'cables', 'pipelines', 'outages', 'datacenters',
+      'ais', 'flights', 'gpsJamming',
+      'natural', 'weather',
+      'economic',
+      'waterways',
+      'ciiChoropleth',
+    ];
+    const techLayers: (keyof MapLayers)[] = [
+      'cables', 'datacenters', 'outages',
+      'startupHubs', 'cloudRegions', 'accelerators', 'techHQs', 'techEvents',
+      'natural', 'weather',
+      'economic',
+    ];
+    const financeLayers: (keyof MapLayers)[] = [
+      'stockExchanges', 'financialCenters', 'centralBanks', 'commodityHubs',
+      'cables', 'pipelines', 'outages',
+      'sanctions', 'economic', 'waterways',
+      'natural', 'weather',
+    ];
+    const happyLayers: (keyof MapLayers)[] = [
+      'positiveEvents', 'kindness', 'happiness', 'speciesRecovery', 'renewableInstallations',
+    ];
+    const commodityLayers: (keyof MapLayers)[] = [
+      'miningSites', 'processingPlants', 'commodityPorts', 'commodityHubs',
+      'minerals', 'pipelines', 'waterways', 'tradeRoutes',
+      'natural', 'weather', 'outages',
+    ];
+
+    switch ((SITE_VARIANT || 'full') as MapVariant) {
+      case 'tech':
+        return techLayers;
+      case 'finance':
+        return financeLayers;
+      case 'happy':
+        return happyLayers;
+      case 'commodity':
+        return commodityLayers;
+      default:
+        return fullLayers;
+    }
+  }
+
+  private getLayerLabel(layer: keyof MapLayers): string {
+    return resolveLayerLabel(LAYER_REGISTRY[layer], t);
+  }
+
+  private createSharedIcon(layer: keyof MapLayers, className: string, color = resolveLayerAccentColor(layer, this.getThemeMode())): HTMLDivElement {
+    const icon = document.createElement('div');
+    icon.className = `${className} map-shared-icon`;
+    icon.style.color = color;
+    icon.innerHTML = resolveLayerIcon(layer);
+    return icon;
+  }
+
+  private refreshLegend(): void {
+    if (!this.legendEl) return;
+    const itemsRoot = this.legendEl.querySelector('.map-legend-items') as HTMLElement | null;
+    if (!itemsRoot) return;
+
+    const activeLayers = this.getVariantLayerKeys().filter((layer) => this.state.layers[layer]);
+    if (activeLayers.length === 0) {
+      itemsRoot.innerHTML = '<div class="map-legend-item"><span class="map-legend-empty">No active layers</span></div>';
+      return;
+    }
+
+    const theme = this.getThemeMode();
+    itemsRoot.innerHTML = activeLayers
+      .map((layer) => {
+        const color = resolveLayerAccentColor(layer, theme);
+        return `<div class="map-legend-item"><span class="map-legend-icon" style="color:${color}">${resolveLayerIcon(layer)}</span>${escapeHtml(this.getLayerLabel(layer).toUpperCase())}</div>`;
+      })
+      .join('');
+  }
+
 
 
   private createLayerToggles(): HTMLElement {
     const toggles = document.createElement('div');
     toggles.className = 'layer-toggles';
     toggles.id = 'layerToggles';
-
-    // Variant-aware layer buttons
-    const fullLayers: (keyof MapLayers)[] = [
-      'iranAttacks',                                      // Iran conflict
-      'conflicts', 'hotspots', 'sanctions', 'protests',  // geopolitical
-      'bases', 'nuclear', 'irradiators',                 // military/strategic
-      'military',                                         // military tracking (flights + vessels)
-      'cables', 'pipelines', 'outages', 'datacenters',   // infrastructure
-      // cyberThreats is intentionally hidden on SVG/mobile fallback (DeckGL desktop only)
-      'ais', 'flights', 'gpsJamming',                      // transport/interference
-      'natural', 'weather',                               // natural
-      'economic',                                         // economic
-      'waterways',                                        // labels
-      'ciiChoropleth',                                    // CII heat-map (DeckGL only, shown as disabled toggle)
-    ];
-    const techLayers: (keyof MapLayers)[] = [
-      'cables', 'datacenters', 'outages',                // tech infrastructure
-      'startupHubs', 'cloudRegions', 'accelerators', 'techHQs', 'techEvents', // tech ecosystem
-      'natural', 'weather',                               // natural events
-      'economic',                                         // economic/geographic
-    ];
-    const financeLayers: (keyof MapLayers)[] = [
-      'stockExchanges', 'financialCenters', 'centralBanks', 'commodityHubs', // finance ecosystem
-      'cables', 'pipelines', 'outages',                   // infrastructure
-      'sanctions', 'economic', 'waterways',               // geopolitical/economic
-      'natural', 'weather',                               // natural events
-    ];
-    const happyLayers: (keyof MapLayers)[] = [
-      'positiveEvents', 'kindness', 'happiness', 'speciesRecovery', 'renewableInstallations',
-    ];
-    const layers = SITE_VARIANT === 'tech' ? techLayers : SITE_VARIANT === 'finance' ? financeLayers : SITE_VARIANT === 'happy' ? happyLayers : fullLayers;
-    const layerLabelKeys: Partial<Record<keyof MapLayers, string>> = {
-      hotspots: 'components.deckgl.layers.intelHotspots',
-      conflicts: 'components.deckgl.layers.conflictZones',
-      bases: 'components.deckgl.layers.militaryBases',
-      nuclear: 'components.deckgl.layers.nuclearSites',
-      irradiators: 'components.deckgl.layers.gammaIrradiators',
-      military: 'components.deckgl.layers.militaryActivity',
-      cables: 'components.deckgl.layers.underseaCables',
-      pipelines: 'components.deckgl.layers.pipelines',
-      outages: 'components.deckgl.layers.internetOutages',
-      datacenters: 'components.deckgl.layers.aiDataCenters',
-      ais: 'components.deckgl.layers.shipTraffic',
-      flights: 'components.deckgl.layers.flightDelays',
-      natural: 'components.deckgl.layers.naturalEvents',
-      weather: 'components.deckgl.layers.weatherAlerts',
-      economic: 'components.deckgl.layers.economicCenters',
-      waterways: 'components.deckgl.layers.strategicWaterways',
-      startupHubs: 'components.deckgl.layers.startupHubs',
-      cloudRegions: 'components.deckgl.layers.cloudRegions',
-      accelerators: 'components.deckgl.layers.accelerators',
-      techHQs: 'components.deckgl.layers.techHQs',
-      techEvents: 'components.deckgl.layers.techEvents',
-      stockExchanges: 'components.deckgl.layers.stockExchanges',
-      financialCenters: 'components.deckgl.layers.financialCenters',
-      centralBanks: 'components.deckgl.layers.centralBanks',
-      commodityHubs: 'components.deckgl.layers.commodityHubs',
-      gulfInvestments: 'components.deckgl.layers.gulfInvestments',
-      iranAttacks: 'components.deckgl.layers.iranAttacks',
-      gpsJamming: 'components.deckgl.layers.gpsJamming',
-      ciiChoropleth: 'components.deckgl.layers.ciiChoropleth',
-    };
-    const getLayerLabel = (layer: keyof MapLayers): string => {
-      if (layer === 'sanctions') return t('components.deckgl.layerHelp.labels.sanctions');
-      const key = layerLabelKeys[layer];
-      return key ? t(key) : layer;
-    };
+    const layers = this.getVariantLayerKeys();
 
     const MAX_SVG_LAYERS = 9;
     const enforceLayerLimit = () => {
@@ -459,7 +480,11 @@ export class MapComponent {
       const btn = document.createElement('button');
       btn.className = `layer-toggle ${this.state.layers[layer] ? 'active' : ''}`;
       btn.dataset.layer = layer;
-      btn.textContent = getLayerLabel(layer);
+      const icon = this.createSharedIcon(layer, 'layer-toggle-icon');
+      const label = document.createElement('span');
+      label.className = 'layer-toggle-label';
+      label.textContent = this.getLayerLabel(layer);
+      btn.append(icon, label);
       btn.addEventListener('click', () => {
         this.toggleLayer(layer);
         enforceLayerLimit();
@@ -645,32 +670,9 @@ export class MapComponent {
   private createLegend(): HTMLElement {
     const legend = document.createElement('div');
     legend.className = 'map-legend';
-
-    if (SITE_VARIANT === 'tech') {
-      // Tech variant legend
-      legend.innerHTML = `
-        <div class="map-legend-item"><span class="legend-dot" style="background:#8b5cf6"></span>${escapeHtml(t('components.deckgl.layers.techHQs').toUpperCase())}</div>
-        <div class="map-legend-item"><span class="legend-dot" style="background:#06b6d4"></span>${escapeHtml(t('components.deckgl.layers.startupHubs').toUpperCase())}</div>
-        <div class="map-legend-item"><span class="legend-dot" style="background:#f59e0b"></span>${escapeHtml(t('components.deckgl.layers.cloudRegions').toUpperCase())}</div>
-        <div class="map-legend-item"><span class="map-legend-icon" style="color:#a855f7">📅</span>${escapeHtml(t('components.deckgl.layers.techEvents').toUpperCase())}</div>
-        <div class="map-legend-item"><span class="map-legend-icon" style="color:#4ecdc4">💾</span>${escapeHtml(t('components.deckgl.layers.aiDataCenters').toUpperCase())}</div>
-      `;
-    } else if (SITE_VARIANT === 'happy') {
-      // Happy variant legend — natural events only
-      legend.innerHTML = `
-        <div class="map-legend-item"><span class="map-legend-icon earthquake">●</span>${escapeHtml(t('components.deckgl.layers.naturalEvents').toUpperCase())}</div>
-      `;
-    } else {
-      // Geopolitical variant legend
-      legend.innerHTML = `
-        <div class="map-legend-item"><span class="legend-dot high"></span>${escapeHtml((t('popups.hotspot.levels.high') ?? 'HIGH').toUpperCase())}</div>
-        <div class="map-legend-item"><span class="legend-dot elevated"></span>${escapeHtml((t('popups.hotspot.levels.elevated') ?? 'ELEVATED').toUpperCase())}</div>
-        <div class="map-legend-item"><span class="legend-dot low"></span>${escapeHtml((t('popups.monitoring') ?? 'MONITORING').toUpperCase())}</div>
-        <div class="map-legend-item"><span class="map-legend-icon conflict">⚔</span>${escapeHtml(t('modals.search.types.conflict').toUpperCase())}</div>
-        <div class="map-legend-item"><span class="map-legend-icon earthquake">●</span>${escapeHtml(t('modals.search.types.earthquake').toUpperCase())}</div>
-        <div class="map-legend-item"><span class="map-legend-icon apt">⚠</span>APT</div>
-      `;
-    }
+    legend.innerHTML = '<div class="map-legend-items"></div>';
+    this.legendEl = legend;
+    this.refreshLegend();
     return legend;
   }
 
@@ -1629,7 +1631,7 @@ export class MapComponent {
       console.log('[Map] Actually rendered', rendered, 'earthquake markers');
     }
 
-    // Economic Centers (always HTML - emoji icons for type distinction)
+    // Economic Centers
     if (this.state.layers.economic) {
       ECONOMIC_CENTERS.forEach((center) => {
         const pos = projection([center.lon, center.lat]);
@@ -1640,9 +1642,7 @@ export class MapComponent {
         div.style.left = `${pos[0]}px`;
         div.style.top = `${pos[1]}px`;
 
-        const icon = document.createElement('div');
-        icon.className = 'economic-icon';
-        icon.textContent = center.type === 'exchange' ? '📈' : center.type === 'central-bank' ? '🏛' : '💰';
+        const icon = this.createSharedIcon('economic', 'economic-icon');
         div.appendChild(icon);
         div.title = center.name;
 
@@ -1661,7 +1661,7 @@ export class MapComponent {
       });
     }
 
-    // Weather Alerts (severity icons)
+    // Weather Alerts
     if (this.state.layers.weather) {
       this.weatherAlerts.forEach((alert) => {
         if (!alert.centroid) return;
@@ -1674,9 +1674,7 @@ export class MapComponent {
         div.style.top = `${pos[1]}px`;
         div.style.borderColor = getSeverityColor(alert.severity);
 
-        const icon = document.createElement('div');
-        icon.className = 'weather-icon';
-        icon.textContent = '⚠';
+        const icon = this.createSharedIcon('weather', 'weather-icon');
         div.appendChild(icon);
 
         div.addEventListener('click', (e) => {
@@ -1694,7 +1692,7 @@ export class MapComponent {
       });
     }
 
-    // Internet Outages (severity colors)
+    // Internet Outages
     if (this.state.layers.outages) {
       this.outages.forEach((outage) => {
         const pos = projection([outage.lon, outage.lat]);
@@ -1705,9 +1703,7 @@ export class MapComponent {
         div.style.left = `${pos[0]}px`;
         div.style.top = `${pos[1]}px`;
 
-        const icon = document.createElement('div');
-        icon.className = 'outage-icon';
-        icon.textContent = '📡';
+        const icon = this.createSharedIcon('outages', 'outage-icon');
         div.appendChild(icon);
 
         const label = document.createElement('div');
@@ -1741,9 +1737,7 @@ export class MapComponent {
         div.style.left = `${pos[0]}px`;
         div.style.top = `${pos[1]}px`;
 
-        const icon = document.createElement('div');
-        icon.className = 'cable-advisory-icon';
-        icon.textContent = advisory.severity === 'fault' ? '⚡' : '⚠';
+        const icon = this.createSharedIcon('cables', 'cable-advisory-icon');
         div.appendChild(icon);
 
         const label = document.createElement('div');
@@ -1774,9 +1768,7 @@ export class MapComponent {
         div.style.left = `${pos[0]}px`;
         div.style.top = `${pos[1]}px`;
 
-        const icon = document.createElement('div');
-        icon.className = 'repair-ship-icon';
-        icon.textContent = '🚢';
+        const icon = this.createSharedIcon('cables', 'repair-ship-icon');
         div.appendChild(icon);
 
         const label = document.createElement('div');
@@ -1799,7 +1791,7 @@ export class MapComponent {
       });
     }
 
-    // AI Data Centers (always HTML - 🖥️ icons, filter to ≥10k GPUs)
+    // AI Data Centers
     const MIN_GPU_COUNT = 10000;
     if (this.state.layers.datacenters) {
       AI_DATA_CENTERS.filter(dc => (dc.chipCount || 0) >= MIN_GPU_COUNT).forEach((dc) => {
@@ -1812,9 +1804,7 @@ export class MapComponent {
         div.style.left = `${pos[0]}px`;
         div.style.top = `${pos[1]}px`;
 
-        const icon = document.createElement('div');
-        icon.className = 'datacenter-icon';
-        icon.textContent = '🖥️';
+        const icon = this.createSharedIcon('datacenters', 'datacenter-icon');
         div.appendChild(icon);
 
         div.addEventListener('click', (e) => {
@@ -1832,7 +1822,7 @@ export class MapComponent {
       });
     }
 
-    // Spaceports (🚀 icon)
+    // Spaceports
     if (this.state.layers.spaceports) {
       SPACEPORTS.forEach((port) => {
         const pos = projection([port.lon, port.lat]);
@@ -1843,9 +1833,7 @@ export class MapComponent {
         div.style.left = `${pos[0]}px`;
         div.style.top = `${pos[1]}px`;
 
-        const icon = document.createElement('div');
-        icon.className = 'spaceport-icon';
-        icon.textContent = '🚀';
+        const icon = this.createSharedIcon('spaceports', 'spaceport-icon');
         div.appendChild(icon);
 
         const label = document.createElement('div');
@@ -1868,7 +1856,7 @@ export class MapComponent {
       });
     }
 
-    // Critical Minerals (💎 icon)
+    // Critical Minerals
     if (this.state.layers.minerals) {
       CRITICAL_MINERALS.forEach((mine) => {
         const pos = projection([mine.lon, mine.lat]);
@@ -1879,10 +1867,7 @@ export class MapComponent {
         div.style.left = `${pos[0]}px`;
         div.style.top = `${pos[1]}px`;
 
-        const icon = document.createElement('div');
-        icon.className = 'mineral-icon';
-        // Select icon based on mineral type
-        icon.textContent = mine.mineral === 'Lithium' ? '🔋' : mine.mineral === 'Rare Earths' ? '🧲' : '💎';
+        const icon = this.createSharedIcon('minerals', 'mineral-icon');
         div.appendChild(icon);
 
         const label = document.createElement('div');
@@ -1907,7 +1892,7 @@ export class MapComponent {
 
     // === TECH VARIANT LAYERS ===
 
-    // Startup Hubs (🚀 icon by tier)
+    // Startup Hubs
     if (this.state.layers.startupHubs) {
       STARTUP_HUBS.forEach((hub) => {
         const pos = projection([hub.lon, hub.lat]);
@@ -1918,9 +1903,7 @@ export class MapComponent {
         div.style.left = `${pos[0]}px`;
         div.style.top = `${pos[1]}px`;
 
-        const icon = document.createElement('div');
-        icon.className = 'startup-hub-icon';
-        icon.textContent = hub.tier === 'mega' ? '🦄' : hub.tier === 'major' ? '🚀' : '💡';
+        const icon = this.createSharedIcon('startupHubs', 'startup-hub-icon');
         div.appendChild(icon);
 
         if (this.state.zoom >= 2 || hub.tier === 'mega') {
@@ -1945,7 +1928,7 @@ export class MapComponent {
       });
     }
 
-    // Cloud Regions (☁️ icons by provider)
+    // Cloud Regions
     if (this.state.layers.cloudRegions) {
       CLOUD_REGIONS.forEach((region) => {
         const pos = projection([region.lon, region.lat]);
@@ -1956,11 +1939,7 @@ export class MapComponent {
         div.style.left = `${pos[0]}px`;
         div.style.top = `${pos[1]}px`;
 
-        const icon = document.createElement('div');
-        icon.className = 'cloud-region-icon';
-        // Provider-specific icons
-        const icons: Record<string, string> = { aws: '🟠', gcp: '🔵', azure: '🟣', cloudflare: '🟡' };
-        icon.textContent = icons[region.provider] || '☁️';
+        const icon = this.createSharedIcon('cloudRegions', 'cloud-region-icon');
         div.appendChild(icon);
 
         if (this.state.zoom >= 3) {
@@ -1985,7 +1964,7 @@ export class MapComponent {
       });
     }
 
-    // Tech HQs (🏢 icons by company type) - with clustering by city
+    // Tech HQs
     if (this.state.layers.techHQs) {
       // Cluster radius depends on zoom - tighter clustering when zoomed out
       const clusterRadius = this.state.zoom >= 4 ? 15 : this.state.zoom >= 3 ? 25 : 40;
@@ -2002,23 +1981,17 @@ export class MapComponent {
         div.style.left = `${cluster.pos[0]}px`;
         div.style.top = `${cluster.pos[1]}px`;
 
-        const icon = document.createElement('div');
-        icon.className = 'tech-hq-icon';
+        const icon = this.createSharedIcon('techHQs', 'tech-hq-icon');
 
         if (isCluster) {
           // Show count for clusters
-          const unicornCount = cluster.items.filter(h => h.type === 'unicorn').length;
-          const faangCount = cluster.items.filter(h => h.type === 'faang').length;
-          icon.textContent = faangCount > 0 ? '🏛️' : unicornCount > 0 ? '🦄' : '🏢';
-
+          
           const badge = document.createElement('div');
           badge.className = 'cluster-badge';
           badge.textContent = String(cluster.items.length);
           div.appendChild(badge);
 
           div.title = cluster.items.map(h => h.company).join(', ');
-        } else {
-          icon.textContent = primaryItem.type === 'faang' ? '🏛️' : primaryItem.type === 'unicorn' ? '🦄' : '🏢';
         }
         div.appendChild(icon);
 
@@ -2055,7 +2028,7 @@ export class MapComponent {
       });
     }
 
-    // Accelerators (🎯 icons)
+    // Accelerators
     if (this.state.layers.accelerators) {
       ACCELERATORS.forEach((acc) => {
         const pos = projection([acc.lon, acc.lat]);
@@ -2066,9 +2039,7 @@ export class MapComponent {
         div.style.left = `${pos[0]}px`;
         div.style.top = `${pos[1]}px`;
 
-        const icon = document.createElement('div');
-        icon.className = 'accelerator-icon';
-        icon.textContent = acc.type === 'accelerator' ? '🎯' : acc.type === 'incubator' ? '🔬' : '🎨';
+        const icon = this.createSharedIcon('accelerators', 'accelerator-icon');
         div.appendChild(icon);
 
         if (this.state.zoom >= 3) {
@@ -2093,7 +2064,7 @@ export class MapComponent {
       });
     }
 
-    // Tech Events / Conferences (📅 icons) - with clustering
+    // Tech Events / Conferences
     if (this.state.layers.techEvents && this.techEvents.length > 0) {
       const mapWidth = this.container.clientWidth;
       const mapHeight = this.container.clientHeight;
@@ -2120,6 +2091,9 @@ export class MapComponent {
         div.className = `tech-event-marker ${hasUpcomingSoon ? 'upcoming-soon' : ''} ${isCluster ? 'cluster' : ''}`;
         div.style.left = `${cluster.pos[0]}px`;
         div.style.top = `${cluster.pos[1]}px`;
+
+        const icon = this.createSharedIcon('techEvents', 'tech-event-icon');
+        div.appendChild(icon);
 
         if (isCluster) {
           const badge = document.createElement('div');
@@ -2153,24 +2127,23 @@ export class MapComponent {
       });
     }
 
-    // Stock Exchanges (🏛️ icon by tier)
+    // Stock Exchanges
     if (this.state.layers.stockExchanges) {
       STOCK_EXCHANGES.forEach((exchange) => {
         const pos = projection([exchange.lon, exchange.lat]);
         if (!pos || !Number.isFinite(pos[0]) || !Number.isFinite(pos[1])) return;
 
-        const icon = exchange.tier === 'mega' ? '🏛️' : exchange.tier === 'major' ? '📊' : '📈';
         const div = document.createElement('div');
         div.className = `map-marker exchange-marker tier-${exchange.tier}`;
         div.style.left = `${pos[0]}px`;
         div.style.top = `${pos[1]}px`;
         div.style.zIndex = exchange.tier === 'mega' ? '50' : '40';
-        div.textContent = icon;
+        div.appendChild(this.createSharedIcon('stockExchanges', 'map-marker-icon'));
         div.title = `${exchange.shortName} (${exchange.city})`;
 
         if ((this.state.zoom >= 2 && exchange.tier === 'mega') || this.state.zoom >= 3) {
           const label = document.createElement('span');
-          label.className = 'marker-label';
+          label.className = 'map-marker-label';
           label.textContent = exchange.shortName;
           div.appendChild(label);
         }
@@ -2190,24 +2163,23 @@ export class MapComponent {
       });
     }
 
-    // Financial Centers (💰 icon by type)
+    // Financial Centers
     if (this.state.layers.financialCenters) {
       FINANCIAL_CENTERS.forEach((center) => {
         const pos = projection([center.lon, center.lat]);
         if (!pos || !Number.isFinite(pos[0]) || !Number.isFinite(pos[1])) return;
 
-        const icon = center.type === 'global' ? '💰' : center.type === 'regional' ? '🏦' : '🏝️';
         const div = document.createElement('div');
         div.className = `map-marker financial-center-marker type-${center.type}`;
         div.style.left = `${pos[0]}px`;
         div.style.top = `${pos[1]}px`;
         div.style.zIndex = center.type === 'global' ? '45' : '35';
-        div.textContent = icon;
+        div.appendChild(this.createSharedIcon('financialCenters', 'map-marker-icon'));
         div.title = `${center.name} Financial Center`;
 
         if ((this.state.zoom >= 2 && center.type === 'global') || this.state.zoom >= 3) {
           const label = document.createElement('span');
-          label.className = 'marker-label';
+          label.className = 'map-marker-label';
           label.textContent = center.name;
           div.appendChild(label);
         }
@@ -2227,24 +2199,23 @@ export class MapComponent {
       });
     }
 
-    // Central Banks (🏛️ icon by type)
+    // Central Banks
     if (this.state.layers.centralBanks) {
       CENTRAL_BANKS.forEach((bank) => {
         const pos = projection([bank.lon, bank.lat]);
         if (!pos || !Number.isFinite(pos[0]) || !Number.isFinite(pos[1])) return;
 
-        const icon = bank.type === 'supranational' ? '🌐' : bank.type === 'major' ? '🏛️' : '🏦';
         const div = document.createElement('div');
         div.className = `map-marker central-bank-marker type-${bank.type}`;
         div.style.left = `${pos[0]}px`;
         div.style.top = `${pos[1]}px`;
         div.style.zIndex = bank.type === 'supranational' ? '48' : bank.type === 'major' ? '42' : '38';
-        div.textContent = icon;
+        div.appendChild(this.createSharedIcon('centralBanks', 'map-marker-icon'));
         div.title = `${bank.shortName} - ${bank.name}`;
 
         if ((this.state.zoom >= 2 && (bank.type === 'major' || bank.type === 'supranational')) || this.state.zoom >= 3) {
           const label = document.createElement('span');
-          label.className = 'marker-label';
+          label.className = 'map-marker-label';
           label.textContent = bank.shortName;
           div.appendChild(label);
         }
@@ -2264,24 +2235,23 @@ export class MapComponent {
       });
     }
 
-    // Commodity Hubs (⛽ icon by type)
+    // Commodity Hubs
     if (this.state.layers.commodityHubs) {
       COMMODITY_HUBS.forEach((hub) => {
         const pos = projection([hub.lon, hub.lat]);
         if (!pos || !Number.isFinite(pos[0]) || !Number.isFinite(pos[1])) return;
 
-        const icon = hub.type === 'exchange' ? '📦' : hub.type === 'port' ? '🚢' : '⛽';
         const div = document.createElement('div');
         div.className = `map-marker commodity-hub-marker type-${hub.type}`;
         div.style.left = `${pos[0]}px`;
         div.style.top = `${pos[1]}px`;
         div.style.zIndex = '38';
-        div.textContent = icon;
+        div.appendChild(this.createSharedIcon('commodityHubs', 'map-marker-icon'));
         div.title = `${hub.name} (${hub.city})`;
 
         if (this.state.zoom >= 3) {
           const label = document.createElement('span');
-          label.className = 'marker-label';
+          label.className = 'map-marker-label';
           label.textContent = hub.name;
           div.appendChild(label);
         }
@@ -3125,6 +3095,7 @@ export class MapComponent {
     }
 
     this.onLayerChange?.(layer, this.state.layers[layer], source);
+    this.refreshLegend();
     // Defer render to next frame to avoid blocking the click handler
     requestAnimationFrame(() => this.render());
   }
@@ -3615,6 +3586,7 @@ export class MapComponent {
   public setLayers(layers: MapLayers): void {
     this.state.layers = { ...layers };
     this.syncLayerButtons();
+    this.refreshLegend();
     this.render();
   }
 
