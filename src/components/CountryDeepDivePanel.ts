@@ -830,6 +830,9 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
 
   private open(): void {
     if (this.panel.classList.contains('active')) return;
+    if (!this.panel.isConnected) {
+      document.body.appendChild(this.panel);
+    }
     this.lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     this.panel.classList.add('active');
     this.panel.setAttribute('aria-hidden', 'false');

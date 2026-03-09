@@ -533,3 +533,93 @@ export async function fetchCountryMarkets(country: string): Promise<PredictionMa
     return [];
   }
 }
+
+/** Live search — used by the search modal for on-demand prediction market results. */
+export async function searchPredictions(query: string): Promise<PredictionMarket[]> {
+  if (!query || query.length < 2) return [];
+  const lowerQuery = query.toLowerCase();
+
+  // Strategy 1: Sebuf RPC (works in production on Vercel)
+  try {
+    const resp = await client.listPredictionMarkets({
+      category: '',
+      query,
+      pageSize: 10,
+      cursor: '',
+    });
+    if (resp.markets && resp.markets.length > 0) {
+      return resp.markets
+        .filter(m => !isExpired(m.closesAt ? new Date(m.closesAt).toISOString() : undefined))
+        .map(m => ({
+          title: m.title,
+          yesPrice: m.yesPrice * 100,
+          volume: m.volume,
+          url: m.url,
+          endDate: m.closesAt ? new Date(m.closesAt).toISOString() : undefined,
+        }));
+    }
+  } catch { /* RPC unavailable (e.g. localhost), fall through */ }
+
+  // Strategy 2: Gamma API via polyFetch — fetch top events and filter client-side
+  try {
+    const response = await polyFetch('events', {
+      closed: 'false',
+      active: 'true',
+      archived: 'false',
+      end_date_min: new Date().toISOString(),
+      order: 'volume',
+      ascending: 'false',
+      limit: '100',
+    });
+    if (!response.ok) return [];
+    const events: PolymarketEvent[] = await response.json();
+    if (!Array.isArray(events)) return [];
+
+    const results: PredictionMarket[] = [];
+    const seen = new Set<string>();
+
+    for (const event of events) {
+      if (event.closed || seen.has(event.id)) continue;
+      seen.add(event.id);
+
+      const titleMatches = event.title?.toLowerCase().includes(lowerQuery);
+      const matchingMarkets = (event.markets ?? []).filter(m =>
+        m.question?.toLowerCase().includes(lowerQuery),
+      );
+
+      if (!titleMatches && matchingMarkets.length === 0) continue;
+      if (isExcluded(event.title)) continue;
+
+      const candidates = matchingMarkets.length > 0
+        ? matchingMarkets.filter(m => !m.closed && !isExpired(m.endDate))
+        : (event.markets ?? []).filter(m => !m.closed && !isExpired(m.endDate));
+
+      if (candidates.length > 0) {
+        const topMarket = candidates.reduce((best, m) => {
+          const vol = m.volumeNum ?? (m.volume ? parseFloat(m.volume) : 0);
+          const bestVol = best.volumeNum ?? (best.volume ? parseFloat(best.volume) : 0);
+          return vol > bestVol ? m : best;
+        });
+        results.push({
+          title: topMarket.question || event.title,
+          yesPrice: parseMarketPrice(topMarket),
+          volume: event.volume ?? 0,
+          url: buildMarketUrl(event.slug),
+          endDate: parseEndDate(topMarket.endDate ?? event.endDate),
+        });
+      } else if (titleMatches) {
+        results.push({
+          title: event.title,
+          yesPrice: 50,
+          volume: event.volume ?? 0,
+          url: buildMarketUrl(event.slug),
+          endDate: parseEndDate(event.endDate),
+        });
+      }
+    }
+
+    return results
+      .sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0))
+      .slice(0, 10);
+  } catch { return []; }
+}

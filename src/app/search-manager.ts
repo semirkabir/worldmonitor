@@ -23,6 +23,7 @@ import { trackSearchResultSelected, trackCountrySelected } from '@/services/anal
 import { t } from '@/services/i18n';
 import { saveToStorage, setTheme } from '@/utils';
 import { CountryIntelManager } from '@/app/country-intel';
+import { searchPredictions } from '@/services/prediction';
 
 export interface SearchManagerCallbacks {
   openCountryBriefByCode: (code: string, country: string) => void;
@@ -375,6 +376,7 @@ export class SearchManager implements AppModule {
       case 'country': {
         const { code, name } = result.data as { code: string; name: string };
         trackCountrySelected(code, name, 'search');
+        this.ctx.map?.setView('global');
         this.callbacks.openCountryBriefByCode(code, name);
         break;
       }
@@ -527,6 +529,17 @@ export class SearchManager implements AppModule {
         data: p,
       })));
     }
+
+    // Live prediction search — fetches matching markets from the API on demand
+    this.ctx.searchModal.registerAsyncSource('prediction', async (query) => {
+      const markets = await searchPredictions(query);
+      return markets.map(p => ({
+        id: `live-${p.title}`,
+        title: p.title,
+        subtitle: `${Math.round(p.yesPrice)}% probability`,
+        data: p,
+      }));
+    });
 
     if (this.ctx.latestMarkets.length > 0) {
       this.ctx.searchModal.registerSource('market', this.ctx.latestMarkets.map(m => ({

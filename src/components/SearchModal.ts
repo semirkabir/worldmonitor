@@ -85,7 +85,9 @@ export class SearchModal {
   private closeTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private viewportHandler: (() => void) | null = null;
   private sources: SearchableSource[] = [];
+  private asyncSources: { type: SearchResultType; fetcher: (query: string) => Promise<SearchableSource['items']> }[] = [];
   private results: SearchResult[] = [];
+  private renderedResults: SearchResult[] = []; // mirrors DOM render order (differs from results when grouped)
   private commandResults: CommandResult[] = [];
   private selectedIndex = 0;
   private recentSearches: string[] = [];
@@ -94,6 +96,8 @@ export class SearchModal {
   private placeholder: string;
   private activePanelIds: Set<string> = new Set();
   private isMobile: boolean;
+  private asyncSearchTimer: ReturnType<typeof setTimeout> | null = null;
+  private asyncSearchVersion = 0;
 
   constructor(container: HTMLElement, options?: SearchModalOptions) {
     this.container = container;
@@ -108,6 +112,15 @@ export class SearchModal {
       this.sources[existingIndex] = { type, items };
     } else {
       this.sources.push({ type, items });
+    }
+  }
+
+  public registerAsyncSource(type: SearchResultType, fetcher: (query: string) => Promise<SearchableSource['items']>): void {
+    const idx = this.asyncSources.findIndex(s => s.type === type);
+    if (idx >= 0) {
+      this.asyncSources[idx] = { type, fetcher };
+    } else {
+      this.asyncSources.push({ type, fetcher });
     }
   }
 
@@ -271,6 +284,8 @@ export class SearchModal {
 
     if (!query) {
       this.commandResults = [];
+      if (this.asyncSearchTimer) { clearTimeout(this.asyncSearchTimer); this.asyncSearchTimer = null; }
+      this.asyncSearchVersion++;
       this.showRecentOrEmpty();
       if (this.isMobile) this.renderChips();
       return;
@@ -314,7 +329,7 @@ export class SearchModal {
     for (const type of priority) {
       const matches = byType.get(type) || [];
       matches.sort((a, b) => b._score - a._score);
-      const limit = this.isMobile ? 2 : (type === 'news' ? 6 : type === 'country' ? 4 : 3);
+      const limit = this.isMobile ? 2 : (type === 'news' ? 6 : type === 'prediction' ? 5 : type === 'country' ? 4 : 3);
       this.results.push(...matches.slice(0, limit));
       if (this.results.length >= maxResults) break;
     }
@@ -324,6 +339,9 @@ export class SearchModal {
     this.selectedIndex = 0;
     this.renderResults();
     if (this.isMobile) this.renderChips(query);
+
+    // Fire async sources (debounced) to augment results with live data
+    this.scheduleAsyncSearch(query);
   }
 
   private showRecentOrEmpty(): void {
@@ -333,6 +351,43 @@ export class SearchModal {
       this.renderRecent();
     } else {
       this.renderEmpty();
+    }
+  }
+
+  private scheduleAsyncSearch(query: string): void {
+    if (this.asyncSources.length === 0) return;
+    if (this.asyncSearchTimer) clearTimeout(this.asyncSearchTimer);
+
+    const version = ++this.asyncSearchVersion;
+    this.asyncSearchTimer = setTimeout(() => {
+      this.runAsyncSearch(query, version);
+    }, 50);
+  }
+
+  private async runAsyncSearch(query: string, version: number): Promise<void> {
+    const existingIds = new Set(this.results.map(r => r.id));
+    let added = false;
+
+    const fetches = this.asyncSources.map(async (source) => {
+      try {
+        const items = await source.fetcher(query);
+        // Stale check — user may have typed more
+        if (version !== this.asyncSearchVersion) return;
+
+        for (const item of items.slice(0, 5)) {
+          if (existingIds.has(item.id)) continue;
+          // Also dedupe by title (static uses title as id, live prefixes with "live-")
+          if (this.results.some(r => r.type === source.type && r.title === item.title)) continue;
+          existingIds.add(item.id);
+          this.results.push({ type: source.type, id: item.id, title: item.title, subtitle: item.subtitle, data: item.data });
+          added = true;
+        }
+      } catch { /* async source failed, ignore */ }
+    });
+
+    await Promise.allSettled(fetches);
+    if (version === this.asyncSearchVersion && added) {
+      this.renderResults();
     }
   }
 
@@ -410,88 +465,161 @@ export class SearchModal {
     return this.commandResults.length + this.results.length;
   }
 
+  private getSectionLabel(type: SearchResultType): string {
+    const labels: Partial<Record<SearchResultType, string>> = {
+      news: 'News', prediction: 'Predictions', country: 'Countries',
+      hotspot: 'Hotspots', conflict: 'Conflicts', market: 'Markets',
+      base: 'Military Bases', pipeline: 'Pipelines', cable: 'Cables',
+      datacenter: 'Data Centers', earthquake: 'Earthquakes', outage: 'Outages',
+      nuclear: 'Nuclear', irradiator: 'Nuclear Sites', techcompany: 'Tech Companies',
+      ailab: 'AI Labs', startup: 'Startups', techevent: 'Tech Events',
+      techhq: 'Tech HQs', accelerator: 'Accelerators', exchange: 'Exchanges',
+      financialcenter: 'Financial Centers', centralbank: 'Central Banks',
+      commodityhub: 'Commodity Hubs',
+    };
+    return labels[type] || type;
+  }
+
+  /** Appends highlighted text (plain text nodes + mark elements) into container. */
+  private appendHighlighted(text: string, container: HTMLElement): void {
+    const query = this.input?.value.trim() || '';
+    if (!query) { container.textContent = text; return; }
+    const escapedQ = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Split on captured match — odd indices are the matches
+    const parts = text.split(new RegExp(`(${escapedQ})`, 'gi'));
+    parts.forEach((part, i) => {
+      if (!part) return;
+      if (i % 2 === 1) {
+        const mark = document.createElement('mark');
+        mark.textContent = part;
+        container.appendChild(mark);
+      } else {
+        container.appendChild(document.createTextNode(part));
+      }
+    });
+  }
+
+  private makeSectionHeader(label: string): HTMLElement {
+    const hdr = document.createElement('div');
+    hdr.className = 'search-section-header';
+    hdr.textContent = label;
+    return hdr;
+  }
+
+  private makeResultItem(index: number): HTMLElement {
+    const row = document.createElement('div');
+    row.className = 'search-result-item' + (index === this.selectedIndex ? ' selected' : '');
+    row.dataset.index = String(index);
+    return row;
+  }
+
   private renderResults(): void {
     if (!this.resultsList) return;
 
     if (this.commandResults.length === 0 && this.results.length === 0) {
-      this.resultsList.innerHTML = `
-        <div class="search-empty">
-          <div class="search-empty-icon">\u2205</div>
-          <div>${t('modals.search.noResults')}</div>
-        </div>
-      `;
+      const empty = document.createElement('div');
+      empty.className = 'search-empty';
+      const icon = document.createElement('div');
+      icon.className = 'search-empty-icon';
+      icon.textContent = '\u2205';
+      const msg = document.createElement('div');
+      msg.textContent = t('modals.search.noResults');
+      empty.appendChild(icon);
+      empty.appendChild(msg);
+      this.resultsList.replaceChildren(empty);
       return;
     }
 
     const icons: Record<SearchResultType, string> = {
-      country: '\u{1F3F3}\uFE0F',
-      news: '\u{1F4F0}',
-      hotspot: '\u{1F4CD}',
-      market: '\u{1F4C8}',
-      prediction: '\u{1F3AF}',
-      conflict: '\u2694\uFE0F',
-      base: '\u{1F3DB}\uFE0F',
-      pipeline: '\u{1F6E2}',
-      cable: '\u{1F310}',
-      datacenter: '\u{1F5A5}\uFE0F',
-      earthquake: '\u{1F30D}',
-      outage: '\u{1F4E1}',
-      nuclear: '\u2622\uFE0F',
-      irradiator: '\u269B\uFE0F',
-      techcompany: '\u{1F3E2}',
-      ailab: '\u{1F9E0}',
-      startup: '\u{1F680}',
-      techevent: '\u{1F4C5}',
-      techhq: '\u{1F984}',
-      accelerator: '\u{1F680}',
-      exchange: '\u{1F3DB}\uFE0F',
-      financialcenter: '\u{1F4B0}',
-      centralbank: '\u{1F3E6}',
-      commodityhub: '\u{1F4E6}',
+      country: '\u{1F3F3}\uFE0F', news: '\u{1F4F0}', hotspot: '\u{1F4CD}',
+      market: '\u{1F4C8}', prediction: '\u{1F3AF}', conflict: '\u2694\uFE0F',
+      base: '\u{1F3DB}\uFE0F', pipeline: '\u{1F6E2}', cable: '\u{1F310}',
+      datacenter: '\u{1F5A5}\uFE0F', earthquake: '\u{1F30D}', outage: '\u{1F4E1}',
+      nuclear: '\u2622\uFE0F', irradiator: '\u269B\uFE0F', techcompany: '\u{1F3E2}',
+      ailab: '\u{1F9E0}', startup: '\u{1F680}', techevent: '\u{1F4C5}',
+      techhq: '\u{1F984}', accelerator: '\u{1F680}', exchange: '\u{1F3DB}\uFE0F',
+      financialcenter: '\u{1F4B0}', centralbank: '\u{1F3E6}', commodityhub: '\u{1F4E6}',
     };
 
-    let html = '';
+    const frag = document.createDocumentFragment();
     let globalIndex = 0;
+    this.renderedResults = []; // rebuild in render order
 
+    const addItem = (row: HTMLElement, idx: number) => {
+      row.addEventListener('click', () => this.selectResult(idx));
+      frag.appendChild(row);
+    };
+
+    // Commands section
     if (this.commandResults.length > 0) {
-      html += `<div class="search-section-header">${t('modals.search.commands')}</div>`;
+      frag.appendChild(this.makeSectionHeader(t('modals.search.commands')));
       for (const { command } of this.commandResults) {
-        html += `
-          <div class="search-result-item command-item ${globalIndex === this.selectedIndex ? 'selected' : ''}" data-index="${globalIndex}" data-command="${command.id}">
-            <span class="search-result-icon">${command.icon}</span>
-            <div class="search-result-content">
-              <div class="search-result-title">${escapeHtml(resolveCommandLabel(command))}</div>
-            </div>
-            <span class="search-result-type">${escapeHtml(resolveCategoryLabel(command))}</span>
-          </div>`;
-        globalIndex++;
-      }
-      if (this.results.length > 0) {
-        html += `<div class="search-section-header">${t('modals.search.results')}</div>`;
+        const row = this.makeResultItem(globalIndex);
+        row.classList.add('command-item');
+        row.dataset.command = command.id;
+
+        const iconEl = document.createElement('span');
+        iconEl.className = 'search-result-icon';
+        iconEl.textContent = command.icon;
+
+        const content = document.createElement('div');
+        content.className = 'search-result-content';
+        const titleEl = document.createElement('div');
+        titleEl.className = 'search-result-title';
+        titleEl.textContent = resolveCommandLabel(command);
+        content.appendChild(titleEl);
+
+        const typeEl = document.createElement('span');
+        typeEl.className = 'search-result-type';
+        typeEl.textContent = resolveCategoryLabel(command);
+
+        row.appendChild(iconEl);
+        row.appendChild(content);
+        row.appendChild(typeEl);
+        addItem(row, globalIndex++);
       }
     }
 
+    // Results grouped by type with a section header per group
+    const typeOrder: SearchResultType[] = [];
+    const byType = new Map<SearchResultType, SearchResult[]>();
     for (const result of this.results) {
-      html += `
-        <div class="search-result-item ${globalIndex === this.selectedIndex ? 'selected' : ''}" data-index="${globalIndex}">
-          <span class="search-result-icon">${icons[result.type]}</span>
-          <div class="search-result-content">
-            <div class="search-result-title">${this.highlightMatch(result.title)}</div>
-            ${result.subtitle ? `<div class="search-result-subtitle">${escapeHtml(result.subtitle)}</div>` : ''}
-          </div>
-          <span class="search-result-type">${escapeHtml(t(`modals.search.types.${result.type}`) || result.type)}</span>
-        </div>`;
-      globalIndex++;
+      if (!byType.has(result.type)) { typeOrder.push(result.type); byType.set(result.type, []); }
+      byType.get(result.type)!.push(result);
     }
 
-    this.resultsList.innerHTML = html;
+    for (const type of typeOrder) {
+      frag.appendChild(this.makeSectionHeader(this.getSectionLabel(type)));
+      for (const result of byType.get(type)!) {
+        this.renderedResults.push(result); // track rendered order
+        const row = this.makeResultItem(globalIndex);
 
-    this.resultsList.querySelectorAll('.search-result-item').forEach((el) => {
-      el.addEventListener('click', () => {
-        const index = parseInt((el as HTMLElement).dataset.index || '0');
-        this.selectResult(index);
-      });
-    });
+        const iconEl = document.createElement('span');
+        iconEl.className = 'search-result-icon';
+        iconEl.textContent = icons[result.type];
+
+        const content = document.createElement('div');
+        content.className = 'search-result-content';
+
+        const titleEl = document.createElement('div');
+        titleEl.className = 'search-result-title';
+        this.appendHighlighted(result.title, titleEl);
+        content.appendChild(titleEl);
+
+        if (result.subtitle) {
+          const sub = document.createElement('div');
+          sub.className = 'search-result-subtitle';
+          sub.textContent = result.subtitle;
+          content.appendChild(sub);
+        }
+
+        row.appendChild(iconEl);
+        row.appendChild(content);
+        addItem(row, globalIndex++);
+      }
+    }
+
+    this.resultsList.replaceChildren(frag);
   }
 
   private renderChips(query?: string): void {
@@ -528,15 +656,6 @@ export class SearchModal {
     });
   }
 
-  private highlightMatch(text: string): string {
-    const query = this.input?.value.trim() || '';
-    const escapedText = escapeHtml(text);
-    if (!query) return escapedText;
-
-    const escapedQuery = escapeHtml(query);
-    const regex = new RegExp(`(${escapedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    return escapedText.replace(regex, '<mark>$1</mark>');
-  }
 
   private handleKeydown(e: KeyboardEvent): void {
     switch (e.key) {
@@ -598,7 +717,7 @@ export class SearchModal {
     }
 
     const entityIndex = index - this.commandResults.length;
-    const result = this.results[entityIndex];
+    const result = this.renderedResults[entityIndex];
     if (!result) return;
 
     this.saveRecentSearch(this.input?.value.trim() || '');
