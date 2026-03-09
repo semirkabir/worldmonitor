@@ -672,8 +672,18 @@ export class DeckGLMap {
     this.deckOverlay = new MapboxOverlay({
       interleaved: true,
       layers: this.buildLayers(),
-      getTooltip: (info: PickingInfo) => this.getTooltip(info),
-      onClick: (info: PickingInfo) => this.handleClick(info),
+      // Disable tiny hover tooltips; use full popup on hover instead of click
+      getTooltip: () => null,
+      onHover: (info: PickingInfo) => {
+        // Show rich popup when hovering an object; clear when leaving
+        if (info.object) {
+          this.handleClick(info);
+        } else {
+          this.popup.hide();
+        }
+      },
+      // Keep click handler as a no-op for now to avoid double-triggering
+      onClick: () => {},
       pickingRadius: 10,
       useDevicePixels: window.devicePixelRatio > 2 ? 2 : true,
       onError: (error: Error) => console.warn('[DeckGLMap] Render error (non-fatal):', error.message),
@@ -1823,38 +1833,46 @@ export class DeckGLMap {
     });
   }
 
-  private createEarthquakesLayer(earthquakes: Earthquake[]): ScatterplotLayer {
-    return new ScatterplotLayer({
+  private createEarthquakesLayer(earthquakes: Earthquake[]): IconLayer {
+    return new IconLayer({
       id: 'earthquakes-layer',
       data: earthquakes,
       getPosition: (d) => [d.location?.longitude ?? 0, d.location?.latitude ?? 0],
-      getRadius: (d) => Math.pow(2, d.magnitude) * 1000,
-      getFillColor: (d) => {
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('natural'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: (d: Earthquake) => {
         const mag = d.magnitude;
-        if (mag >= 6) return [255, 0, 0, 200] as [number, number, number, number];
-        if (mag >= 5) return [255, 100, 0, 200] as [number, number, number, number];
+        if (mag >= 6) return 22;
+        if (mag >= 5) return 18;
+        return 14;
+      },
+      sizeMinPixels: 10,
+      sizeMaxPixels: 26,
+      getColor: (d: Earthquake) => {
+        const mag = d.magnitude;
+        if (mag >= 6) return [255, 0, 0, 230] as [number, number, number, number];
+        if (mag >= 5) return [255, 120, 0, 220] as [number, number, number, number];
         return COLORS.earthquake;
       },
-      radiusMinPixels: 4,
-      radiusMaxPixels: 30,
       pickable: true,
+      billboard: true,
     });
   }
 
-  private createNaturalEventsLayer(events: NaturalEvent[]): ScatterplotLayer {
-    return new ScatterplotLayer({
+  private createNaturalEventsLayer(events: NaturalEvent[]): IconLayer {
+    return new IconLayer({
       id: 'natural-events-layer',
       data: events,
       getPosition: (d: NaturalEvent) => [d.lon, d.lat],
-      getRadius: (d: NaturalEvent) => d.title.startsWith('🔴') ? 20000 : d.title.startsWith('🟠') ? 15000 : 8000,
-      getFillColor: (d: NaturalEvent) => {
-        if (d.title.startsWith('🔴')) return [255, 0, 0, 220] as [number, number, number, number];
-        if (d.title.startsWith('🟠')) return [255, 140, 0, 200] as [number, number, number, number];
-        return [255, 150, 50, 180] as [number, number, number, number];
-      },
-      radiusMinPixels: 5,
-      radiusMaxPixels: 18,
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('natural'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: (d: NaturalEvent) => d.title.startsWith('🔴') ? 20 : d.title.startsWith('🟠') ? 17 : 14,
+      sizeMinPixels: 10,
+      sizeMaxPixels: 26,
       pickable: true,
+      billboard: true,
     });
   }
 
@@ -2078,22 +2096,47 @@ export class DeckGLMap {
     });
   }
 
-  private createMilitaryVesselClustersLayer(clusters: MilitaryVesselCluster[]): ScatterplotLayer {
-    return new ScatterplotLayer({
+  private createMilitaryVesselClustersLayer(clusters: MilitaryVesselCluster[]): IconLayer {
+    return new IconLayer({
       id: 'military-vessel-clusters-layer',
       data: clusters,
       getPosition: (d) => [d.lon, d.lat],
-      getRadius: (d) => 15000 + (d.vesselCount || 1) * 3000,
-      getFillColor: (d) => {
-        // Vessel types: 'exercise' | 'deployment' | 'transit' | 'unknown'
+      getIcon: (d: MilitaryVesselCluster) => {
         const activity = d.activityType || 'unknown';
-        if (activity === 'exercise' || activity === 'deployment') return [255, 100, 100, 200] as [number, number, number, number];
-        if (activity === 'transit') return [255, 180, 100, 180] as [number, number, number, number];
-        return [200, 150, 150, 160] as [number, number, number, number];
+        if (activity === 'deployment') return 'deployment';
+        if (activity === 'transit') return 'transit';
+        if (activity === 'exercise') return 'exercise';
+        return 'unknown';
       },
-      radiusMinPixels: 8,
-      radiusMaxPixels: 25,
+      iconAtlas: (() => {
+        // Reuse the military layer accent color for the base icon color
+        const theme = getThemeMode();
+        const baseColor = resolveLayerAccentColor('military', theme);
+        const svg = resolveLayerIcon('military')
+          .replace(
+            '<svg ',
+            `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" style="color:${baseColor}" `,
+          );
+        return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      })(),
+      iconMapping: {
+        deployment: { x: 0, y: 0, width: 32, height: 32, mask: false },
+        transit: { x: 0, y: 0, width: 32, height: 32, mask: false },
+        exercise: { x: 0, y: 0, width: 32, height: 32, mask: false },
+        unknown: { x: 0, y: 0, width: 32, height: 32, mask: false },
+      },
+      getSize: (d: MilitaryVesselCluster) => 14 + Math.min(6, (d.vesselCount || 1) * 0.7),
+      sizeMinPixels: 10,
+      sizeMaxPixels: 24,
       pickable: true,
+      billboard: true,
+      getColor: (d: MilitaryVesselCluster) => {
+        const activity = d.activityType || 'unknown';
+        if (activity === 'deployment') return [255, 80, 80, 230] as [number, number, number, number];
+        if (activity === 'exercise') return [255, 150, 80, 220] as [number, number, number, number];
+        if (activity === 'transit') return [255, 210, 120, 210] as [number, number, number, number];
+        return [200, 180, 180, 200] as [number, number, number, number];
+      },
     });
   }
 
@@ -2128,16 +2171,19 @@ export class DeckGLMap {
     });
   }
 
-  private createWaterwaysLayer(): ScatterplotLayer {
-    return new ScatterplotLayer({
+  private createWaterwaysLayer(): IconLayer {
+    return new IconLayer({
       id: 'waterways-layer',
       data: STRATEGIC_WATERWAYS,
       getPosition: (d) => [d.lon, d.lat],
-      getRadius: 10000,
-      getFillColor: [100, 150, 255, 180] as [number, number, number, number],
-      radiusMinPixels: 5,
-      radiusMaxPixels: 12,
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('waterways'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: () => 16,
+      sizeMinPixels: 10,
+      sizeMaxPixels: 22,
       pickable: true,
+      billboard: true,
     });
   }
 
