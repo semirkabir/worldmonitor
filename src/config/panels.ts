@@ -233,7 +233,7 @@ const TECH_MAP_LAYERS: MapLayers = {
   economic: true,
   waterways: false,
   outages: true,
-  cyberThreats: false,
+  cyberThreats: true,
   datacenters: true,
   protests: false,
   flights: false,
@@ -249,7 +249,7 @@ const TECH_MAP_LAYERS: MapLayers = {
   // Tech layers (enabled in tech variant)
   startupHubs: true,
   cloudRegions: true,
-  accelerators: false,
+  accelerators: true,
   techHQs: true,
   techEvents: true,
   // Finance layers (disabled in tech variant)
@@ -279,7 +279,7 @@ const TECH_MOBILE_MAP_LAYERS: MapLayers = {
 
   conflicts: false,
   bases: false,
-  cables: false,
+  cables: true,
   pipelines: false,
   hotspots: false,
   ais: false,
@@ -290,7 +290,7 @@ const TECH_MOBILE_MAP_LAYERS: MapLayers = {
   economic: false,
   waterways: false,
   outages: true,
-  cyberThreats: false,
+  cyberThreats: true,
   datacenters: true,
   protests: false,
   flights: false,
@@ -305,9 +305,9 @@ const TECH_MOBILE_MAP_LAYERS: MapLayers = {
   climate: false,
   // Tech layers (limited on mobile)
   startupHubs: true,
-  cloudRegions: false,
-  accelerators: false,
-  techHQs: false,
+  cloudRegions: true,
+  accelerators: true,
+  techHQs: true,
   techEvents: true,
   // Finance layers (disabled in tech variant)
   stockExchanges: false,
@@ -410,8 +410,8 @@ const FINANCE_MAP_LAYERS: MapLayers = {
   stockExchanges: true,
   financialCenters: true,
   centralBanks: true,
-  commodityHubs: false,
-  gulfInvestments: false,
+  commodityHubs: true,
+  gulfInvestments: true,
   // Happy variant layers
   positiveEvents: false,
   kindness: false,
@@ -465,10 +465,10 @@ const FINANCE_MOBILE_MAP_LAYERS: MapLayers = {
   techEvents: false,
   // Finance layers (limited on mobile)
   stockExchanges: true,
-  financialCenters: false,
+  financialCenters: true,
   centralBanks: true,
-  commodityHubs: false,
-  gulfInvestments: false,
+  commodityHubs: true,
+  gulfInvestments: true,
   // Happy variant layers
   positiveEvents: false,
   kindness: false,
@@ -758,7 +758,7 @@ const COMMODITY_MOBILE_MAP_LAYERS: MapLayers = {
   dayNight: false,
   // Commodity layers (limited on mobile)
   miningSites: true,
-  processingPlants: false,
+  processingPlants: true,
   commodityPorts: true,
 };
 

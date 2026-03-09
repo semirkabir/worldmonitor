@@ -3911,6 +3911,9 @@ body.playback-mode .status-dot {
 }
 
 .layer-toggles:not(.deckgl-layer-toggles) .layer-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 3px 8px;
   background: var(--bg);
   border: 1px solid var(--border);
@@ -3921,6 +3924,16 @@ body.playback-mode .status-dot {
   text-transform: uppercase;
   position: relative;
   transition: color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+}
+
+.layer-toggles:not(.deckgl-layer-toggles) .layer-toggle-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.layer-toggles:not(.deckgl-layer-toggles) .layer-toggle-label {
+  line-height: 1;
 }
 
 .layer-toggles:not(.deckgl-layer-toggles) .layer-toggle.active {
@@ -4369,7 +4382,8 @@ body.playback-mode .status-dot {
 }
 
 .cable-advisory-icon {
-  font-size: 14px;
+  width: 14px;
+  height: 14px;
   filter: drop-shadow(0 0 6px var(--cable-advisory-color, var(--semantic-critical)));
 }
 
@@ -4392,7 +4406,8 @@ body.playback-mode .status-dot {
 }
 
 .repair-ship-icon {
-  font-size: 14px;
+  width: 14px;
+  height: 14px;
   filter: drop-shadow(0 0 6px var(--repair-ship-color, var(--semantic-low)));
 }
 
@@ -4532,7 +4547,8 @@ body.playback-mode .status-dot {
 }
 
 .datacenter-icon {
-  font-size: 16px;
+  width: 16px;
+  height: 16px;
   filter: drop-shadow(0 0 6px var(--datacenter-color));
 }
 
@@ -4550,7 +4566,8 @@ body.playback-mode .status-dot {
 }
 
 .datacenter-marker.cluster .datacenter-icon {
-  font-size: 20px;
+  width: 20px;
+  height: 20px;
 }
 
 .datacenter-marker.cluster .cluster-badge {
@@ -4656,7 +4673,8 @@ body.playback-mode .status-dot {
 }
 
 .outage-icon {
-  font-size: 14px;
+  width: 14px;
+  height: 14px;
   filter: drop-shadow(0 0 4px var(--outage-color, var(--semantic-elevated)));
 }
 
@@ -6716,7 +6734,13 @@ a.prediction-link:hover {
 }
 
 .map-legend-icon {
-  font-size: 10px;
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+}
+
+.map-legend-empty {
+  color: var(--text-dim);
 }
 
 .map-legend-icon.ship {
@@ -6766,6 +6790,19 @@ a.prediction-link:hover {
 
 .legend-dot.low {
   background: var(--status-live);
+}
+
+.map-shared-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.map-shared-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .conflict-click-area {
@@ -7052,7 +7089,8 @@ a.prediction-link:hover {
 }
 
 .economic-icon {
-  font-size: 14px;
+  width: 14px;
+  height: 14px;
   filter: drop-shadow(0 0 3px var(--shadow-color));
 }
 
@@ -7140,7 +7178,8 @@ a.prediction-link:hover {
 }
 
 .spaceport-icon {
-  font-size: 16px;
+  width: 16px;
+  height: 16px;
   filter: drop-shadow(0 0 4px var(--defcon-4));
 }
 
@@ -7215,7 +7254,8 @@ a.prediction-link:hover {
 }
 
 .mineral-icon {
-  font-size: 14px;
+  width: 14px;
+  height: 14px;
   filter: drop-shadow(0 0 4px var(--semantic-info));
 }
 
@@ -7294,12 +7334,14 @@ a.prediction-link:hover {
 }
 
 .startup-hub-icon {
-  font-size: 16px;
+  width: 16px;
+  height: 16px;
   filter: drop-shadow(0 0 4px var(--status-live));
 }
 
 .startup-hub-marker.mega .startup-hub-icon {
-  font-size: 20px;
+  width: 20px;
+  height: 20px;
   filter: drop-shadow(0 0 8px var(--semantic-info)) drop-shadow(0 0 16px #ff44ff60);
 }
 
@@ -7387,7 +7429,8 @@ a.prediction-link:hover {
 }
 
 .cloud-region-icon {
-  font-size: 12px;
+  width: 12px;
+  height: 12px;
   filter: drop-shadow(0 0 4px var(--accent));
 }
 
@@ -7500,12 +7543,14 @@ a.prediction-link:hover {
 }
 
 .tech-hq-icon {
-  font-size: 14px;
+  width: 14px;
+  height: 14px;
   filter: drop-shadow(0 0 4px var(--semantic-info));
 }
 
 .tech-hq-marker.faang .tech-hq-icon {
-  font-size: 16px;
+  width: 16px;
+  height: 16px;
   filter: drop-shadow(0 0 6px var(--status-live)) drop-shadow(0 0 12px #00ffaa60);
 }
 
@@ -7606,7 +7651,8 @@ a.prediction-link:hover {
 }
 
 .tech-hq-marker.cluster .tech-hq-icon {
-  font-size: 18px;
+  width: 18px;
+  height: 18px;
 }
 
 .tech-event-marker.cluster {
@@ -7707,7 +7753,8 @@ a.prediction-link:hover {
 }
 
 .accelerator-icon {
-  font-size: 14px;
+  width: 14px;
+  height: 14px;
   filter: drop-shadow(0 0 4px var(--semantic-high));
 }
 
@@ -12979,14 +13026,13 @@ a.prediction-link:hover {
 /* Tech Events Map Markers */
 .tech-event-marker {
   position: absolute;
-  background: var(--semantic-info);
-  border: 2px solid var(--accent);
-  border-radius: 50%;
-  width: 12px;
-  height: 12px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 6px var(--shadow-color);
   transform: translate(-50%, -50%) scale(var(--marker-scale, 1));
   transform-origin: center;
   will-change: transform;
@@ -12998,8 +13044,82 @@ a.prediction-link:hover {
 }
 
 .tech-event-marker.upcoming-soon {
-  background: var(--yellow);
   animation: pulse-marker 2s ease-in-out infinite;
+}
+
+.tech-event-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--semantic-info);
+  filter: drop-shadow(0 0 6px var(--semantic-info));
+}
+
+.tech-event-marker.upcoming-soon .tech-event-icon {
+  color: var(--yellow);
+  filter: drop-shadow(0 0 6px var(--yellow));
+}
+
+.map-marker {
+  position: absolute;
+  transform: translate(-50%, -50%) scale(var(--marker-scale, 1));
+  transform-origin: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.map-marker:hover {
+  transform: translate(-50%, -50%) scale(calc(var(--marker-scale, 1) * 1.12));
+}
+
+.map-marker-icon {
+  width: 16px;
+  height: 16px;
+  filter: drop-shadow(0 0 5px currentColor);
+}
+
+.exchange-marker .map-marker-icon {
+  color: #fbbf24;
+}
+
+.financial-center-marker .map-marker-icon {
+  color: #34d399;
+}
+
+.central-bank-marker .map-marker-icon {
+  color: #fde68a;
+}
+
+.commodity-hub-marker .map-marker-icon {
+  color: #fdba74;
+}
+
+.map-marker-label {
+  font-size: 8px;
+  line-height: 1;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  text-shadow: 0 0 4px var(--bg), 0 0 8px var(--bg);
+}
+
+.exchange-marker .map-marker-label {
+  color: #fbbf24;
+}
+
+.financial-center-marker .map-marker-label {
+  color: #34d399;
+}
+
+.central-bank-marker .map-marker-label {
+  color: #fde68a;
+}
+
+.commodity-hub-marker .map-marker-label {
+  color: #fdba74;
 }
 
 @keyframes pulse-marker {
@@ -13590,7 +13710,6 @@ a.prediction-link:hover {
 }
 
 .deckgl-layer-toggles .toggle-icon {
-  font-size: 12px;
   width: 16px;
   height: 16px;
   min-width: 16px;
@@ -13599,6 +13718,12 @@ a.prediction-link:hover {
   justify-content: center;
   line-height: 1;
   overflow: hidden;
+}
+
+.deckgl-layer-toggles .toggle-icon svg {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
 .deckgl-layer-toggles .toggle-label {
@@ -13761,6 +13886,20 @@ a.prediction-link:hover {
 
 .deckgl-legend .legend-item svg {
   flex-shrink: 0;
+}
+
+.deckgl-legend .legend-icon {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.deckgl-legend .legend-icon svg {
+  width: 14px;
+  height: 14px;
+  display: block;
 }
 
 .deckgl-legend .legend-label {
