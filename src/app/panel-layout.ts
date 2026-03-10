@@ -34,6 +34,12 @@ import {
   WorldClockPanel,
   AirlineIntelPanel,
   AviationCommandBar,
+  EconomicCalendarPanel,
+  SanctionsTrackerPanel,
+  AlertRulesPanel,
+  GeopoliticalRiskPanel,
+  CorrelationMatrixPanel,
+  TradeFlowPanel,
 } from '@/components';
 import { SatelliteFiresPanel } from '@/components/SatelliteFiresPanel';
 import { focusInvestmentOnMap } from '@/services/investments-focus';
@@ -203,7 +209,7 @@ export class PanelLayoutManager implements AppModule {
         </div>
         <div class="header-right">
           <button class="search-btn" id="searchBtn"><kbd>⌘K</kbd> ${t('header.search')}</button>
-          ${this.ctx.isDesktopApp ? '' : `<button class="copy-link-btn" id="copyLinkBtn">${t('header.copyLink')}</button>`}
+          ${this.ctx.isDesktopApp ? '' : `<button class="copy-link-btn" id="saveLayoutBtn">${t('header.saveLayout')}</button>`}
           <button class="theme-toggle-btn" id="headerThemeToggle" title="${t('header.toggleTheme')}">
             ${getCurrentTheme() === 'dark'
         ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
@@ -480,6 +486,28 @@ export class PanelLayoutManager implements AppModule {
     this.ctx.panels['commodities'] = commoditiesPanel;
 
     const predictionPanel = new PredictionPanel();
+    predictionPanel.setOnMarketClick((market) => {
+      if (this.ctx.predictionBriefPage) {
+        this.ctx.predictionBriefPage.showLoading();
+        import('@/services/prediction').then(module => {
+           module.fetchMarketDetails(market.slug || '')
+            .then(details => {
+              if (details) {
+                this.ctx.predictionBriefPage?.show(market, details);
+              } else {
+                this.ctx.predictionBriefPage?.hide();
+              }
+            })
+            .catch(err => {
+              console.error('[Prediction Market] Failed to load details', err);
+              this.ctx.predictionBriefPage?.hide();
+            });
+        }).catch(err => {
+          console.error('[Prediction Market] Failed to load prediction module', err);
+          this.ctx.predictionBriefPage?.hide();
+        });
+      }
+    });
     this.ctx.panels['polymarket'] = predictionPanel;
 
     const govPanel = new NewsPanel('gov', t('panels.gov'));
@@ -776,6 +804,12 @@ export class PanelLayoutManager implements AppModule {
       this.ctx.panels['macro-signals'] = new MacroSignalsPanel();
       this.ctx.panels['etf-flows'] = new ETFFlowsPanel();
       this.ctx.panels['stablecoins'] = new StablecoinPanel();
+      this.ctx.panels['economic-calendar'] = new EconomicCalendarPanel();
+      this.ctx.panels['sanctions-tracker'] = new SanctionsTrackerPanel();
+      this.ctx.panels['alert-rules'] = new AlertRulesPanel();
+      this.ctx.panels['geopolitical-risk'] = new GeopoliticalRiskPanel();
+      this.ctx.panels['correlation-matrix'] = new CorrelationMatrixPanel();
+      this.ctx.panels['trade-flows'] = new TradeFlowPanel();
     }
 
     if (this.ctx.isDesktopApp) {

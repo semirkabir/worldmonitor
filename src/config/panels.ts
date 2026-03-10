@@ -59,6 +59,12 @@ const FULL_PANELS: Record<string, PanelConfig> = {
   'telegram-intel': { name: 'Telegram Intel', enabled: true, priority: 2, ...(_desktop && { premium: 'locked' as const }) },
   'airline-intel': { name: 'Airline Intelligence', enabled: true, priority: 2 },
   'world-clock': { name: 'World Clock', enabled: true, priority: 2 },
+  'economic-calendar': { name: 'Economic Calendar', enabled: true, priority: 1 },
+  'sanctions-tracker': { name: 'Sanctions Tracker', enabled: true, priority: 1 },
+  'alert-rules': { name: 'Alert Rules', enabled: true, priority: 2 },
+  'geopolitical-risk': { name: 'Geopolitical Risk Index', enabled: true, priority: 1 },
+  'correlation-matrix': { name: 'Correlation Matrix', enabled: true, priority: 2 },
+  'trade-flows': { name: 'Trade Flows', enabled: true, priority: 2 },
 };
 
 const FULL_MAP_LAYERS: MapLayers = {

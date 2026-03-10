@@ -247,16 +247,16 @@ export class EventHandlerManager implements AppModule {
     document.getElementById('mobileSearchBtn')?.addEventListener('click', openSearch);
     document.getElementById('searchMobileFab')?.addEventListener('click', openSearch);
 
-    document.getElementById('copyLinkBtn')?.addEventListener('click', async () => {
+    document.getElementById('saveLayoutBtn')?.addEventListener('click', async () => {
       const shareUrl = this.getShareUrl();
       if (!shareUrl) return;
-      const button = document.getElementById('copyLinkBtn');
+      const button = document.getElementById('saveLayoutBtn');
       try {
-        await this.copyToClipboard(shareUrl);
-        this.setCopyLinkFeedback(button, 'Copied!');
+        const urlObj = new URL(shareUrl);
+        localStorage.setItem('worldmonitor-saved-map-layout', urlObj.search);
+        this.setCopyLinkFeedback(button, t('header.layoutSaved'));
       } catch (error) {
-        console.warn('Failed to copy share link:', error);
-        this.setCopyLinkFeedback(button, 'Copy failed');
+        console.warn('Failed to save layout:', error);
       }
     });
 
@@ -409,7 +409,7 @@ export class EventHandlerManager implements AppModule {
               happy: 'https://happy.worldmonitor.app',
               conflicts: 'https://conflicts.worldmonitor.app',
             };
-            if (hosts[variant]) window.location.href = hosts[variant];
+            if (hosts[variant]) window.location.href = hosts[variant] ?? '';
           }
         }
       });
@@ -572,20 +572,7 @@ export class EventHandlerManager implements AppModule {
     });
   }
 
-  private async copyToClipboard(text: string): Promise<void> {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      return;
-    }
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-  }
+
 
   private setCopyLinkFeedback(button: HTMLElement | null, message: string): void {
     if (!button) return;

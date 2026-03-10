@@ -15,6 +15,7 @@ import type { ExportPanel } from '@/utils';
 import type { UnifiedSettings } from '@/components/UnifiedSettings';
 import type { PizzIntIndicator } from '@/components';
 import type { ParsedMapUrlState } from '@/utils';
+import type { PredictionBriefPage } from '@/components/PredictionBriefPage';
 import type { PositiveNewsFeedPanel } from '@/components/PositiveNewsFeedPanel';
 import type { CountersPanel } from '@/components/CountersPanel';
 import type { ProgressChartsPanel } from '@/components/ProgressChartsPanel';
@@ -105,6 +106,7 @@ export interface AppContext {
   unifiedSettings: UnifiedSettings | null;
   pizzintIndicator: PizzIntIndicator | null;
   countryBriefPage: CountryBriefPanel | null;
+  predictionBriefPage: PredictionBriefPage | null;
   countryTimeline: CountryTimeline | null;
 
   // Happy variant state

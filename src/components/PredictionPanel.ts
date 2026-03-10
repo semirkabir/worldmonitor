@@ -4,12 +4,18 @@ import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
 import { t } from '@/services/i18n';
 
 export class PredictionPanel extends Panel {
+  private onMarketClick?: (market: PredictionMarket) => void;
+
   constructor() {
     super({
       id: 'polymarket',
       title: t('panels.polymarket'),
       infoTooltip: t('components.prediction.infoTooltip'),
     });
+  }
+
+  public setOnMarketClick(cb: (market: PredictionMarket) => void): void {
+    this.onMarketClick = cb;
   }
 
   private formatVolume(volume?: number): string {
@@ -49,8 +55,8 @@ export class PredictionPanel extends Panel {
           ? `<div class="prediction-meta">${volumeStr ? `<span class="prediction-volume">${t('components.predictions.vol')}: ${volumeStr}</span>` : ''}${expiryHtml}</div>`
           : '';
 
-        return `
-      <div class="prediction-item">
+        const itemHtml = `
+      <div class="prediction-item" data-slug="${p.slug || ''}" style="cursor: pointer;">
         ${titleHtml}
         ${metaHtml}
         <div class="prediction-bar">
@@ -63,9 +69,24 @@ export class PredictionPanel extends Panel {
         </div>
       </div>
     `;
+        return itemHtml;
       })
       .join('');
 
     this.setContent(html);
+
+    // Attach click listeners
+    const items = this.element.querySelectorAll('.prediction-item');
+    items.forEach((item: Element, index: number) => {
+      item.addEventListener('click', (e: Event) => {
+        // Don't trigger if they clicked the external link directly
+        if ((e.target as HTMLElement).tagName.toLowerCase() === 'a') return;
+        
+        const market = data[index];
+        if (market && this.onMarketClick) {
+          this.onMarketClick(market);
+        }
+      });
+    });
   }
 }

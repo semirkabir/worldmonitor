@@ -12,6 +12,7 @@ export interface PredictionMarket {
   volume?: number;
   url?: string;
   endDate?: string;
+  slug?: string;
 }
 
 function parseEndDate(raw?: string): string | undefined {
@@ -267,8 +268,27 @@ async function fetchTopMarkets(): Promise<PredictionMarket[]> {
         volume,
         url: buildMarketUrl(undefined, m.slug),
         endDate: parseEndDate(m.endDate),
+        slug: m.slug,
       };
     });
+}
+
+export async function fetchMarketDetails(slug: string): Promise<{ description?: string; resolutionSource?: string; liquidity?: number } | null> {
+  try {
+    const response = await polyFetch('markets', { slug });
+    if (!response.ok) return null;
+    const data: PolymarketMarket[] = await response.json();
+    if (!data || data.length === 0) return null;
+    const market = data[0] as unknown as { description?: string; resolution_source?: string; liquidityNum?: number };
+    return {
+      description: market.description,
+      resolutionSource: market.resolution_source,
+      liquidity: market.liquidityNum
+    };
+  } catch (e) {
+    console.warn(`Failed to fetch details for market ${slug}:`, e);
+    return null;
+  }
 }
 
 interface BootstrapPredictionData {
@@ -306,6 +326,7 @@ export async function fetchPredictions(): Promise<PredictionMarket[]> {
             volume: m.volume,
             url: m.url,
             endDate: m.closesAt ? new Date(m.closesAt).toISOString() : undefined,
+            slug: m.id,
           }))
           .slice(0, 15);
       }
@@ -346,6 +367,7 @@ export async function fetchPredictions(): Promise<PredictionMarket[]> {
             volume: eventVolume,
             url: buildMarketUrl(event.slug),
             endDate: parseEndDate(topMarket.endDate ?? event.endDate),
+            slug: topMarket.slug,
           });
         } else {
           markets.push({
@@ -354,6 +376,7 @@ export async function fetchPredictions(): Promise<PredictionMarket[]> {
             volume: eventVolume,
             url: buildMarketUrl(event.slug),
             endDate: parseEndDate(event.endDate),
+            slug: event.slug,
           });
         }
       }
@@ -512,6 +535,7 @@ export async function fetchCountryMarkets(country: string): Promise<PredictionMa
             volume: event.volume ?? 0,
             url: buildMarketUrl(event.slug),
             endDate: parseEndDate(topMarket.endDate ?? event.endDate),
+            slug: topMarket.slug,
           });
         } else {
           markets.push({
@@ -520,6 +544,7 @@ export async function fetchCountryMarkets(country: string): Promise<PredictionMa
             volume: event.volume ?? 0,
             url: buildMarketUrl(event.slug),
             endDate: parseEndDate(event.endDate),
+            slug: event.slug,
           });
         }
       }
@@ -556,6 +581,7 @@ export async function searchPredictions(query: string): Promise<PredictionMarket
           volume: m.volume,
           url: m.url,
           endDate: m.closesAt ? new Date(m.closesAt).toISOString() : undefined,
+          slug: m.id,
         }));
     }
   } catch { /* RPC unavailable (e.g. localhost), fall through */ }
@@ -606,6 +632,7 @@ export async function searchPredictions(query: string): Promise<PredictionMarket
           volume: event.volume ?? 0,
           url: buildMarketUrl(event.slug),
           endDate: parseEndDate(topMarket.endDate ?? event.endDate),
+          slug: topMarket.slug,
         });
       } else if (titleMatches) {
         results.push({
@@ -614,6 +641,7 @@ export async function searchPredictions(query: string): Promise<PredictionMarket
           volume: event.volume ?? 0,
           url: buildMarketUrl(event.slug),
           endDate: parseEndDate(event.endDate),
+          slug: event.slug,
         });
       }
     }

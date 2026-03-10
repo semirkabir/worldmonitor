@@ -1,0 +1,12 @@
+﻿src/components/AlertRulesPanel.ts(2,1): error TS6133: 't' is declared but its value is never read.
+src/components/CorrelationMatrixPanel.ts(2,1): error TS6133: 't' is declared but its value is never read.
+src/components/DeckGLMap.ts(263,7): error TS6133: 'DATACENTER_ICON_MAPPING' is declared but its value is never read.
+src/components/DeckGLMap.ts(3062,11): error TS6133: 'getTooltip' is declared but its value is never read.
+src/components/EconomicCalendarPanel.ts(2,1): error TS6133: 't' is declared but its value is never read.
+src/components/EconomicCalendarPanel.ts(19,7): error TS6133: 'CALENDAR_SOURCES' is declared but its value is never read.
+src/components/EconomicCalendarPanel.ts(94,11): error TS6133: 'lastFetch' is declared but its value is never read.
+src/components/GeopoliticalRiskPanel.ts(2,1): error TS6133: 't' is declared but its value is never read.
+src/components/GeopoliticalRiskPanel.ts(58,11): error TS6133: 'cx' is declared but its value is never read.
+src/components/GeopoliticalRiskPanel.ts(59,11): error TS6133: 'cy' is declared but its value is never read.
+src/components/SanctionsTrackerPanel.ts(2,1): error TS6133: 't' is declared but its value is never read.
+src/components/TradeFlowPanel.ts(2,1): error TS6133: 't' is declared but its value is never read.

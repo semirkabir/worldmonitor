@@ -14,7 +14,7 @@ import { getAiFlowSettings, subscribeAiFlowChange, isHeadlineMemoryEnabled } fro
 import { startLearning } from '@/services/country-instability';
 import { loadFromStorage, parseMapUrlState, saveToStorage, isMobileDevice } from '@/utils';
 import type { ParsedMapUrlState } from '@/utils';
-import { SignalModal, IntelligenceGapBadge, BreakingNewsBanner } from '@/components';
+import { SignalModal, IntelligenceGapBadge, BreakingNewsBanner, PredictionBriefPage } from '@/components';
 import { initBreakingNewsAlerts, destroyBreakingNewsAlerts } from '@/services/breaking-news-alerts';
 import type { ServiceStatusPanel } from '@/components/ServiceStatusPanel';
 import type { StablecoinPanel } from '@/components/StablecoinPanel';
@@ -253,7 +253,9 @@ export class App {
       }
     }
 
-    let initialUrlState: ParsedMapUrlState | null = parseMapUrlState(window.location.search, mapLayers);
+    const savedLayoutSearch = localStorage.getItem('worldmonitor-saved-map-layout');
+    const effectiveSearch = window.location.search || savedLayoutSearch || '';
+    let initialUrlState: ParsedMapUrlState | null = parseMapUrlState(effectiveSearch, mapLayers);
     if (initialUrlState.layers) {
       if (currentVariant === 'tech') {
         const geoLayers: (keyof MapLayers)[] = ['conflicts', 'bases', 'hotspots', 'nuclear', 'irradiators', 'sanctions', 'military', 'protests', 'pipelines', 'waterways', 'ais', 'flights', 'spaceports', 'minerals'];
@@ -338,6 +340,7 @@ export class App {
       unifiedSettings: null,
       pizzintIndicator: null,
       countryBriefPage: null,
+      predictionBriefPage: null,
       countryTimeline: null,
       positivePanel: null,
       countersPanel: null,
@@ -492,6 +495,7 @@ export class App {
     this.state.signalModal.setLocationClickHandler((lat, lon) => {
       this.state.map?.setCenter(lat, lon, 4);
     });
+    this.state.predictionBriefPage = new PredictionBriefPage();
     if (!this.state.isMobile) {
       this.state.findingsBadge = new IntelligenceGapBadge();
       this.state.findingsBadge.setOnSignalClick((signal) => {

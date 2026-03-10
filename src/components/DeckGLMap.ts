@@ -260,7 +260,7 @@ const MARKER_ICONS = {
 
 const BASES_ICON_MAPPING = { triangleUp: { x: 0, y: 0, width: 32, height: 32, mask: true } };
 const NUCLEAR_ICON_MAPPING = { hexagon: { x: 0, y: 0, width: 32, height: 32, mask: true } };
-const DATACENTER_ICON_MAPPING = { square: { x: 0, y: 0, width: 32, height: 32, mask: true } };
+
 const AIRCRAFT_ICON_MAPPING = { plane: { x: 0, y: 0, width: 32, height: 32, mask: true } };
 const SHARED_LAYER_ICON_MAPPING = { marker: { x: 0, y: 0, width: 32, height: 32, mask: false } };
 const SHARED_LAYER_ICON_ATLAS_CACHE = new Map<string, string>();
@@ -3059,7 +3059,7 @@ export class DeckGLMap {
     });
   }
 
-  private getTooltip(info: PickingInfo): { html: string } | null {
+  public getTooltip(info: PickingInfo): { html: string } | null {
     if (!info.object) return null;
 
     const rawLayerId = info.layer?.id || '';
@@ -3592,6 +3592,15 @@ export class DeckGLMap {
     layersToggleBtn.title = 'Toggle Layers';
     layersToggleBtn.textContent = 'LAYERS';
 
+    const layersClearBtn = document.createElement('button');
+    layersClearBtn.className = 'layers-row-clear';
+    layersClearBtn.title = 'Clear all layers';
+    layersClearBtn.textContent = '✕';
+    layersClearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.clearAllLayers();
+    });
+
     const layersHelpBtn = document.createElement('button');
     layersHelpBtn.className = 'layer-help-btn layers-row-help';
     layersHelpBtn.title = t('components.deckgl.layerGuide');
@@ -3602,6 +3611,7 @@ export class DeckGLMap {
     });
 
     layersRow.appendChild(layersToggleBtn);
+    layersRow.appendChild(layersClearBtn);
     layersRow.appendChild(layersHelpBtn);
     slider.appendChild(layersRow);
 
@@ -3657,7 +3667,7 @@ export class DeckGLMap {
     list.className = 'toggle-list';
     list.style.maxHeight = '32vh';
     list.style.overflowY = 'auto';
-    list.style.scrollbarWidth = 'thin';
+    list.style.setProperty('scrollbar-width', 'thin');
 
     layerConfig.forEach(({ key, label, icon, premium }) => {
       const isLocked = premium === 'locked' && !_wmKey;
@@ -3731,6 +3741,30 @@ export class DeckGLMap {
     }
   }
 
+  /** Clear all active layers */
+  private clearAllLayers(): void {
+    const layerDefs = getLayersForVariant((SITE_VARIANT || 'full') as MapVariant, 'flat');
+    layerDefs.forEach(def => {
+      const key = def.key as keyof MapLayers;
+      if (this.state.layers[key]) {
+        this.state.layers[key] = false;
+        this.onLayerChange?.(key, false, 'programmatic');
+      }
+    });
+    // Sync all checkboxes in the panel
+    this.container.querySelectorAll<HTMLInputElement>('.layer-toggle input[type="checkbox"]').forEach(cb => {
+      cb.checked = false;
+    });
+    // Hide CII legend if it was visible
+    const ciiLeg = this.container.querySelector('#ciiChoroplethLegend') as HTMLElement | null;
+    if (ciiLeg) ciiLeg.style.display = 'none';
+    // Stop flights timer if running
+    this.manageAircraftTimer(false);
+    this.layerWarningShown = false;
+    this.render();
+    this.refreshLegend();
+  }
+
   /** Show layer help popup explaining each layer */
   private showLayerHelp(): void {
     const existing = this.container.querySelector('.layer-help-popup');
@@ -3743,7 +3777,6 @@ export class DeckGLMap {
     popup.className = 'layer-help-popup';
 
     const label = (layerKey: string): string => t(`components.deckgl.layers.${layerKey}`).toUpperCase();
-    const staticLabel = (labelKey: string): string => t(`components.deckgl.layerHelp.labels.${labelKey}`).toUpperCase();
     const helpItem = (layerLabel: string, descriptionKey: string): string =>
       `<div class="layer-help-item"><span>${layerLabel}</span> ${t(`components.deckgl.layerHelp.descriptions.${descriptionKey}`)}</div>`;
     const helpSection = (titleKey: string, items: string[], noteKey?: string): string => `
@@ -3760,31 +3793,33 @@ export class DeckGLMap {
       </div>
     `;
 
+    // ── TECH variant ─────────────────────────────────────────────────────────
+    // Layers: startupHubs, techHQs, accelerators, cloudRegions,
+    //         datacenters, cables, outages, cyberThreats, techEvents
     const techHelpContent = `
       ${helpHeader}
       <div class="layer-help-content">
         ${helpSection('techEcosystem', [
       helpItem(label('startupHubs'), 'techStartupHubs'),
-      helpItem(label('cloudRegions'), 'techCloudRegions'),
       helpItem(label('techHQs'), 'techHQs'),
       helpItem(label('accelerators'), 'techAccelerators'),
+      helpItem(label('cloudRegions'), 'techCloudRegions'),
       helpItem(label('techEvents'), 'techEvents'),
     ])}
         ${helpSection('infrastructure', [
-      helpItem(label('underseaCables'), 'infraCables'),
       helpItem(label('aiDataCenters'), 'infraDatacenters'),
+      helpItem(label('underseaCables'), 'infraCables'),
       helpItem(label('internetOutages'), 'infraOutages'),
       helpItem(label('cyberThreats'), 'techCyberThreats'),
-    ])}
-        ${helpSection('naturalEconomic', [
-      helpItem(label('naturalEvents'), 'naturalEventsTech'),
-      helpItem(label('fires'), 'techFires'),
-      helpItem(staticLabel('countries'), 'countriesOverlay'),
-      helpItem(label('dayNight'), 'dayNight'),
     ])}
       </div>
     `;
 
+    // ── FINANCE variant ───────────────────────────────────────────────────────
+    // Layers: stockExchanges, financialCenters, centralBanks, commodityHubs,
+    //         gulfInvestments, tradeRoutes, cables, pipelines,
+    //         outages, weather, economic, waterways,
+    //         natural, cyberThreats, dayNight
     const financeHelpContent = `
       ${helpHeader}
       <div class="layer-help-content">
@@ -3796,34 +3831,84 @@ export class DeckGLMap {
       helpItem(label('gulfInvestments'), 'financeGulfInvestments'),
     ])}
         ${helpSection('infrastructureRisk', [
+      helpItem(label('tradeRoutes'), 'financeTradeRoutes'),
       helpItem(label('underseaCables'), 'financeCables'),
       helpItem(label('pipelines'), 'financePipelines'),
       helpItem(label('internetOutages'), 'financeOutages'),
       helpItem(label('cyberThreats'), 'financeCyberThreats'),
-      helpItem(label('tradeRoutes'), 'tradeRoutes'),
     ])}
         ${helpSection('macroContext', [
+      helpItem(label('weatherAlerts'), 'weatherAlertsMarket'),
       helpItem(label('economicCenters'), 'economicCenters'),
       helpItem(label('strategicWaterways'), 'macroWaterways'),
-      helpItem(label('weatherAlerts'), 'weatherAlertsMarket'),
-      helpItem(label('naturalEvents'), 'naturalEventsMacro'),
+      helpItem(label('naturalEvents'), 'financeNatural'),
       helpItem(label('dayNight'), 'dayNight'),
     ])}
       </div>
     `;
 
+    // ── HAPPY variant ─────────────────────────────────────────────────────────
+    // Layers: positiveEvents, kindness, happiness, speciesRecovery, renewableInstallations
+    const happyHelpContent = `
+      ${helpHeader}
+      <div class="layer-help-content">
+        ${helpSection('happyCore', [
+      helpItem(label('positiveEvents'), 'happyPositiveEvents'),
+      helpItem(label('kindness'), 'happyKindness'),
+      helpItem(label('happiness'), 'happyHappiness'),
+    ])}
+        ${helpSection('happyEnvironment', [
+      helpItem(label('speciesRecovery'), 'happySpecies'),
+      helpItem(label('renewableInstallations'), 'happyRenewable'),
+    ])}
+      </div>
+    `;
+
+    // ── COMMODITY variant ─────────────────────────────────────────────────────
+    // Layers: miningSites, processingPlants, commodityPorts, commodityHubs,
+    //         minerals, pipelines, waterways, tradeRoutes,
+    //         natural, weather, outages, dayNight
+    const commodityHelpContent = `
+      ${helpHeader}
+      <div class="layer-help-content">
+        ${helpSection('commodityAssets', [
+      helpItem(label('miningSites'), 'commodityMining'),
+      helpItem(label('processingPlants'), 'commodityProcessing'),
+      helpItem(label('commodityPorts'), 'commodityPorts'),
+      helpItem(label('commodityHubs'), 'commodityHubs'),
+      helpItem(label('criticalMinerals'), 'commodityMinerals'),
+    ])}
+        ${helpSection('commodityRoutes', [
+      helpItem(label('pipelines'), 'commodityPipelines'),
+      helpItem(label('strategicWaterways'), 'commodityWaterways'),
+      helpItem(label('tradeRoutes'), 'commodityTradeRoutes'),
+    ])}
+        ${helpSection('commodityContext', [
+      helpItem(label('naturalEvents'), 'commodityNatural'),
+      helpItem(label('weatherAlerts'), 'commodityWeather'),
+      helpItem(label('internetOutages'), 'commodityOutages'),
+      helpItem(label('dayNight'), 'dayNight'),
+    ])}
+      </div>
+    `;
+
+    // ── FULL / WORLD variant ──────────────────────────────────────────────────
+    // Layers: iranAttacks, hotspots, conflicts, bases, nuclear, irradiators,
+    //         spaceports, cables, pipelines, datacenters, military,
+    //         ais, tradeRoutes, flights, protests, ucdpEvents, displacement,
+    //         climate, weather, outages, cyberThreats, natural, fires,
+    //         waterways, economic, minerals, gpsJamming, ciiChoropleth, dayNight
     const fullHelpContent = `
       ${helpHeader}
       <div class="layer-help-content">
         ${helpSection('timeFilter', [
-      helpItem(staticLabel('timeRecent'), 'timeRecent'),
-      helpItem(staticLabel('timeExtended'), 'timeExtended'),
+      helpItem('1H / 6H / 24H', 'timeRecent'),
+      helpItem('7D / ALL', 'timeExtended'),
     ], 'timeAffects')}
         ${helpSection('geopolitical', [
-      helpItem(label('conflictZones'), 'geoConflicts'),
-
+      helpItem(label('iranAttacks'), 'geoIranAttacks'),
       helpItem(label('intelHotspots'), 'geoHotspots'),
-      helpItem(staticLabel('sanctions'), 'geoSanctions'),
+      helpItem(label('conflictZones'), 'geoConflicts'),
       helpItem(label('protests'), 'geoProtests'),
       helpItem(label('ucdpEvents'), 'geoUcdpEvents'),
       helpItem(label('displacementFlows'), 'geoDisplacement'),
@@ -3832,14 +3917,14 @@ export class DeckGLMap {
       helpItem(label('militaryBases'), 'militaryBases'),
       helpItem(label('nuclearSites'), 'militaryNuclear'),
       helpItem(label('gammaIrradiators'), 'militaryIrradiators'),
-      helpItem(label('militaryActivity'), 'militaryActivity'),
       helpItem(label('spaceports'), 'militarySpaceports'),
+      helpItem(label('militaryActivity'), 'militaryActivity'),
     ])}
         ${helpSection('infrastructure', [
       helpItem(label('underseaCables'), 'infraCablesFull'),
       helpItem(label('pipelines'), 'infraPipelinesFull'),
-      helpItem(label('internetOutages'), 'infraOutages'),
       helpItem(label('aiDataCenters'), 'infraDatacentersFull'),
+      helpItem(label('internetOutages'), 'infraOutages'),
       helpItem(label('cyberThreats'), 'infraCyberThreats'),
     ])}
         ${helpSection('transport', [
@@ -3856,8 +3941,9 @@ export class DeckGLMap {
       helpItem(label('criticalMinerals'), 'mineralsFull'),
     ])}
         ${helpSection('overlays', [
+      helpItem(label('ciiChoropleth'), 'ciiChoropleth'),
+      helpItem(label('gpsJamming'), 'gpsJamming'),
       helpItem(label('dayNight'), 'dayNight'),
-      helpItem(staticLabel('countries'), 'countriesOverlay'),
       helpItem(label('strategicWaterways'), 'waterwaysLabels'),
     ])}
       </div>
@@ -3867,7 +3953,11 @@ export class DeckGLMap {
       ? techHelpContent
       : SITE_VARIANT === 'finance'
         ? financeHelpContent
-        : fullHelpContent;
+        : SITE_VARIANT === 'happy'
+          ? happyHelpContent
+          : SITE_VARIANT === 'commodity'
+            ? commodityHelpContent
+            : fullHelpContent;
 
     popup.querySelector('.layer-help-close')?.addEventListener('click', () => popup.remove());
 
@@ -5028,6 +5118,20 @@ export class DeckGLMap {
         } catch { /* style not done loading */ }
         map.getCanvas().style.cursor = '';
       }
+    });
+
+    map.on('click', (e) => {
+      if (!this.onCountryClick) return;
+      const features = map.queryRenderedFeatures(e.point, { layers: ['country-interactive'] });
+      const properties = (features?.[0]?.properties ?? {}) as Record<string, unknown>;
+      const code = typeof properties['ISO3166-1-Alpha-2'] === 'string'
+        ? properties['ISO3166-1-Alpha-2'].trim().toUpperCase()
+        : undefined;
+      const name = typeof properties.name === 'string'
+        ? properties.name.trim()
+        : undefined;
+      const { lng, lat } = e.lngLat;
+      this.onCountryClick({ lat, lon: lng, code: code || undefined, name: name || undefined });
     });
   }
 
