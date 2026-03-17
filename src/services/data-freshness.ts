@@ -37,7 +37,8 @@ export type DataSourceId =
   | 'wto_trade'      // WTO trade policy data
   | 'supply_chain'   // Supply chain disruption intelligence
   | 'security_advisories'  // Government travel/security advisories
-  | 'gpsjam';              // GPS/GNSS interference
+  | 'gpsjam'               // GPS/GNSS interference
+  | 'webcams';             // Windy live webcams
 
 export type FreshnessStatus = 'fresh' | 'stale' | 'very_stale' | 'no_data' | 'disabled' | 'error';
 
@@ -105,6 +106,7 @@ const SOURCE_METADATA: Record<DataSourceId, { name: string; requiredForRisk: boo
   supply_chain: { name: 'Supply Chain Intelligence', requiredForRisk: false, panelId: 'supply-chain' },
   security_advisories: { name: 'Security Advisories', requiredForRisk: false, panelId: 'security-advisories' },
   gpsjam: { name: 'GPS/GNSS Interference', requiredForRisk: false, panelId: 'map' },
+  webcams: { name: 'Live Webcams (Windy)', requiredForRisk: false, panelId: 'live-webcams' },
 };
 
 class DataFreshnessTracker {
@@ -412,6 +414,7 @@ const INTELLIGENCE_GAP_MESSAGES: Record<DataSourceId, string> = {
   supply_chain: 'Supply chain disruption status unavailable—chokepoint monitoring offline',
   security_advisories: 'Government travel advisory data unavailable—security alerts may be missed',
   gpsjam: 'GPS/GNSS interference data unavailable—jamming zones undetected',
+  webcams: 'Live webcam feeds unavailable—Windy API not responding',
 };
 
 /**

@@ -4,6 +4,7 @@
  */
 
 import { getApiBaseUrl } from './runtime';
+import { dataFreshness } from './data-freshness';
 
 export interface WindyCamera {
   id: string;
@@ -87,10 +88,12 @@ export async function fetchCameras(
     .then((data) => {
       cache.set(url, { data, fetchedAt: Date.now() });
       inflight.delete(url);
+      dataFreshness.recordUpdate('webcams', data.cameras.length);
       return data;
     })
     .catch((err) => {
       inflight.delete(url);
+      dataFreshness.recordError('webcams', err.message);
       throw err;
     });
 
