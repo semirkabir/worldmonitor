@@ -409,6 +409,14 @@ export class MapContainer {
     }
   }
 
+  public enableAisLiveTracking(): void {
+    this.deckGLMap?.enableAisLiveTracking();
+  }
+
+  public disableAisLiveTracking(): void {
+    this.deckGLMap?.disableAisLiveTracking();
+  }
+
   public setCableActivity(advisories: CableAdvisory[], repairShips: RepairShip[]): void {
     this.cachedCableAdvisories = advisories;
     this.cachedRepairShips = repairShips;

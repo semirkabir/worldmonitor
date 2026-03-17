@@ -558,6 +558,37 @@ function camerasPlugin(): Plugin {
   };
 }
 
+function aisSnapshotPlugin(): Plugin {
+  const RELAY_URL = 'http://localhost:3004/ais/snapshot';
+  return {
+    name: 'ais-snapshot-proxy',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url?.startsWith('/api/ais-snapshot')) return next();
+
+        const url = new URL(req.url, 'http://localhost');
+        const candidates = url.searchParams.get('candidates') || 'false';
+
+        try {
+          const response = await fetch(`${RELAY_URL}?candidates=${candidates}`, {
+            signal: AbortSignal.timeout(12000),
+          });
+          const data = await response.text();
+          res.statusCode = response.status;
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', 'public, max-age=60');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.end(data);
+        } catch (err: any) {
+          res.statusCode = 502;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'AIS relay unavailable' }));
+        }
+      });
+    },
+  };
+}
+
 function rssProxyPlugin(): Plugin {
   return {
     name: 'rss-proxy',
@@ -690,6 +721,7 @@ export default defineConfig({
     htmlVariantPlugin(),
     polymarketPlugin(),
     camerasPlugin(),
+    aisSnapshotPlugin(),
     rssProxyPlugin(),
     youtubeLivePlugin(),
     sebufApiPlugin(),

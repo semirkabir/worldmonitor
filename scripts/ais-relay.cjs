@@ -3217,7 +3217,7 @@ const GAP_THRESHOLD = 60 * 60 * 1000; // 1 hour
 const SNAPSHOT_INTERVAL_MS = Math.max(2000, Number(process.env.AIS_SNAPSHOT_INTERVAL_MS || 5000));
 const CANDIDATE_RETENTION_MS = 2 * 60 * 60 * 1000; // 2 hours
 const MAX_DENSITY_ZONES = 200;
-const MAX_CANDIDATE_REPORTS = 1500;
+const MAX_CANDIDATE_REPORTS = 20000;
 
 const vessels = new Map();
 const vesselHistory = new Map();
