@@ -661,6 +661,8 @@
         "europe": "EVROPA",
         "americas": "AMERIKA",
         "asia": "ASIE",
+        "africa": "AFRIKA",
+        "oceania": "OCEÁNIE",
         "space": "VESMÍR"
       },
       "expand": "Rozbalit",

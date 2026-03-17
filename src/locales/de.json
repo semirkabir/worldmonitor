@@ -670,6 +670,8 @@
         "europe": "EUROPA",
         "americas": "AMERIKA",
         "asia": "ASIEN",
+        "africa": "AFRIKA",
+        "oceania": "OZEANIEN",
         "space": "WELTRAUM"
       },
       "expand": "Erweitern",

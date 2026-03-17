@@ -664,6 +664,8 @@
         "europe": "ヨーロッパ",
         "americas": "アメリカ",
         "asia": "アジア",
+        "africa": "アフリカ",
+        "oceania": "オセアニア",
         "space": "宇宙"
       }
     },

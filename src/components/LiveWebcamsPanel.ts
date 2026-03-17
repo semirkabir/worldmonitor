@@ -7,16 +7,20 @@ import { trackWebcamSelected, trackWebcamRegionFiltered } from '@/services/analy
 import { getStreamQuality, subscribeStreamQualityChange } from '@/services/ai-flow-settings';
 import { isMobileDevice } from '@/utils';
 import { getLiveStreamsAlwaysOn, subscribeLiveStreamsSettingsChange } from '@/services/live-stream-settings';
+import { fetchCameras, regionToContinentCode, type WindyCamera } from '@/services/webcam-api';
 
-type WebcamRegion = 'iran' | 'middle-east' | 'europe' | 'asia' | 'americas' | 'space';
+type WebcamRegion = 'iran' | 'middle-east' | 'europe' | 'asia' | 'americas' | 'africa' | 'oceania' | 'space';
 
 interface WebcamFeed {
   id: string;
   city: string;
   country: string;
   region: WebcamRegion;
-  channelHandle: string;
-  fallbackVideoId: string;
+  // YouTube source
+  channelHandle?: string;
+  fallbackVideoId?: string;
+  // Windy webcam source
+  windyId?: string;
 }
 
 // Verified YouTube live stream IDs — validated Feb 2026 via title cross-check.
@@ -57,6 +61,21 @@ const WEBCAM_FEEDS: WebcamFeed[] = [
   { id: 'space-walk', city: 'Space Walk', country: 'Space', region: 'space', channelHandle: '@NASA', fallbackVideoId: '0FBiyFpV__g' },
 ];
 
+/** Regions that use curated YouTube feeds (no dynamic Windy fetch). */
+const STATIC_REGIONS = new Set<WebcamRegion>(['iran', 'middle-east', 'space']);
+
+/** Convert a Windy API camera into our WebcamFeed format. */
+function windyCameraToFeed(cam: WindyCamera, region: WebcamRegion): WebcamFeed {
+  return {
+    id: `windy-${cam.id}`,
+    city: cam.location.city || cam.title.split(':')[0] || 'Unknown',
+    country: cam.location.country,
+    region,
+    windyId: cam.id,
+  };
+}
+
+
 const MAX_GRID_CELLS = 4;
 
 // Eco mode pauses streams after inactivity to save CPU/bandwidth.
@@ -82,6 +101,12 @@ export class LiveWebcamsPanel extends Panel {
   private iframeTrackers = new Map<HTMLIFrameElement, WebcamIframeTracker>();
   private observer: IntersectionObserver | null = null;
   private isVisible = false;
+  // Dynamic Windy cameras — keyed by region
+  private dynamicFeeds = new Map<WebcamRegion, WebcamFeed[]>();
+  private dynamicLoading = new Set<string>();
+  private dynamicTotal = new Map<WebcamRegion, number>();
+  private dynamicOffset = new Map<WebcamRegion, number>();
+  private readonly DYNAMIC_PAGE_SIZE = 50;
   // Stream lifecycle
   private idleTimeout: ReturnType<typeof setTimeout> | null = null;
   private boundIdleResetHandler!: () => void;
@@ -150,8 +175,81 @@ export class LiveWebcamsPanel extends Panel {
   };
 
   private get filteredFeeds(): WebcamFeed[] {
-    if (this.regionFilter === 'all') return WEBCAM_FEEDS;
-    return WEBCAM_FEEDS.filter(f => f.region === this.regionFilter);
+    if (this.regionFilter === 'all') {
+      // Static YouTube feeds + all loaded dynamic feeds
+      const dynamic = Array.from(this.dynamicFeeds.values()).flat();
+      return [...WEBCAM_FEEDS, ...dynamic];
+    }
+    const staticForRegion = WEBCAM_FEEDS.filter(f => f.region === this.regionFilter);
+    const dynamicForRegion = this.dynamicFeeds.get(this.regionFilter) ?? [];
+    return [...staticForRegion, ...dynamicForRegion];
+  }
+
+  /** Fetch dynamic Windy cameras for the current region (if not static-only). */
+  private async loadDynamicFeeds(region: WebcamRegion): Promise<void> {
+    if (STATIC_REGIONS.has(region)) return;
+    if (this.dynamicLoading.has(region)) return;
+    if (this.dynamicFeeds.has(region)) return; // Already loaded first page
+
+    this.dynamicLoading.add(region);
+    try {
+      const continentCode = regionToContinentCode(region);
+      const resp = await fetchCameras(continentCode, this.DYNAMIC_PAGE_SIZE, 0);
+      const feeds = resp.cameras.map(cam => windyCameraToFeed(cam, region));
+      this.dynamicFeeds.set(region, feeds);
+      this.dynamicTotal.set(region, resp.total);
+      this.dynamicOffset.set(region, feeds.length);
+
+      // Update live count in toolbar
+      this.updateLiveCameraCount();
+
+      // Re-render if still on this region
+      if (this.regionFilter === region || this.regionFilter === 'all') {
+        if (!this.filteredFeeds.includes(this.activeFeed)) {
+          this.activeFeed = this.filteredFeeds[0] ?? WEBCAM_FEEDS[0]!;
+        }
+        this.render();
+      }
+    } catch (err) {
+      console.warn('[Webcams] Failed to load dynamic cameras for', region, err);
+    } finally {
+      this.dynamicLoading.delete(region);
+    }
+  }
+
+  /** Load next page of Windy cameras for a region. */
+  private async loadMoreFeeds(region: WebcamRegion): Promise<void> {
+    if (STATIC_REGIONS.has(region)) return;
+    const currentOffset = this.dynamicOffset.get(region) ?? 0;
+    const total = this.dynamicTotal.get(region) ?? 0;
+    if (currentOffset >= total) return;
+    if (this.dynamicLoading.has(region)) return;
+
+    this.dynamicLoading.add(region);
+    try {
+      const continentCode = regionToContinentCode(region);
+      const resp = await fetchCameras(continentCode, this.DYNAMIC_PAGE_SIZE, currentOffset);
+      const feeds = resp.cameras.map(cam => windyCameraToFeed(cam, region));
+      const existing = this.dynamicFeeds.get(region) ?? [];
+      this.dynamicFeeds.set(region, [...existing, ...feeds]);
+      this.dynamicOffset.set(region, currentOffset + feeds.length);
+      this.updateLiveCameraCount();
+      if (this.regionFilter === region || this.regionFilter === 'all') {
+        this.render();
+      }
+    } catch (err) {
+      console.warn('[Webcams] Failed to load more cameras for', region, err);
+    } finally {
+      this.dynamicLoading.delete(region);
+    }
+  }
+
+  private updateLiveCameraCount(): void {
+    const countEl = this.toolbar?.querySelector('.webcam-live-count');
+    if (countEl) {
+      const total = this.filteredFeeds.length;
+      countEl.textContent = `${total} cameras`;
+    }
   }
 
   private static readonly ALL_GRID_IDS = ['jerusalem', 'tehran', 'kyiv', 'washington'];
@@ -179,6 +277,8 @@ export class LiveWebcamsPanel extends Panel {
       { key: 'europe', label: t('components.webcams.regions.europe') },
       { key: 'americas', label: t('components.webcams.regions.americas') },
       { key: 'asia', label: t('components.webcams.regions.asia') },
+      { key: 'africa', label: t('components.webcams.regions.africa') },
+      { key: 'oceania', label: t('components.webcams.regions.oceania') },
       { key: 'space', label: t('components.webcams.regions.space') },
     ];
 
@@ -229,6 +329,16 @@ export class LiveWebcamsPanel extends Panel {
     this.toolbar?.querySelectorAll('.webcam-region-btn').forEach(btn => {
       (btn as HTMLElement).classList.toggle('active', (btn as HTMLElement).dataset.region === filter);
     });
+
+    // Trigger dynamic loading for non-static regions
+    if (filter !== 'all' && !STATIC_REGIONS.has(filter as WebcamRegion)) {
+      this.loadDynamicFeeds(filter as WebcamRegion);
+    } else if (filter === 'all') {
+      // Preload all dynamic regions
+      const dynamicRegions: WebcamRegion[] = ['europe', 'americas', 'asia', 'africa', 'oceania'];
+      dynamicRegions.forEach(r => this.loadDynamicFeeds(r));
+    }
+
     const feeds = this.filteredFeeds;
     if (feeds.length > 0 && !feeds.includes(this.activeFeed)) {
       this.activeFeed = feeds[0]!;
@@ -244,6 +354,10 @@ export class LiveWebcamsPanel extends Panel {
       (btn as HTMLElement).classList.toggle('active', (btn as HTMLElement).dataset.mode === mode);
     });
     this.render();
+  }
+
+  private buildWindyEmbedUrl(windyId: string): string {
+    return `https://webcams.windy.com/webcams/public/embed/player/${windyId}/day`;
   }
 
   private buildEmbedUrl(videoId: string): string {
@@ -262,9 +376,14 @@ export class LiveWebcamsPanel extends Panel {
   private createIframe(feed: WebcamFeed): HTMLIFrameElement {
     const iframe = document.createElement('iframe');
     iframe.className = 'webcam-iframe';
-    iframe.src = this.buildEmbedUrl(feed.fallbackVideoId);
+    if (feed.windyId) {
+      iframe.src = this.buildWindyEmbedUrl(feed.windyId);
+      iframe.allow = 'autoplay';
+    } else {
+      iframe.src = this.buildEmbedUrl(feed.fallbackVideoId!);
+      iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
+    }
     iframe.title = `${feed.city} live webcam`;
-    iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
     iframe.referrerPolicy = 'strict-origin-when-cross-origin';
     if (!isDesktopRuntime()) {
       iframe.allowFullscreen = true;
@@ -367,10 +486,15 @@ export class LiveWebcamsPanel extends Panel {
 
     const openBtn = document.createElement('a');
     openBtn.className = 'offline-retry webcam-embed-open';
-    openBtn.href = `https://www.youtube.com/watch?v=${encodeURIComponent(feed.fallbackVideoId)}`;
+    if (feed.windyId) {
+      openBtn.href = `https://www.windy.com/webcams/${encodeURIComponent(feed.windyId)}`;
+      openBtn.textContent = 'Open on Windy';
+    } else {
+      openBtn.href = `https://www.youtube.com/watch?v=${encodeURIComponent(feed.fallbackVideoId!)}`;
+      openBtn.textContent = t('components.liveNews.openOnYouTube') || 'Open on YouTube';
+    }
     openBtn.target = '_blank';
     openBtn.rel = 'noopener noreferrer';
-    openBtn.textContent = t('components.liveNews.openOnYouTube') || 'Open on YouTube';
     openBtn.addEventListener('click', (e) => e.stopPropagation());
 
     actions.append(retryBtn, openBtn);
@@ -535,6 +659,20 @@ export class LiveWebcamsPanel extends Panel {
       });
       switcher.appendChild(btn);
     });
+
+    // "Load More" button for dynamic regions with more cameras available
+    const region = this.regionFilter as WebcamRegion;
+    if (!STATIC_REGIONS.has(region) && this.regionFilter !== 'all') {
+      const currentOffset = this.dynamicOffset.get(region) ?? 0;
+      const total = this.dynamicTotal.get(region) ?? 0;
+      if (currentOffset < total) {
+        const loadMoreBtn = document.createElement('button');
+        loadMoreBtn.className = 'webcam-feed-btn webcam-load-more';
+        loadMoreBtn.textContent = `Load more (${currentOffset}/${total})`;
+        loadMoreBtn.addEventListener('click', () => this.loadMoreFeeds(region));
+        switcher.appendChild(loadMoreBtn);
+      }
+    }
 
     this.content.appendChild(wrapper);
     this.content.appendChild(switcher);

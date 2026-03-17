@@ -479,6 +479,8 @@
         "europe": "EUROPA",
         "americas": "AMERIKA",
         "asia": "AZIË",
+        "africa": "AFRIKA",
+        "oceania": "OCEANIË",
         "space": "RUIMTE"
       },
       "expand": "Uitvouwen",

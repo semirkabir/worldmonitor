@@ -664,6 +664,8 @@
         "europe": "CHÂU ÂU",
         "americas": "CHÂU MỸ",
         "asia": "CHÂU Á",
+        "africa": "CHÂU PHI",
+        "oceania": "CHÂU ĐẠI DƯƠNG",
         "space": "KHÔNG GIAN"
       }
     },

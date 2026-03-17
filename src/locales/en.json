@@ -668,6 +668,8 @@
         "europe": "EUROPE",
         "americas": "AMERICAS",
         "asia": "ASIA",
+        "africa": "AFRICA",
+        "oceania": "OCEANIA",
         "space": "SPACE"
       }
     },
