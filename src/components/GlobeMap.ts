@@ -469,6 +469,7 @@ export class GlobeMap {
   // Overlay UI elements
   private layerTogglesEl: HTMLElement | null = null;
   private tooltipEl: HTMLElement | null = null;
+  private tooltipHoverTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Callbacks
   private onLayerChangeCb: ((layer: keyof MapLayers, enabled: boolean, source: 'user' | 'programmatic') => void) | null = null;
@@ -970,10 +971,19 @@ export class GlobeMap {
         </div>`;
     }
 
-    el.addEventListener('mouseenter', () => {
-      this.showMarkerTooltip(d, el);
+    // Remove native browser tooltip — we use our custom styled tooltip instead
+    el.removeAttribute('title');
+
+    // Use pointerenter/leave with a short delay so the tooltip appears reliably
+    // on hover (globe.gl's 3D transforms can cause brief mouseenter/leave flicker)
+    el.addEventListener('pointerenter', () => {
+      if (this.tooltipHoverTimer) clearTimeout(this.tooltipHoverTimer);
+      this.tooltipHoverTimer = setTimeout(() => {
+        this.showMarkerTooltip(d, el);
+      }, 80);
     });
-    el.addEventListener('mouseleave', () => {
+    el.addEventListener('pointerleave', () => {
+      if (this.tooltipHoverTimer) { clearTimeout(this.tooltipHoverTimer); this.tooltipHoverTimer = null; }
       this.hideTooltip();
     });
 
@@ -1170,6 +1180,7 @@ export class GlobeMap {
   }
 
   private hideTooltip(): void {
+    if (this.tooltipHoverTimer) { clearTimeout(this.tooltipHoverTimer); this.tooltipHoverTimer = null; }
     this.tooltipEl?.remove();
     this.tooltipEl = null;
   }

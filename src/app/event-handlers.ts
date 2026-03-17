@@ -75,6 +75,10 @@ export class EventHandlerManager implements AppModule {
   private boundThemeChangedHandler: (() => void) | null = null;
   private boundMapResizeMoveHandler: ((e: MouseEvent) => void) | null = null;
   private boundMapEndResizeHandler: (() => void) | null = null;
+  private boundBloombergKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+  private kbShortcutsOverlay: HTMLElement | null = null;
+  private statusDropdownEl: HTMLElement | null = null;
+  private statusDropdownTimer: ReturnType<typeof setTimeout> | null = null;
   private boundMapResizeVisChangeHandler: (() => void) | null = null;
   private boundMapFullscreenEscHandler: ((e: KeyboardEvent) => void) | null = null;
   private boundMobileMenuKeyHandler: ((e: KeyboardEvent) => void) | null = null;
@@ -115,6 +119,8 @@ export class EventHandlerManager implements AppModule {
     this.setupEventListeners();
     this.setupIdleDetection();
     this.setupTvMode();
+    this.setupBloombergShortcuts();
+    this.setupStatusDropdown();
   }
 
   private setupTvMode(): void {
@@ -232,6 +238,12 @@ export class EventHandlerManager implements AppModule {
       document.removeEventListener('keydown', this.boundMobileMenuKeyHandler);
       this.boundMobileMenuKeyHandler = null;
     }
+    if (this.boundBloombergKeyHandler) {
+      document.removeEventListener('keydown', this.boundBloombergKeyHandler);
+      this.boundBloombergKeyHandler = null;
+    }
+    this.kbShortcutsOverlay?.remove();
+    this.kbShortcutsOverlay = null;
     this.ctx.tvMode?.destroy();
     this.ctx.tvMode = null;
     this.ctx.unifiedSettings?.destroy();
@@ -1094,6 +1106,305 @@ export class EventHandlerManager implements AppModule {
 
     this.setupMapFullscreen(mapSection);
     this.setupMapDimensionToggle();
+  }
+
+  // ─── Bloomberg Terminal-inspired keyboard shortcuts ───────────────────────
+
+  private setupBloombergShortcuts(): void {
+    this.boundBloombergKeyHandler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable ||
+        e.ctrlKey || e.metaKey || e.altKey
+      ) return;
+
+      switch (e.key) {
+        case '?':
+          e.preventDefault();
+          this.toggleKbShortcutsOverlay();
+          break;
+        case 'Escape':
+          if (this.kbShortcutsOverlay) {
+            this.kbShortcutsOverlay.remove();
+            this.kbShortcutsOverlay = null;
+          }
+          break;
+        case '/':
+          e.preventDefault();
+          this.callbacks.updateSearchIndex();
+          this.ctx.searchModal?.open();
+          break;
+        case 'g':
+        case 'G':
+          if (!e.shiftKey) {
+            e.preventDefault();
+            if (!(this.ctx.map?.isGlobeMode() ?? false)) {
+              document.querySelector<HTMLButtonElement>('[data-mode="globe"]')?.click();
+            }
+          }
+          break;
+        case 'm':
+        case 'M':
+          e.preventDefault();
+          if (this.ctx.map?.isGlobeMode() ?? true) {
+            document.querySelector<HTMLButtonElement>('[data-mode="flat"]')?.click();
+          }
+          break;
+        case 'r':
+        case 'R':
+          e.preventDefault();
+          this.ctx.map?.setView('global');
+          break;
+        case '+':
+        case '=':
+          e.preventDefault();
+          (document.querySelector('.zoom-in') as HTMLButtonElement | null)?.click();
+          break;
+        case '-':
+          e.preventDefault();
+          (document.querySelector('.zoom-out') as HTMLButtonElement | null)?.click();
+          break;
+        case '0':
+          e.preventDefault();
+          (document.querySelector('.zoom-reset') as HTMLButtonElement | null)?.click();
+          break;
+        case 'f':
+        case 'F':
+          e.preventDefault();
+          (document.getElementById('mapFullscreenBtn') as HTMLButtonElement | null)?.click();
+          break;
+        case 'l':
+        case 'L':
+          e.preventDefault();
+          (document.getElementById('layerToggleBtn') as HTMLButtonElement | null)?.click();
+          break;
+
+        // Shift+S — share current view URL
+        case 'S':
+          if (e.shiftKey) {
+            e.preventDefault();
+            this.shareCurrentView();
+          }
+          break;
+      }
+    };
+    document.addEventListener('keydown', this.boundBloombergKeyHandler);
+  }
+
+  private shareCurrentView(): void {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).then(() => {
+      this.showWmToast('\u2713  Link copied to clipboard');
+    }).catch(() => {
+      this.showToast('Copy failed \u2014 use Ctrl+C on the address bar');
+    });
+  }
+
+  private showWmToast(message: string): void {
+    document.querySelector('.wm-toast')?.remove();
+    const toast = document.createElement('div');
+    toast.className = 'wm-toast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => { toast.classList.add('wm-toast-visible'); });
+    setTimeout(() => {
+      toast.classList.remove('wm-toast-visible');
+      setTimeout(() => toast.remove(), 300);
+    }, 2500);
+  }
+
+  private toggleKbShortcutsOverlay(): void {
+    if (this.kbShortcutsOverlay) {
+      this.kbShortcutsOverlay.remove();
+      this.kbShortcutsOverlay = null;
+      return;
+    }
+
+    const shortcuts: [string, string][] = [
+      ['/', 'Open search'],
+      ['G', 'Switch to 3D globe'],
+      ['M', 'Switch to 2D map'],
+      ['R', 'Reset map view'],
+      ['L', 'Toggle layers panel'],
+      ['F', 'Fullscreen map'],
+      ['+ / -', 'Zoom in / out'],
+      ['0', 'Reset zoom'],
+      ['Shift+S', 'Copy share link'],
+      ['Cmd+K', 'Command search'],
+      ['Shift+T', 'TV mode'],
+      ['?', 'Toggle this panel'],
+      ['Esc', 'Close'],
+    ];
+
+    const overlay = document.createElement('div');
+    Object.assign(overlay.style, {
+      position: 'fixed', inset: '0', zIndex: '99999',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
+    });
+
+    const box = document.createElement('div');
+    Object.assign(box.style, {
+      background: '#0a0c10', border: '1px solid #ffaa00', borderRadius: '4px',
+      padding: '28px 36px', minWidth: '460px', maxWidth: '90vw', fontFamily: 'monospace',
+      boxShadow: '0 0 40px rgba(255,170,0,0.2)',
+    });
+
+    const title = document.createElement('div');
+    title.textContent = '\u2328  KEYBOARD SHORTCUTS';
+    Object.assign(title.style, {
+      color: '#ffaa00', fontSize: '13px', fontWeight: 'bold', letterSpacing: '2px',
+      marginBottom: '20px', borderBottom: '1px solid rgba(255,170,0,0.26)', paddingBottom: '10px',
+    });
+    box.appendChild(title);
+
+    const grid = document.createElement('div');
+    Object.assign(grid.style, {
+      display: 'grid', gridTemplateColumns: '140px 1fr', gap: '4px 24px',
+    });
+
+    shortcuts.forEach(([key, desc]) => {
+      const keyEl = document.createElement('span');
+      keyEl.textContent = key;
+      Object.assign(keyEl.style, {
+        color: '#ffaa00', fontSize: '11px', padding: '4px 8px',
+        background: 'rgba(255,170,0,0.08)', borderRadius: '2px', letterSpacing: '0.5px',
+      });
+
+      const descEl = document.createElement('span');
+      descEl.textContent = desc;
+      Object.assign(descEl.style, {
+        color: '#aaaaaa', fontSize: '11px', padding: '4px 0', alignSelf: 'center',
+      });
+
+      grid.appendChild(keyEl);
+      grid.appendChild(descEl);
+    });
+    box.appendChild(grid);
+
+    const footer = document.createElement('div');
+    footer.textContent = 'PRESS ? OR ESC TO CLOSE';
+    Object.assign(footer.style, {
+      marginTop: '20px', color: '#555', fontSize: '10px',
+      textAlign: 'center', letterSpacing: '1px',
+    });
+    box.appendChild(footer);
+    overlay.appendChild(box);
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        overlay.remove();
+        this.kbShortcutsOverlay = null;
+      }
+    });
+
+    document.body.appendChild(overlay);
+    this.kbShortcutsOverlay = overlay;
+  }
+
+  // ─── Live status hover dropdown ───────────────────────────────────────────
+
+  // Sources that use a persistent WebSocket connection (true "live")
+  private static readonly WS_SOURCES = new Set(['ais']);
+
+  private setupStatusDropdown(): void {
+    const indicator = document.querySelector<HTMLElement>('.status-indicator');
+    if (!indicator) return;
+
+    indicator.style.cursor = 'pointer';
+    indicator.style.position = 'relative';
+
+    indicator.addEventListener('mouseenter', () => {
+      if (this.statusDropdownTimer) clearTimeout(this.statusDropdownTimer);
+      this.showStatusDropdown(indicator);
+    });
+    indicator.addEventListener('mouseleave', () => {
+      this.statusDropdownTimer = setTimeout(() => this.hideStatusDropdown(), 200);
+    });
+  }
+
+  private showStatusDropdown(anchor: HTMLElement): void {
+    this.hideStatusDropdown();
+
+    const sources = dataFreshness.getAllSources().filter(s => s.enabled);
+    const dropdown = document.createElement('div');
+    dropdown.className = 'status-dropdown';
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'status-dropdown-header';
+    header.textContent = 'DATA SOURCES';
+    dropdown.appendChild(header);
+
+    // Sort: errors first, then by name
+    const sorted = [...sources].sort((a, b) => {
+      const order = { error: 0, no_data: 1, very_stale: 2, stale: 3, fresh: 4, disabled: 5 };
+      return (order[a.status] ?? 9) - (order[b.status] ?? 9);
+    });
+
+    sorted.forEach(source => {
+      const isWs = EventHandlerManager.WS_SOURCES.has(source.id);
+      const row = document.createElement('div');
+      row.className = 'status-dropdown-row';
+
+      const dot = document.createElement('span');
+      dot.className = `status-dropdown-dot status-dropdown-dot-${this.getSourceDotClass(source.status, isWs)}`;
+      row.appendChild(dot);
+
+      const name = document.createElement('span');
+      name.className = 'status-dropdown-name';
+      name.textContent = source.name;
+      row.appendChild(name);
+
+      const badge = document.createElement('span');
+      badge.className = `status-dropdown-badge status-dropdown-badge-${this.getSourceDotClass(source.status, isWs)}`;
+      badge.textContent = this.getSourceLabel(source, isWs);
+      row.appendChild(badge);
+
+      dropdown.appendChild(row);
+    });
+
+    // Keep open when hovering the dropdown itself
+    dropdown.addEventListener('mouseenter', () => {
+      if (this.statusDropdownTimer) clearTimeout(this.statusDropdownTimer);
+    });
+    dropdown.addEventListener('mouseleave', () => {
+      this.statusDropdownTimer = setTimeout(() => this.hideStatusDropdown(), 200);
+    });
+
+    anchor.appendChild(dropdown);
+    this.statusDropdownEl = dropdown;
+  }
+
+  private hideStatusDropdown(): void {
+    this.statusDropdownEl?.remove();
+    this.statusDropdownEl = null;
+  }
+
+  private getSourceDotClass(status: string, isWs: boolean): string {
+    if (isWs) return 'live';
+    if (status === 'error' || status === 'no_data') return 'error';
+    if (status === 'very_stale') return 'error';
+    if (status === 'stale') return 'stale';
+    if (status === 'fresh') return 'fresh';
+    return 'stale';
+  }
+
+  private getSourceLabel(source: { status: string; lastUpdate: Date | null; lastError: string | null }, isWs: boolean): string {
+    if (isWs) return 'LIVE';
+    if (source.status === 'error') return 'ERROR';
+    if (source.status === 'no_data' || !source.lastUpdate) return 'NO DATA';
+    return this.timeAgo(source.lastUpdate);
+  }
+
+  private timeAgo(date: Date): string {
+    const secs = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (secs < 60) return 'just now';
+    if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
+    if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
+    return `${Math.floor(secs / 86400)}d ago`;
   }
 
   private setupMapDimensionToggle(): void {

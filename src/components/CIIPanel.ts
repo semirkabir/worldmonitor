@@ -12,6 +12,8 @@ export class CIIPanel extends Panel {
   private hasCachedRender = false;
   private onShareStory?: (code: string, name: string) => void;
   private onCountryClick?: (code: string) => void;
+  private compareTarget: CountryScore | null = null;
+  private compareModal: HTMLElement | null = null;
 
   constructor() {
     super({
@@ -69,12 +71,19 @@ export class CIIPanel extends Panel {
     });
     shareBtn.appendChild(rawHtml(CIIPanel.SHARE_SVG));
 
+    const vsBtn = h('button', {
+      className: 'cii-vs-btn',
+      dataset: { code: country.code },
+      title: 'Compare with another country',
+    }, 'vs');
+
     return h('div', { className: 'cii-country', dataset: { code: country.code } },
       h('div', { className: 'cii-header' },
         h('span', { className: 'cii-emoji' }, emoji),
         h('span', { className: 'cii-name' }, country.name),
         h('span', { className: 'cii-score' }, String(country.score)),
         this.buildTrendArrow(country.trend, country.change24h),
+        vsBtn,
         shareBtn,
       ),
       h('div', { className: 'cii-bar-container' },
@@ -87,6 +96,119 @@ export class CIIPanel extends Panel {
         h('span', { title: t('common.information') }, `I:${country.components.information}`),
       ),
     );
+  }
+
+  // ─── Country quick-compare ────────────────────────────────────────────────
+
+  private buildCompareModal(a: CountryScore, b: CountryScore): HTMLElement {
+    const overlay = document.createElement('div');
+    overlay.className = 'cii-compare-overlay';
+
+    const modal = document.createElement('div');
+    modal.className = 'cii-compare-modal';
+
+    // Header
+    const header = h('div', { className: 'cii-compare-header' },
+      h('span', {}, 'COUNTRY COMPARE'),
+      h('button', { className: 'cii-compare-close', title: 'Close' }, '\u00d7'),
+    );
+    modal.appendChild(header);
+
+    // Two-column comparison
+    const grid = h('div', { className: 'cii-compare-grid' },
+      this.buildCompareCard(a, b),
+      h('div', { className: 'cii-compare-divider' }),
+      this.buildCompareCard(b, a),
+    );
+    modal.appendChild(grid);
+
+    // Score diff summary
+    const diff = a.score - b.score;
+    const diffLabel = diff === 0 ? 'EQUAL RISK' : `${a.name} ${diff > 0 ? 'MORE' : 'LESS'} UNSTABLE BY ${Math.abs(diff)} pts`;
+    modal.appendChild(h('div', { className: 'cii-compare-diff' }, diffLabel));
+
+    overlay.appendChild(modal);
+
+    // Close handlers
+    const close = () => { overlay.remove(); this.compareModal = null; this.compareTarget = null; };
+    header.querySelector('.cii-compare-close')?.addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); }, { once: true });
+
+    return overlay;
+  }
+
+  private buildCompareCard(country: CountryScore, other: CountryScore): HTMLElement {
+    const color = this.getLevelColor(country.level);
+    const emoji = this.getLevelEmoji(country.level);
+    const isWinner = country.score < other.score; // lower = more stable
+
+    const card = h('div', { className: `cii-compare-card${isWinner ? ' cii-compare-winner' : ''}` },
+      h('div', { className: 'cii-compare-name' },
+        h('span', {}, emoji),
+        h('strong', {}, country.name),
+        isWinner ? h('span', { className: 'cii-compare-tag' }, 'MORE STABLE') : h('span', {}),
+      ),
+      h('div', { className: 'cii-compare-score', style: `color:${color}` }, String(country.score)),
+      h('div', { className: 'cii-compare-level' }, country.level.toUpperCase()),
+      this.buildTrendArrow(country.trend, country.change24h),
+    );
+
+    // Component bars
+    const components: [string, keyof CountryScore['components']][] = [
+      ['Unrest', 'unrest'], ['Conflict', 'conflict'], ['Security', 'security'], ['Intel', 'information'],
+    ];
+    const barsEl = h('div', { className: 'cii-compare-bars' });
+    components.forEach(([label, key]) => {
+      const val = country.components[key];
+      const otherVal = other.components[key];
+      const barColor = val > otherVal ? 'var(--semantic-elevated, #ffaa00)' : 'var(--semantic-normal, #44ff88)';
+      barsEl.appendChild(h('div', { className: 'cii-compare-bar-row' },
+        h('span', { className: 'cii-compare-bar-label' }, label),
+        h('div', { className: 'cii-compare-bar-track' },
+          h('div', { className: 'cii-compare-bar-fill', style: `width:${val}%;background:${barColor}` }),
+        ),
+        h('span', { className: 'cii-compare-bar-val' }, String(val)),
+      ));
+    });
+    card.appendChild(barsEl);
+    return card;
+  }
+
+  private bindVsButtons(): void {
+    this.content.querySelectorAll<HTMLElement>('.cii-vs-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const code = btn.dataset.code;
+        const country = this.scores.find(s => s.code === code);
+        if (!country) return;
+
+        if (!this.compareTarget) {
+          // First selection — highlight and wait for second
+          this.compareTarget = country;
+          this.content.querySelectorAll('.cii-vs-btn').forEach(b => b.classList.remove('cii-vs-selected'));
+          btn.classList.add('cii-vs-selected');
+          btn.textContent = 'vs \u2713';
+        } else if (this.compareTarget.code === country.code) {
+          // Deselect
+          this.compareTarget = null;
+          btn.classList.remove('cii-vs-selected');
+          btn.textContent = 'vs';
+        } else {
+          // Second selection — show modal
+          const modal = this.buildCompareModal(this.compareTarget, country);
+          this.compareModal?.remove();
+          this.compareModal = modal;
+          document.body.appendChild(modal);
+          // Reset vs button state
+          this.content.querySelectorAll('.cii-vs-btn').forEach(b => {
+            b.classList.remove('cii-vs-selected');
+            b.textContent = 'vs';
+          });
+          this.compareTarget = null;
+        }
+      });
+    });
   }
 
   private bindShareButtons(): void {
@@ -144,6 +266,7 @@ export class CIIPanel extends Panel {
       const listEl = h('div', { className: 'cii-list' }, ...withData.map(s => this.buildCountry(s)));
       replaceChildren(this.content, listEl);
       this.bindShareButtons();
+      this.bindVsButtons();
     } catch (error) {
       console.error('[CIIPanel] Refresh error:', error);
       this.showError(t('common.failedCII'), () => void this.refresh());
@@ -160,6 +283,7 @@ export class CIIPanel extends Panel {
     const listEl = h('div', { className: 'cii-list' }, ...scores.map(s => this.buildCountry(s)));
     replaceChildren(this.content, listEl);
     this.bindShareButtons();
+    this.bindVsButtons();
     console.log(`[CIIPanel] Rendered ${scores.length} countries from cached/bootstrap data`);
   }
 
