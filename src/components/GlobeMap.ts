@@ -19,6 +19,10 @@ import { isDesktopRuntime } from '@/services/runtime';
 import type { GlobeInstance, ConfigOptions } from 'globe.gl';
 import { INTEL_HOTSPOTS, CONFLICT_ZONES, MILITARY_BASES, NUCLEAR_FACILITIES, SPACEPORTS, ECONOMIC_CENTERS, STRATEGIC_WATERWAYS, CRITICAL_MINERALS, UNDERSEA_CABLES } from '@/config/geo';
 import { PIPELINES } from '@/config/pipelines';
+import { STOCK_EXCHANGES, FINANCIAL_CENTERS, CENTRAL_BANKS, COMMODITY_HUBS } from '@/config/finance-geo';
+import { STARTUP_HUBS, ACCELERATORS, TECH_HQS } from '@/config/tech-geo';
+import { GULF_INVESTMENTS } from '@/config/gulf-fdi';
+import type { GulfInvestment } from '@/types';
 import { t } from '@/services/i18n';
 import { SITE_VARIANT } from '@/config/variant';
 import { getGlobeRenderScale, resolveGlobePixelRatio, resolvePerformanceProfile, subscribeGlobeRenderScaleChange, getGlobeTexture, GLOBE_TEXTURE_URLS, subscribeGlobeTextureChange, getGlobeVisualPreset, subscribeGlobeVisualPresetChange, type GlobeRenderScale, type GlobePerformanceProfile, type GlobeVisualPreset } from '@/services/globe-render-settings';
@@ -277,6 +281,66 @@ interface AisDisruptionMarker extends BaseMarker {
   severity: AisDisruptionEvent['severity'];
   description: string;
 }
+interface StockExchangeMarker extends BaseMarker {
+  _kind: 'stockExchange';
+  id: string;
+  name: string;
+  shortName: string;
+  country: string;
+  tier: string;
+}
+interface FinancialCenterMarker extends BaseMarker {
+  _kind: 'financialCenter';
+  id: string;
+  name: string;
+  country: string;
+  type: string;
+}
+interface CentralBankMarker extends BaseMarker {
+  _kind: 'centralBank';
+  id: string;
+  name: string;
+  shortName: string;
+  country: string;
+  type: string;
+}
+interface CommodityHubMarker extends BaseMarker {
+  _kind: 'commodityHub';
+  id: string;
+  name: string;
+  country: string;
+  type: string;
+}
+interface GulfInvestmentMarker extends BaseMarker {
+  _kind: 'gulfInvestment';
+  id: string;
+  assetName: string;
+  investingCountry: string;
+  targetCountry: string;
+  sector: string;
+  status: string;
+}
+interface StartupHubMarker extends BaseMarker {
+  _kind: 'startupHub';
+  id: string;
+  name: string;
+  country: string;
+  tier: string;
+}
+interface AcceleratorMarker extends BaseMarker {
+  _kind: 'accelerator';
+  id: string;
+  name: string;
+  country: string;
+  type: string;
+}
+interface TechHQMarker extends BaseMarker {
+  _kind: 'techHQ';
+  id: string;
+  company: string;
+  country: string;
+  type: string;
+}
 interface GlobePath {
   id: string;
   name: string;
@@ -303,6 +367,8 @@ type GlobeMarker =
   | ConflictZoneMarker | MilBaseMarker | NuclearSiteMarker | IrradiatorSiteMarker | SpaceportSiteMarker
   | EarthquakeMarker | EconomicMarker | DatacenterMarker | WaterwayMarker | MineralMarker
   | FlightDelayMarker | CableAdvisoryMarker | RepairShipMarker | AisDisruptionMarker
+  | StockExchangeMarker | FinancialCenterMarker | CentralBankMarker | CommodityHubMarker
+  | GulfInvestmentMarker | StartupHubMarker | AcceleratorMarker | TechHQMarker
   | NewsLocationMarker | FlashMarker;
 
 interface GlobeControlsLike {
@@ -374,6 +440,14 @@ export class GlobeMap {
   private cableAdvisoryMarkers: CableAdvisoryMarker[] = [];
   private repairShipMarkers: RepairShipMarker[] = [];
   private aisMarkers: AisDisruptionMarker[] = [];
+  private stockExchangeMarkers: StockExchangeMarker[] = [];
+  private financialCenterMarkers: FinancialCenterMarker[] = [];
+  private centralBankMarkers: CentralBankMarker[] = [];
+  private commodityHubMarkers: CommodityHubMarker[] = [];
+  private gulfInvestmentMarkers: GulfInvestmentMarker[] = [];
+  private startupHubMarkers: StartupHubMarker[] = [];
+  private acceleratorMarkers: AcceleratorMarker[] = [];
+  private techHQMarkers: TechHQMarker[] = [];
   private tradeRouteSegments: TradeRouteSegment[] = [];
   private globePaths: GlobePath[] = [];
   private cableFaultIds = new Set<string>();
@@ -395,6 +469,7 @@ export class GlobeMap {
   // Overlay UI elements
   private layerTogglesEl: HTMLElement | null = null;
   private tooltipEl: HTMLElement | null = null;
+  private tooltipHoverTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Callbacks
   private onLayerChangeCb: ((layer: keyof MapLayers, enabled: boolean, source: 'user' | 'programmatic') => void) | null = null;
@@ -458,7 +533,7 @@ export class GlobeMap {
       .globeImageUrl(GLOBE_TEXTURE_URLS[initialTexture])
       .backgroundImageUrl('')
       .atmosphereColor('#000000')
-      .atmosphereAltitude(0.18)
+      .atmosphereAltitude(0)
       .width(initW)
       .height(initH)
       .pathTransitionDuration(0);
@@ -808,32 +883,31 @@ export class GlobeMap {
       el.innerHTML = this.buildLayerIconGlyph('bases', c, 12);
       el.title = `${d.name}${d.country ? ' · ' + d.country : ''}`;
     } else if (d._kind === 'nuclearSite') {
-      el.innerHTML = `<div style="font-size:11px;color:#ffd700;text-shadow:0 0 4px #ffd70088;">☢</div>`;
-      el.title = `${d.name} (${d.type})`;
+      el.innerHTML = this.buildLayerIconGlyph('nuclear', '#ffd700', 11);
+      el.title = escapeHtml(`${d.name} (${d.type})`);
     } else if (d._kind === 'irradiator') {
-      el.innerHTML = `<div style="font-size:10px;color:#ff8800;text-shadow:0 0 3px #ff880088;">⚠</div>`;
-      el.title = `${d.city}, ${d.country}`;
+      el.innerHTML = this.buildLayerIconGlyph('irradiators', '#ff8800', 10);
+      el.title = escapeHtml(`${d.city}, ${d.country}`);
     } else if (d._kind === 'spaceport') {
-      el.innerHTML = `<div style="font-size:11px;color:#88ddff;text-shadow:0 0 4px #88ddff88;">🚀</div>`;
-      el.title = `${d.name} (${d.operator})`;
+      el.innerHTML = this.buildLayerIconGlyph('spaceports', '#88ddff', 11);
+      el.title = escapeHtml(`${d.name} (${d.operator})`);
     } else if (d._kind === 'earthquake') {
       const mc = d.magnitude >= 6 ? '#ff2020' : d.magnitude >= 4 ? '#ff8800' : '#ffcc00';
       const sz = Math.max(8, Math.min(18, Math.round(d.magnitude * 2.5)));
       el.innerHTML = `<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${mc}44;border:2px solid ${mc};box-shadow:0 0 6px 2px ${mc}55;"></div>`;
       el.title = `M${d.magnitude.toFixed(1)} — ${d.place}`;
     } else if (d._kind === 'economic') {
-      const ec = d.type === 'exchange' ? '#ffd700' : d.type === 'central-bank' ? '#4488ff' : '#44cc88';
-      el.innerHTML = `<div style="font-size:11px;color:${ec};text-shadow:0 0 4px ${ec}88;">💰</div>`;
-      el.title = `${d.name} · ${d.country}`;
+      el.innerHTML = this.buildLayerIconGlyph('economic', '#ffd700', 11);
+      el.title = escapeHtml(`${d.name} · ${d.country}`);
     } else if (d._kind === 'datacenter') {
-      el.innerHTML = `<div style="font-size:10px;color:#88aaff;text-shadow:0 0 3px #88aaff88;">🖥</div>`;
-      el.title = `${d.name} (${d.owner})`;
+      el.innerHTML = this.buildLayerIconGlyph('datacenters', '#88aaff', 10);
+      el.title = escapeHtml(`${d.name} (${d.owner})`);
     } else if (d._kind === 'waterway') {
-      el.innerHTML = `<div style="font-size:10px;color:#44aadd;text-shadow:0 0 3px #44aadd88;">⚓</div>`;
-      el.title = d.name;
+      el.innerHTML = this.buildLayerIconGlyph('waterways', '#44aadd', 10);
+      el.title = escapeHtml(d.name);
     } else if (d._kind === 'mineral') {
-      el.innerHTML = `<div style="font-size:10px;color:#cc88ff;text-shadow:0 0 3px #cc88ff88;">💎</div>`;
-      el.title = `${d.mineral} — ${d.name}`;
+      el.innerHTML = this.buildLayerIconGlyph('minerals', '#cc88ff', 10);
+      el.title = escapeHtml(`${d.mineral} — ${d.name}`);
     } else if (d._kind === 'flightDelay') {
       const sc = d.severity === 'severe' ? '#ff2020' : d.severity === 'major' ? '#ff6600' : d.severity === 'moderate' ? '#ffaa00' : '#ffee44';
       el.innerHTML = `<div style="font-size:11px;color:${sc};text-shadow:0 0 4px ${sc}88;">✈</div>`;
@@ -861,6 +935,31 @@ export class GlobeMap {
       const sc = d.severity === 'high' ? '#ff2020' : d.severity === 'elevated' ? '#ff8800' : '#44aaff';
       el.innerHTML = `<div style="font-size:11px;color:${sc};text-shadow:0 0 4px ${sc}88;">⛴</div>`;
       el.title = d.name;
+    } else if (d._kind === 'stockExchange') {
+      el.innerHTML = this.buildLayerIconGlyph('stockExchanges', '#ffd700', 11);
+      el.title = escapeHtml(`${d.shortName} — ${d.name} · ${d.country}`);
+    } else if (d._kind === 'financialCenter') {
+      el.innerHTML = this.buildLayerIconGlyph('financialCenters', '#44aaff', 10);
+      el.title = escapeHtml(`${d.name} · ${d.country}`);
+    } else if (d._kind === 'centralBank') {
+      el.innerHTML = this.buildLayerIconGlyph('centralBanks', '#4488ff', 10);
+      el.title = escapeHtml(`${d.shortName} · ${d.country}`);
+    } else if (d._kind === 'commodityHub') {
+      el.innerHTML = this.buildLayerIconGlyph('commodityHubs', '#ff9944', 10);
+      el.title = escapeHtml(`${d.name} · ${d.country}`);
+    } else if (d._kind === 'gulfInvestment') {
+      const gc = d.investingCountry === 'SA' ? '#00a854' : d.investingCountry === 'AE' ? '#ff0064' : '#44dd88';
+      el.innerHTML = this.buildLayerIconGlyph('gulfInvestments', gc, 10);
+      el.title = escapeHtml(`${d.assetName} · ${d.sector}`);
+    } else if (d._kind === 'startupHub') {
+      el.innerHTML = this.buildLayerIconGlyph('startupHubs', '#ff6644', 10);
+      el.title = escapeHtml(`${d.name} · ${d.country}`);
+    } else if (d._kind === 'accelerator') {
+      el.innerHTML = this.buildLayerIconGlyph('accelerators', '#ffaa44', 10);
+      el.title = escapeHtml(`${d.name} · ${d.country}`);
+    } else if (d._kind === 'techHQ') {
+      el.innerHTML = this.buildLayerIconGlyph('techHQs', '#88aaff', 10);
+      el.title = escapeHtml(`${d.company} · ${d.country}`);
     } else if (d._kind === 'flash') {
       el.style.pointerEvents = 'none';
       el.innerHTML = `
@@ -871,6 +970,22 @@ export class GlobeMap {
             ${this.pulseStyle('0.7s')}"></div>
         </div>`;
     }
+
+    // Remove native browser tooltip — we use our custom styled tooltip instead
+    el.removeAttribute('title');
+
+    // Use pointerenter/leave with a short delay so the tooltip appears reliably
+    // on hover (globe.gl's 3D transforms can cause brief mouseenter/leave flicker)
+    el.addEventListener('pointerenter', () => {
+      if (this.tooltipHoverTimer) clearTimeout(this.tooltipHoverTimer);
+      this.tooltipHoverTimer = setTimeout(() => {
+        this.showMarkerTooltip(d, el);
+      }, 80);
+    });
+    el.addEventListener('pointerleave', () => {
+      if (this.tooltipHoverTimer) { clearTimeout(this.tooltipHoverTimer); this.tooltipHoverTimer = null; }
+      this.hideTooltip();
+    });
 
     el.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1062,10 +1177,10 @@ export class GlobeMap {
 
     this.container.appendChild(el);
     this.tooltipEl = el;
-    setTimeout(() => this.hideTooltip(), 3500);
   }
 
   private hideTooltip(): void {
+    if (this.tooltipHoverTimer) { clearTimeout(this.tooltipHoverTimer); this.tooltipHoverTimer = null; }
     this.tooltipEl?.remove();
     this.tooltipEl = null;
   }
@@ -1076,7 +1191,6 @@ export class GlobeMap {
     const el = document.createElement('div');
     el.className = 'map-controls deckgl-controls';
     el.innerHTML = `
-      <span class="globe-beta-badge">BETA</span>
       <div class="zoom-controls">
         <button class="map-btn zoom-in"    title="Zoom in">+</button>
         <button class="map-btn zoom-out"   title="Zoom out">-</button>
@@ -1234,6 +1348,14 @@ export class GlobeMap {
       markers.push(...this.cableAdvisoryMarkers);
       markers.push(...this.repairShipMarkers);
     }
+    if (this.layers.stockExchanges) markers.push(...this.stockExchangeMarkers);
+    if (this.layers.financialCenters) markers.push(...this.financialCenterMarkers);
+    if (this.layers.centralBanks) markers.push(...this.centralBankMarkers);
+    if (this.layers.commodityHubs) markers.push(...this.commodityHubMarkers);
+    if (this.layers.gulfInvestments) markers.push(...this.gulfInvestmentMarkers);
+    if (this.layers.startupHubs) markers.push(...this.startupHubMarkers);
+    if (this.layers.accelerators) markers.push(...this.acceleratorMarkers);
+    if (this.layers.techHQs) markers.push(...this.techHQMarkers);
     markers.push(...this.newsLocationMarkers);
     markers.push(...this.flashMarkers);
 
@@ -1446,6 +1568,84 @@ export class GlobeMap {
         country: m.country,
         status: m.status,
       }));
+    this.stockExchangeMarkers = STOCK_EXCHANGES.map(e => ({
+      _kind: 'stockExchange' as const,
+      _lat: e.lat,
+      _lng: e.lon,
+      id: e.id,
+      name: e.name,
+      shortName: e.shortName,
+      country: e.country,
+      tier: e.tier,
+    }));
+    this.financialCenterMarkers = FINANCIAL_CENTERS.map(f => ({
+      _kind: 'financialCenter' as const,
+      _lat: f.lat,
+      _lng: f.lon,
+      id: f.id,
+      name: f.name,
+      country: f.country,
+      type: f.type,
+    }));
+    this.centralBankMarkers = CENTRAL_BANKS.map(b => ({
+      _kind: 'centralBank' as const,
+      _lat: b.lat,
+      _lng: b.lon,
+      id: b.id,
+      name: b.name,
+      shortName: b.shortName,
+      country: b.country,
+      type: b.type,
+    }));
+    this.commodityHubMarkers = COMMODITY_HUBS.map(h => ({
+      _kind: 'commodityHub' as const,
+      _lat: h.lat,
+      _lng: h.lon,
+      id: h.id,
+      name: h.name,
+      country: h.country,
+      type: h.type,
+    }));
+    this.gulfInvestmentMarkers = (GULF_INVESTMENTS as GulfInvestment[]).map(g => ({
+      _kind: 'gulfInvestment' as const,
+      _lat: g.lat,
+      _lng: g.lon,
+      id: g.id,
+      assetName: g.assetName,
+      investingCountry: g.investingCountry,
+      targetCountry: g.targetCountry,
+      sector: g.sector,
+      status: g.status,
+    }));
+    if (SITE_VARIANT === 'tech') {
+      this.startupHubMarkers = STARTUP_HUBS.map(s => ({
+        _kind: 'startupHub' as const,
+        _lat: s.lat,
+        _lng: s.lon,
+        id: s.id,
+        name: s.name,
+        country: s.country,
+        tier: s.tier,
+      }));
+      this.acceleratorMarkers = ACCELERATORS.map(a => ({
+        _kind: 'accelerator' as const,
+        _lat: a.lat,
+        _lng: a.lon,
+        id: a.id,
+        name: a.name,
+        country: a.country,
+        type: a.type,
+      }));
+      this.techHQMarkers = TECH_HQS.map(h => ({
+        _kind: 'techHQ' as const,
+        _lat: h.lat,
+        _lng: h.lon,
+        id: h.id,
+        company: h.company,
+        country: h.country,
+        type: h.type,
+      }));
+    }
     this.tradeRouteSegments = resolveTradeRouteSegments();
     this.globePaths = [
       ...(UNDERSEA_CABLES as UnderseaCable[]).map(c => ({
@@ -1988,14 +2188,28 @@ export class GlobeMap {
       const THREE = await import('three');
       const scene = this.globe.scene();
 
+      // Override scene background to pure black (globe.gl resets renderer clearColor each frame)
+      scene.background = new THREE.Color(0x000000);
+
+      // Neutralize blue tint — keep original intensity but shift colors to pure white/neutral
+      scene.traverse((obj: any) => {
+        if (obj.isAmbientLight) {
+          obj.color?.setHex(0xffffff); // pure white: same brightness, no blue cast
+        }
+        if (obj.isHemisphereLight) {
+          obj.color?.setHex(0xaaaaaa);       // sky: neutral light gray (was blue-ish)
+          obj.groundColor?.setHex(0x222222); // ground: dark neutral
+        }
+      });
+
       const starCount = 6000;
       const positions = new Float32Array(starCount * 3);
       const colors = new Float32Array(starCount * 3);
       const sizes = new Float32Array(starCount);
 
       for (let i = 0; i < starCount; i++) {
-        // Distribute across a large sphere shell (200–600 units)
-        const r = 200 + Math.random() * 400;
+        // Distribute across a large sphere shell far beyond camera range (~280 units max)
+        const r = 600 + Math.random() * 600;
         const theta = Math.random() * Math.PI * 2;
         const phi = Math.acos(2 * Math.random() - 1);
         positions[i * 3]     = r * Math.sin(phi) * Math.cos(theta);
@@ -2054,56 +2268,33 @@ export class GlobeMap {
       if (oldMat) {
         const stdMat = new THREE.MeshStandardMaterial({
           color: 0xffffff, roughness: 0.8, metalness: 0.1,
-          emissive: new THREE.Color(0x0a1f2e), emissiveIntensity: 0.3,
+          emissive: new THREE.Color(0x000000), emissiveIntensity: 0,
         });
         if ((oldMat as any).map) stdMat.map = (oldMat as any).map;
         (this.globe as any).globeMaterial(stdMat);
       }
 
-      this.cyanLight = new THREE.PointLight(0x00d4ff, 0.3);
+      this.cyanLight = new THREE.PointLight(0xffffff, 0.15);
       this.cyanLight.position.set(-10, -10, -10);
       scene.add(this.cyanLight);
 
       const outerGeo = new THREE.SphereGeometry(2.15, 64, 64);
       const outerMat = new THREE.MeshBasicMaterial({
-        color: 0x00d4ff, side: THREE.BackSide, transparent: true, opacity: 0.15,
+        color: 0x111111, side: THREE.BackSide, transparent: true, opacity: 0.04,
       });
       this.outerGlow = new THREE.Mesh(outerGeo, outerMat);
       scene.add(this.outerGlow);
 
       const innerGeo = new THREE.SphereGeometry(2.08, 64, 64);
       const innerMat = new THREE.MeshBasicMaterial({
-        color: 0x00a8cc, side: THREE.BackSide, transparent: true, opacity: 0.1,
+        color: 0x111111, side: THREE.BackSide, transparent: true, opacity: 0.03,
       });
       this.innerGlow = new THREE.Mesh(innerGeo, innerMat);
       scene.add(this.innerGlow);
 
-      const starCount = 2000;
-      const starPositions = new Float32Array(starCount * 3);
-      const starColors = new Float32Array(starCount * 3);
-      for (let i = 0; i < starCount; i++) {
-        const r = 50 + Math.random() * 50;
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(2 * Math.random() - 1);
-        starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-        starPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-        starPositions[i * 3 + 2] = r * Math.cos(phi);
-        const brightness = 0.5 + Math.random() * 0.5;
-        starColors[i * 3] = brightness;
-        starColors[i * 3 + 1] = brightness;
-        starColors[i * 3 + 2] = brightness;
-      }
-      const starGeo = new THREE.BufferGeometry();
-      starGeo.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-      starGeo.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
-      const starMat = new THREE.PointsMaterial({ size: 0.1, vertexColors: true, transparent: true });
-      this.starField = new THREE.Points(starGeo, starMat);
-      scene.add(this.starField);
-
       const animateExtras = () => {
         if (this.destroyed) return;
         if (this.outerGlow) this.outerGlow.rotation.y += 0.0003;
-        if (this.starField) this.starField.rotation.y += 0.00005;
         this.extrasAnimFrameId = requestAnimationFrame(animateExtras);
       };
       animateExtras();

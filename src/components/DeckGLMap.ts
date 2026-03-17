@@ -165,15 +165,10 @@ const isHappyVariant = SITE_VARIANT === 'happy';
 // Zoom thresholds for layer visibility and labels (matches old Map.ts)
 // Zoom-dependent layer visibility and labels
 const LAYER_ZOOM_THRESHOLDS: Partial<Record<keyof MapLayers, { minZoom: number; showLabels?: number }>> = {
-  bases: { minZoom: 3, showLabels: 5 },
-  nuclear: { minZoom: 3 },
   conflicts: { minZoom: 1, showLabels: 3 },
-  economic: { minZoom: 3 },
   natural: { minZoom: 1, showLabels: 2 },
-  datacenters: { minZoom: 5 },
-  irradiators: { minZoom: 4 },
-  spaceports: { minZoom: 3 },
-  gulfInvestments: { minZoom: 2, showLabels: 5 },
+  bases: { minZoom: 1, showLabels: 5 },
+  gulfInvestments: { minZoom: 1, showLabels: 5 },
 };
 // Export for external use
 export { LAYER_ZOOM_THRESHOLDS };
@@ -240,28 +235,6 @@ function getOverlayColors() {
 // Initialize and refresh on every buildLayers() call
 let COLORS = getOverlayColors();
 
-// SVG icons as data URLs for different marker shapes
-const MARKER_ICONS = {
-  // Square - for datacenters
-  square: 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" rx="3" fill="white"/></svg>`),
-  // Diamond - for hotspots
-  diamond: 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><polygon points="16,2 30,16 16,30 2,16" fill="white"/></svg>`),
-  // Triangle up - for military bases
-  triangleUp: 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><polygon points="16,2 30,28 2,28" fill="white"/></svg>`),
-  // Hexagon - for nuclear
-  hexagon: 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><polygon points="16,2 28,9 28,23 16,30 4,23 4,9" fill="white"/></svg>`),
-  // Circle - fallback
-  circle: 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="white"/></svg>`),
-  // Star - for special markers
-  star: 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><polygon points="16,2 20,12 30,12 22,19 25,30 16,23 7,30 10,19 2,12 12,12" fill="white"/></svg>`),
-  // Airplane silhouette - top-down with wings and tail (pointing north, rotated by trackDeg)
-  plane: 'data:image/svg+xml;base64,' + btoa(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="M16 2 L17.5 10 L17 12 L27 17 L27 19 L17 16 L17 24 L20 26.5 L20 28 L16 27 L12 28 L12 26.5 L15 24 L15 16 L5 19 L5 17 L15 12 L14.5 10 Z" fill="white"/></svg>`),
-};
-
-const BASES_ICON_MAPPING = { triangleUp: { x: 0, y: 0, width: 32, height: 32, mask: true } };
-const NUCLEAR_ICON_MAPPING = { hexagon: { x: 0, y: 0, width: 32, height: 32, mask: true } };
-
-const AIRCRAFT_ICON_MAPPING = { plane: { x: 0, y: 0, width: 32, height: 32, mask: true } };
 const SHARED_LAYER_ICON_MAPPING = { marker: { x: 0, y: 0, width: 32, height: 32, mask: false } };
 const SHARED_LAYER_ICON_ATLAS_CACHE = new Map<string, string>();
 
@@ -1622,9 +1595,9 @@ export class DeckGLMap {
       id: 'bases-layer',
       data,
       getPosition: (d) => [d.lon, d.lat],
-      getIcon: () => 'triangleUp',
-      iconAtlas: MARKER_ICONS.triangleUp,
-      iconMapping: BASES_ICON_MAPPING,
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('bases'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
       getSize: (d) => highlightedBases.has(d.id) ? 16 : 11,
       getColor: (d) => {
         if (highlightedBases.has(d.id)) {
@@ -1680,9 +1653,9 @@ export class DeckGLMap {
       id: 'nuclear-layer',
       data,
       getPosition: (d) => [d.lon, d.lat],
-      getIcon: () => 'hexagon',
-      iconAtlas: MARKER_ICONS.hexagon,
-      iconMapping: NUCLEAR_ICON_MAPPING,
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('nuclear'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
       getSize: (d) => highlightedNuclear.has(d.id) ? 15 : 11,
       getColor: (d) => {
         if (highlightedNuclear.has(d.id)) {
@@ -1700,29 +1673,35 @@ export class DeckGLMap {
     });
   }
 
-  private createIrradiatorsLayer(): ScatterplotLayer {
-    return new ScatterplotLayer({
+  private createIrradiatorsLayer(): IconLayer {
+    return new IconLayer({
       id: 'irradiators-layer',
       data: GAMMA_IRRADIATORS,
       getPosition: (d) => [d.lon, d.lat],
-      getRadius: 6000,
-      getFillColor: [255, 100, 255, 180] as [number, number, number, number], // Magenta
-      radiusMinPixels: 4,
-      radiusMaxPixels: 10,
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('irradiators'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: () => 12,
+      sizeMinPixels: 6,
+      sizeMaxPixels: 14,
       pickable: true,
+      billboard: true,
     });
   }
 
-  private createSpaceportsLayer(): ScatterplotLayer {
-    return new ScatterplotLayer({
+  private createSpaceportsLayer(): IconLayer {
+    return new IconLayer({
       id: 'spaceports-layer',
       data: SPACEPORTS,
       getPosition: (d) => [d.lon, d.lat],
-      getRadius: 10000,
-      getFillColor: [200, 100, 255, 200] as [number, number, number, number], // Purple
-      radiusMinPixels: 5,
-      radiusMaxPixels: 12,
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('spaceports'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: () => 14,
+      sizeMinPixels: 6,
+      sizeMaxPixels: 16,
       pickable: true,
+      billboard: true,
     });
   }
 
@@ -1778,9 +1757,9 @@ export class DeckGLMap {
       id: 'aircraft-positions-layer',
       data: this.aircraftPositions,
       getPosition: (d) => [d.lon, d.lat],
-      getIcon: () => 'plane',
-      iconAtlas: MARKER_ICONS.plane,
-      iconMapping: AIRCRAFT_ICON_MAPPING,
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('flights'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
       getSize: (d) => d.onGround ? 14 : 18,
       getColor: (d) => {
         if (d.onGround) return [120, 120, 120, 160] as [number, number, number, number];
@@ -2283,26 +2262,19 @@ export class DeckGLMap {
     });
   }
 
-  private createMineralsLayer(): ScatterplotLayer {
-    // Critical minerals projects
-    return new ScatterplotLayer({
+  private createMineralsLayer(): IconLayer {
+    return new IconLayer({
       id: 'minerals-layer',
       data: CRITICAL_MINERALS,
       getPosition: (d) => [d.lon, d.lat],
-      getRadius: 8000,
-      getFillColor: (d) => {
-        // Color by mineral type
-        switch (d.mineral) {
-          case 'Lithium': return [0, 200, 255, 200] as [number, number, number, number]; // Cyan
-          case 'Cobalt': return [100, 100, 255, 200] as [number, number, number, number]; // Blue
-          case 'Rare Earths': return [255, 100, 200, 200] as [number, number, number, number]; // Pink
-          case 'Nickel': return [100, 255, 100, 200] as [number, number, number, number]; // Green
-          default: return [200, 200, 200, 200] as [number, number, number, number]; // Gray
-        }
-      },
-      radiusMinPixels: 5,
-      radiusMaxPixels: 12,
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('minerals'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: () => 12,
+      sizeMinPixels: 6,
+      sizeMaxPixels: 14,
       pickable: true,
+      billboard: true,
     });
   }
 
@@ -2645,28 +2617,21 @@ export class DeckGLMap {
     const baseOpacity = zoom < 2.5 ? 0.5 : zoom < 4 ? 0.7 : 1.0;
     const layers: Layer[] = [];
 
-    layers.push(new ScatterplotLayer({
+    layers.push(new IconLayer({
       id: 'hotspots-layer',
       data: this.hotspots,
       getPosition: (d) => [d.lon, d.lat],
-      getRadius: (d) => {
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('hotspots'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: (d) => {
         const score = d.escalationScore || 1;
-        return 10000 + score * 5000;
+        return 10 + score * 3;
       },
-      getFillColor: (d) => {
-        const score = d.escalationScore || 1;
-        const a = Math.round((score >= 4 ? 200 : score >= 2 ? 200 : 180) * baseOpacity);
-        if (score >= 4) return [255, 68, 68, a] as [number, number, number, number];
-        if (score >= 2) return [255, 165, 0, a] as [number, number, number, number];
-        return [255, 255, 0, a] as [number, number, number, number];
-      },
-      radiusMinPixels: 4,
-      radiusMaxPixels: maxPx,
+      sizeMinPixels: 6,
+      sizeMaxPixels: maxPx,
       pickable: true,
-      stroked: true,
-      getLineColor: (d) =>
-        d.hasBreaking ? [255, 255, 255, 255] as [number, number, number, number] : [0, 0, 0, 0] as [number, number, number, number],
-      lineWidthMinPixels: 2,
+      billboard: true,
     }));
 
     const highHotspots = this.hotspots.filter(h => h.level === 'high' || h.hasBreaking);
