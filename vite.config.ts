@@ -558,6 +558,38 @@ function camerasPlugin(): Plugin {
   };
 }
 
+function telegramFeedPlugin(): Plugin {
+  const RELAY_BASE = 'http://localhost:3004';
+  return {
+    name: 'telegram-feed-proxy',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url?.startsWith('/api/telegram-feed')) return next();
+
+        const url = new URL(req.url, 'http://localhost');
+        const params = new URLSearchParams();
+        for (const [k, v] of url.searchParams) params.set(k, v);
+
+        try {
+          const response = await fetch(`${RELAY_BASE}/telegram/feed?${params}`, {
+            signal: AbortSignal.timeout(15000),
+          });
+          const data = await response.text();
+          res.statusCode = response.status;
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', 'public, max-age=30');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.end(data);
+        } catch {
+          res.statusCode = 502;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Relay unavailable', enabled: false, count: 0, items: [] }));
+        }
+      });
+    },
+  };
+}
+
 function aisSnapshotPlugin(): Plugin {
   const RELAY_URL = 'http://localhost:3004/ais/snapshot';
   return {
@@ -721,6 +753,7 @@ export default defineConfig({
     htmlVariantPlugin(),
     polymarketPlugin(),
     camerasPlugin(),
+    telegramFeedPlugin(),
     aisSnapshotPlugin(),
     rssProxyPlugin(),
     youtubeLivePlugin(),
@@ -729,6 +762,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false,
+      disable: process.env.NODE_ENV !== 'production',
 
       includeAssets: [
         'favico/favicon.ico',

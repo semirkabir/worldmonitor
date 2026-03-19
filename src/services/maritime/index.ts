@@ -106,7 +106,7 @@ interface AisSnapshotResponse {
 
 // ---- Callback System ----
 
-type AisCallback = (data: AisPositionData) => void;
+type AisCallback = (data: AisPositionData[]) => void;
 const positionCallbacks = new Set<AisCallback>();
 const lastCallbackTimestampByMmsi = new Map<string, number>();
 
@@ -261,6 +261,7 @@ function pruneCallbackTimestampIndex(now: number): void {
 function emitCandidateReports(reports: SnapshotCandidateReport[]): void {
   if (positionCallbacks.size === 0 || reports.length === 0) return;
   const now = Date.now();
+  const batch: AisPositionData[] = [];
 
   for (const report of reports) {
     if (!report?.mmsi || !Number.isFinite(report.lat) || !Number.isFinite(report.lon)) continue;
@@ -270,7 +271,7 @@ function emitCandidateReports(reports: SnapshotCandidateReport[]): void {
     if (reportTs <= lastTs) continue;
 
     lastCallbackTimestampByMmsi.set(report.mmsi, reportTs);
-    const callbackData: AisPositionData = {
+    batch.push({
       mmsi: report.mmsi,
       name: report.name || '',
       lat: report.lat,
@@ -279,11 +280,13 @@ function emitCandidateReports(reports: SnapshotCandidateReport[]): void {
       heading: report.heading,
       speed: report.speed,
       course: report.course,
-    };
+    });
+  }
 
+  if (batch.length > 0) {
     for (const callback of positionCallbacks) {
       try {
-        callback(callbackData);
+        callback(batch);
       } catch {
         // Ignore callback errors
       }

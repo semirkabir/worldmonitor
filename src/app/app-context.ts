@@ -106,6 +106,7 @@ export interface AppContext {
   unifiedSettings: UnifiedSettings | null;
   pizzintIndicator: PizzIntIndicator | null;
   countryBriefPage: CountryBriefPanel | null;
+  entityDetailPanel: import('@/components/EntityDetailPanel').EntityDetailPanel | null;
   predictionBriefPage: PredictionBriefPage | null;
   countryTimeline: CountryTimeline | null;
 

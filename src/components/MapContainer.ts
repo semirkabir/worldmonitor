@@ -90,6 +90,7 @@ export class MapContainer {
   private cachedOnLayerChange: ((layer: keyof MapLayers, enabled: boolean, source: 'user' | 'programmatic') => void) | null = null;
   private cachedOnTimeRangeChanged: ((range: TimeRange) => void) | null = null;
   private cachedOnCountryClicked: ((country: CountryClickPayload) => void) | null = null;
+  private cachedOnEntityClicked: ((type: string, data: unknown) => void) | null = null;
   private cachedOnHotspotClicked: ((hotspot: Hotspot) => void) | null = null;
   private cachedOnAircraftPositionsUpdate: ((positions: PositionSample[]) => void) | null = null;
 
@@ -254,6 +255,7 @@ export class MapContainer {
     if (this.cachedOnLayerChange) this.setOnLayerChange(this.cachedOnLayerChange);
     if (this.cachedOnTimeRangeChanged) this.onTimeRangeChanged(this.cachedOnTimeRangeChanged);
     if (this.cachedOnCountryClicked) this.onCountryClicked(this.cachedOnCountryClicked);
+    if (this.cachedOnEntityClicked) this.onEntityClicked(this.cachedOnEntityClicked);
     if (this.cachedOnHotspotClicked) this.onHotspotClicked(this.cachedOnHotspotClicked);
     if (this.cachedOnAircraftPositionsUpdate) this.setOnAircraftPositionsUpdate(this.cachedOnAircraftPositionsUpdate);
 
@@ -840,6 +842,11 @@ export class MapContainer {
     if (this.useDeckGL) { this.deckGLMap?.setOnCountryClick(callback); } else { this.svgMap?.setOnCountryClick(callback); }
   }
 
+  public onEntityClicked(callback: (type: string, data: unknown) => void): void {
+    this.cachedOnEntityClicked = callback;
+    if (this.useDeckGL) { this.deckGLMap?.setOnEntityClick(callback); }
+  }
+
   public fitCountry(code: string): void {
     if (this.useGlobe) { this.globeMap?.fitCountry(code); return; }
     if (this.useDeckGL) {
@@ -889,6 +896,7 @@ export class MapContainer {
     this.cachedOnLayerChange = null;
     this.cachedOnTimeRangeChanged = null;
     this.cachedOnCountryClicked = null;
+    this.cachedOnEntityClicked = null;
     this.cachedOnHotspotClicked = null;
     this.cachedOnAircraftPositionsUpdate = null;
     this.cachedEarthquakes = null;

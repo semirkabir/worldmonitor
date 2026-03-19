@@ -1,0 +1,372 @@
+/* ── Entity Detail Panel — slide-in right panel ────────────────────── */
+
+.entity-detail-panel {
+  position: fixed;
+  top: 0;
+  right: -460px;
+  width: 430px;
+  height: 100vh;
+  z-index: 5000;
+  border-left: 1px solid var(--border);
+  background: var(--panel-bg);
+  box-shadow: -8px 0 32px color-mix(in srgb, var(--overlay-heavy) 65%, transparent);
+  transition: right 0.28s ease;
+  overflow: hidden;
+}
+
+.entity-detail-panel.edp-active {
+  right: 0;
+}
+
+.entity-detail-panel.edp-maximized {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  right: 0;
+  z-index: 10000;
+  border-left: none;
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(6px);
+  box-shadow: none;
+  transition: none;
+}
+
+.entity-detail-panel.edp-maximized .edp-panel-content {
+  width: 960px;
+  max-width: 96vw;
+  margin: 32px auto;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px color-mix(in srgb, var(--overlay-heavy) 65%, transparent);
+}
+
+/* ── Shell & layout ────────────────────────────────────────────────── */
+
+.edp-shell {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.edp-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.edp-close:hover {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+.edp-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  padding-top: 48px;
+}
+
+/* ── Header ────────────────────────────────────────────────────────── */
+
+.edp-header {
+  margin-bottom: 16px;
+}
+
+.edp-title {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.edp-subtitle {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+  text-transform: capitalize;
+}
+
+.edp-badge-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.edp-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--surface);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+
+.edp-badge-status {
+  background: color-mix(in srgb, var(--accent-green) 15%, transparent);
+  color: var(--accent-green);
+  border-color: color-mix(in srgb, var(--accent-green) 30%, transparent);
+}
+
+.edp-badge-tier {
+  background: color-mix(in srgb, var(--accent-blue) 15%, transparent);
+  color: var(--accent-blue);
+  border-color: color-mix(in srgb, var(--accent-blue) 30%, transparent);
+}
+
+.edp-badge-severity {
+  background: color-mix(in srgb, var(--accent-red) 15%, transparent);
+  color: var(--accent-red);
+  border-color: color-mix(in srgb, var(--accent-red) 30%, transparent);
+}
+
+/* ── Cards ─────────────────────────────────────────────────────────── */
+
+.edp-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.edp-card-title {
+  margin: 0 0 8px 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+}
+
+.edp-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ── Detail rows ───────────────────────────────────────────────────── */
+
+.edp-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 3px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+}
+
+.edp-detail-row:last-child {
+  border-bottom: none;
+}
+
+.edp-detail-label {
+  font-size: 11px;
+  color: var(--text-faint);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.edp-detail-value {
+  font-size: 12px;
+  color: var(--text);
+  text-align: right;
+  word-break: break-word;
+}
+
+/* ── Loading / empty states ────────────────────────────────────────── */
+
+.edp-loading-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0;
+}
+
+.edp-loading-line {
+  height: 10px;
+  width: 80%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--surface) 25%, var(--border) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: edp-shimmer 1.5s ease-in-out infinite;
+}
+
+.edp-loading-line-short {
+  width: 50%;
+}
+
+.edp-loading-text {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+@keyframes edp-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.edp-empty {
+  font-size: 12px;
+  color: var(--text-faint);
+  padding: 8px 0;
+  font-style: italic;
+}
+
+/* ── Description paragraph ─────────────────────────────────────────── */
+
+.edp-description {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin: 0 0 12px 0;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent-blue);
+}
+
+/* ── Tag/chip list ──────────────────────────────────────────────────── */
+
+.edp-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding-top: 2px;
+}
+
+.edp-tag {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 500;
+  background: var(--surface);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+}
+
+/* ── Landing-point list ─────────────────────────────────────────────── */
+
+.edp-lp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--text);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+}
+
+.edp-lp-row:last-child {
+  border-bottom: none;
+}
+
+.edp-lp-flag {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.edp-lp-city {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.edp-lp-country {
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+/* ── Stat highlight (large metric) ─────────────────────────────────── */
+
+.edp-stat-highlight {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px;
+  background: color-mix(in srgb, var(--accent-blue) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-blue) 20%, transparent);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.edp-stat-highlight-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent-blue);
+  line-height: 1;
+}
+
+.edp-stat-highlight-label {
+  font-size: 10px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 4px;
+}
+
+.edp-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* ── Category badges ────────────────────────────────────────────────── */
+
+.edp-badge-nuclear {
+  background: color-mix(in srgb, #ff6b35 15%, transparent);
+  color: #ff6b35;
+  border-color: color-mix(in srgb, #ff6b35 30%, transparent);
+}
+
+.edp-badge-warning {
+  background: color-mix(in srgb, var(--accent-yellow, #f5c518) 15%, transparent);
+  color: var(--accent-yellow, #f5c518);
+  border-color: color-mix(in srgb, var(--accent-yellow, #f5c518) 30%, transparent);
+}
+
+.edp-badge-dim {
+  background: color-mix(in srgb, var(--text-faint) 10%, transparent);
+  color: var(--text-faint);
+  border-color: color-mix(in srgb, var(--text-faint) 20%, transparent);
+}
+
+/* ── Generic renderer ──────────────────────────────────────────────── */
+
+.edp-generic {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .entity-detail-panel {
+    width: 100vw;
+    right: -100vw;
+  }
+}

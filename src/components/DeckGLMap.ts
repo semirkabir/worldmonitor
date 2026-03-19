@@ -303,7 +303,7 @@ export class DeckGLMap {
   private aisDisruptions: AisDisruptionEvent[] = [];
   private aisDensity: AisDensityZone[] = [];
   private aisVessels: Map<string, AisPositionData> = new Map();
-  private aisLiveCallback: ((data: AisPositionData) => void) | null = null;
+  private aisLiveCallback: ((data: AisPositionData[]) => void) | null = null;
   private cableAdvisories: CableAdvisory[] = [];
   private repairShips: RepairShip[] = [];
   private healthByCableId: Record<string, CableHealthRecord> = {};
@@ -353,6 +353,8 @@ export class DeckGLMap {
   private onHotspotClick?: (hotspot: Hotspot) => void;
   private onTimeRangeChange?: (range: TimeRange) => void;
   private onCountryClick?: (country: CountryClickPayload) => void;
+  private onEntityClick?: (type: string, data: unknown) => void;
+  private entityClickConsumedAt = 0;
   private onLayerChange?: (layer: keyof MapLayers, enabled: boolean, source: 'user' | 'programmatic') => void;
   private onStateChange?: (state: DeckMapState) => void;
   private onAircraftPositionsUpdate?: (positions: PositionSample[]) => void;
@@ -670,8 +672,15 @@ export class DeckGLMap {
           this.popup.hide();
         }
       },
-      // Keep click handler as a no-op for now to avoid double-triggering
-      onClick: () => {},
+      onClick: (info: PickingInfo) => {
+        if (info.object) {
+          this.handleEntityClick(info);
+        } else if (info.coordinate && this.onCountryClick) {
+          const [lon, lat] = info.coordinate as [number, number];
+          const country = this.resolveCountryFromCoordinate(lon, lat);
+          this.onCountryClick({ lat, lon, ...(country ? { code: country.code, name: country.name } : {}) });
+        }
+      },
       pickingRadius: 10,
       useDevicePixels: window.devicePixelRatio > 2 ? 2 : true,
       onError: (error: Error) => console.warn('[DeckGLMap] Render error (non-fatal):', error.message),
@@ -3147,6 +3156,25 @@ export class DeckGLMap {
 
       case 'natural-events-layer':
         return { html: `<div class="deckgl-tooltip"><strong>${text(obj.title)}</strong><br/>${text(obj.category || t('components.deckgl.tooltip.naturalEvent'))}</div>` };
+      case 'ais-vessels-layer': {
+        const shipTypeLabel = (() => {
+          const st = obj.shipType ?? 0;
+          if (st >= 80 && st <= 89) return 'Tanker';
+          if (st >= 70 && st <= 79) return 'Cargo';
+          if (st >= 60 && st <= 69) return 'Passenger';
+          if (st >= 35 && st <= 36) return 'Military';
+          if (st >= 30 && st <= 34) return 'Fishing';
+          if (st >= 50 && st <= 59) return 'Service';
+          if (st > 0) return `Type ${st}`;
+          return 'Vessel';
+        })();
+        const speedStr = obj.speed != null ? `${Number(obj.speed).toFixed(1)} kn` : '';
+        const hdgStr = obj.heading != null && obj.heading >= 0 && obj.heading <= 360
+          ? `${Math.round(obj.heading)}°`
+          : obj.course != null ? `${Math.round(obj.course)}°` : '';
+        const details = [speedStr, hdgStr].filter(Boolean).join(' · ');
+        return { html: `<div class="deckgl-tooltip"><strong>${text(obj.name || obj.mmsi)}</strong><br/>${shipTypeLabel}${details ? `<br/>${details}` : ''}</div>` };
+      }
       case 'ais-density-layer':
         return { html: `<div class="deckgl-tooltip"><strong>${t('components.deckgl.layers.shipTraffic')}</strong><br/>${t('popups.intensity')}: ${text(obj.intensity)}</div>` };
       case 'waterways-layer':
@@ -3522,6 +3550,79 @@ export class DeckGLMap {
       x,
       y,
     });
+  }
+
+  private handleEntityClick(info: PickingInfo): void {
+    if (!info.object || !this.onEntityClick) return;
+
+    const rawLayerId = info.layer?.id || '';
+    const layerId = rawLayerId.endsWith('-ghost') ? rawLayerId.slice(0, -6) : rawLayerId;
+
+    // Reuse the same layerToPopupType mapping
+    const layerToPopupType: Record<string, string> = {
+      'conflict-zones-layer': 'conflict',
+      'bases-layer': 'base',
+      'nuclear-layer': 'nuclear',
+      'irradiators-layer': 'irradiator',
+      'datacenters-layer': 'datacenter',
+      'cables-layer': 'cable',
+      'pipelines-layer': 'pipeline',
+      'earthquakes-layer': 'earthquake',
+      'weather-layer': 'weather',
+      'outages-layer': 'outage',
+      'cyber-threats-layer': 'cyberThreat',
+      'iran-events-layer': 'iranEvent',
+      'protests-layer': 'protest',
+      'military-flights-layer': 'militaryFlight',
+      'military-vessels-layer': 'militaryVessel',
+      'military-vessel-clusters-layer': 'militaryVesselCluster',
+      'military-flight-clusters-layer': 'militaryFlightCluster',
+      'natural-events-layer': 'natEvent',
+      'waterways-layer': 'waterway',
+      'economic-centers-layer': 'economic',
+      'stock-exchanges-layer': 'stockExchange',
+      'financial-centers-layer': 'financialCenter',
+      'central-banks-layer': 'centralBank',
+      'commodity-hubs-layer': 'commodityHub',
+      'spaceports-layer': 'spaceport',
+      'ports-layer': 'port',
+      'flight-delays-layer': 'flight',
+      'aircraft-positions-layer': 'aircraft',
+      'startup-hubs-layer': 'startupHub',
+      'tech-hqs-layer': 'techHQ',
+      'accelerators-layer': 'accelerator',
+      'cloud-regions-layer': 'cloudRegion',
+      'tech-events-layer': 'techEvent',
+      'apt-groups-layer': 'apt',
+      'minerals-layer': 'mineral',
+      'ais-disruptions-layer': 'ais',
+      'ais-vessels-layer': 'aisVessel',
+      'gps-jamming-layer': 'gpsJamming',
+      'cable-advisories-layer': 'cable-advisory',
+      'repair-ships-layer': 'repair-ship',
+      'mining-sites-layer': 'mineral',
+      'processing-plants-layer': 'mineral',
+      'commodity-ports-layer': 'port',
+    };
+
+    const popupType = layerToPopupType[layerId];
+    if (!popupType) return;
+
+    // Resolve data (same enrichment as handleClick)
+    let data = info.object;
+    if (layerId === 'conflict-zones-layer' && info.object.properties) {
+      const conflictId = info.object.properties.id;
+      const fullConflict = CONFLICT_ZONES.find(c => c.id === conflictId);
+      if (fullConflict) data = fullConflict;
+    }
+
+    // Dismiss the hover popup
+    this.popup.hide();
+
+    // Block the native MaplibreGL map.on('click') from also firing country panel
+    this.entityClickConsumedAt = Date.now();
+
+    this.onEntityClick(popupType, data);
   }
 
   // Utility methods
@@ -4431,8 +4532,10 @@ export class DeckGLMap {
 
   public enableAisLiveTracking(): void {
     if (this.aisLiveCallback) return;
-    this.aisLiveCallback = (data: AisPositionData) => {
-      this.aisVessels.set(data.mmsi, data);
+    this.aisLiveCallback = (batch: AisPositionData[]) => {
+      for (const vessel of batch) {
+        this.aisVessels.set(vessel.mmsi, vessel);
+      }
       this.render();
     };
     registerAisCallback(this.aisLiveCallback);
@@ -5033,6 +5136,10 @@ export class DeckGLMap {
     this.onCountryClick = cb;
   }
 
+  public setOnEntityClick(cb: (type: string, data: unknown) => void): void {
+    this.onEntityClick = cb;
+  }
+
   private resolveCountryFromCoordinate(lon: number, lat: number): { code: string; name: string } | null {
     const fromGeometry = getCountryAtCoordinates(lat, lon);
     if (fromGeometry) return fromGeometry;
@@ -5152,6 +5259,8 @@ export class DeckGLMap {
 
     map.on('click', (e) => {
       if (!this.onCountryClick) return;
+      // If a DeckGL entity icon was clicked in this same event loop, skip country detection
+      if (Date.now() - this.entityClickConsumedAt < 100) return;
       const features = map.queryRenderedFeatures(e.point, { layers: ['country-interactive'] });
       const properties = (features?.[0]?.properties ?? {}) as Record<string, unknown>;
       const code = typeof properties['ISO3166-1-Alpha-2'] === 'string'
