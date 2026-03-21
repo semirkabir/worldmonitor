@@ -350,13 +350,14 @@ canvas,
 .variant-option .variant-label {
   max-width: 0;
   overflow: hidden;
+  white-space: nowrap;
   opacity: 0;
   transition: max-width 0.3s ease, opacity 0.2s ease;
 }
 
 .variant-option:hover .variant-label,
 .variant-option.active .variant-label {
-  max-width: 50px;
+  max-width: 82px;
   opacity: 1;
 }
 
@@ -396,7 +397,7 @@ canvas,
 }
 
 .variant-switcher:hover .variant-option .variant-label {
-  max-width: 50px;
+  max-width: 82px;
   opacity: 1;
 }
 

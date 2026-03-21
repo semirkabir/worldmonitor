@@ -169,9 +169,9 @@ export class PanelLayoutManager implements AppModule {
                class="variant-option ${SITE_VARIANT === 'happy' ? 'active' : ''}"
                data-variant="happy"
                ${vTarget('happy')}
-               title="Good News${SITE_VARIANT === 'happy' ? ` ${t('common.currentVariant')}` : ''}">
+               title="${t('header.happy')}${SITE_VARIANT === 'happy' ? ` ${t('common.currentVariant')}` : ''}">
               <span class="variant-icon">☀️</span>
-              <span class="variant-label">Good News</span>
+              <span class="variant-label">${t('header.happy')}</span>
             </a>
             <span class="variant-divider"></span>
             <a href="${vHref('conflicts', 'https://conflicts.worldmonitor.app')}"
