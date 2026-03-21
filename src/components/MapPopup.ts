@@ -1,5 +1,6 @@
 import type { ConflictZone, Hotspot, NewsItem, MilitaryBase, StrategicWaterway, APTGroup, NuclearFacility, EconomicCenter, GammaIrradiator, Pipeline, UnderseaCable, CableAdvisory, RepairShip, InternetOutage, AIDataCenter, AisDisruptionEvent, SocialUnrestEvent, MilitaryFlight, MilitaryVessel, MilitaryFlightCluster, MilitaryVesselCluster, NaturalEvent, Port, Spaceport, CriticalMineralProject, CyberThreat } from '@/types';
 import type { AirportDelayAlert, PositionSample } from '@/services/aviation';
+import type { AisPositionData } from '@/services/maritime';
 import type { Earthquake } from '@/services/earthquakes';
 import type { WeatherAlert } from '@/services/weather';
 import { UNDERSEA_CABLES } from '@/config';
@@ -14,7 +15,7 @@ import { getNaturalEventIcon } from '@/services/eonet';
 import { getHotspotEscalation, getEscalationChange24h } from '@/services/hotspot-escalation';
 import { getCableHealthRecord } from '@/services/cable-health';
 
-export type PopupType = 'conflict' | 'hotspot' | 'earthquake' | 'weather' | 'base' | 'waterway' | 'apt' | 'cyberThreat' | 'nuclear' | 'economic' | 'irradiator' | 'pipeline' | 'cable' | 'cable-advisory' | 'repair-ship' | 'outage' | 'datacenter' | 'datacenterCluster' | 'ais' | 'protest' | 'protestCluster' | 'flight' | 'aircraft' | 'militaryFlight' | 'militaryVessel' | 'militaryFlightCluster' | 'militaryVesselCluster' | 'natEvent' | 'port' | 'spaceport' | 'mineral' | 'startupHub' | 'cloudRegion' | 'techHQ' | 'accelerator' | 'techEvent' | 'techHQCluster' | 'techEventCluster' | 'techActivity' | 'geoActivity' | 'stockExchange' | 'financialCenter' | 'centralBank' | 'commodityHub' | 'iranEvent' | 'gpsJamming';
+export type PopupType = 'conflict' | 'hotspot' | 'earthquake' | 'weather' | 'base' | 'waterway' | 'apt' | 'cyberThreat' | 'nuclear' | 'economic' | 'irradiator' | 'pipeline' | 'cable' | 'cable-advisory' | 'repair-ship' | 'outage' | 'datacenter' | 'datacenterCluster' | 'ais' | 'aisVessel' | 'protest' | 'protestCluster' | 'flight' | 'aircraft' | 'militaryFlight' | 'militaryVessel' | 'militaryFlightCluster' | 'militaryVesselCluster' | 'natEvent' | 'port' | 'spaceport' | 'mineral' | 'startupHub' | 'cloudRegion' | 'techHQ' | 'accelerator' | 'techEvent' | 'techHQCluster' | 'techEventCluster' | 'techActivity' | 'geoActivity' | 'stockExchange' | 'financialCenter' | 'centralBank' | 'commodityHub' | 'iranEvent' | 'gpsJamming';
 
 interface TechEventPopupData {
   id: string;
@@ -423,6 +424,8 @@ export class MapPopup {
         return this.renderDatacenterClusterPopup(data.data as DatacenterClusterData);
       case 'ais':
         return this.renderAisPopup(data.data as AisDisruptionEvent);
+      case 'aisVessel':
+        return this.renderAisVesselPopup(data.data as AisPositionData);
       case 'protest':
         return this.renderProtestPopup(data.data as SocialUnrestEvent);
       case 'protestCluster':
@@ -960,6 +963,59 @@ export class MapPopup {
           </div>
         </div>
         <p class="popup-description">${escapeHtml(event.description)}</p>
+      </div>
+    `;
+  }
+
+  private renderAisVesselPopup(vessel: AisPositionData): string {
+    const name = escapeHtml(vessel.name || `MMSI ${vessel.mmsi}`);
+    const mmsi = escapeHtml(vessel.mmsi);
+    const shipTypeName = (() => {
+      const st = vessel.shipType ?? 0;
+      if (st >= 80 && st <= 89) return 'Tanker';
+      if (st >= 70 && st <= 79) return 'Cargo';
+      if (st >= 60 && st <= 69) return 'Passenger';
+      if (st >= 40 && st <= 49) return 'High Speed';
+      if (st === 37) return 'Pleasure Craft';
+      if (st === 36 || st === 35) return 'Military';
+      if (st === 52) return 'Tug';
+      if (st === 51) return 'SAR';
+      if (st === 30) return 'Fishing';
+      if (st > 0) return `Type ${st}`;
+      return 'Vessel';
+    })();
+    const speedStr = vessel.speed != null ? `${vessel.speed.toFixed(1)} kts` : '—';
+    const headingVal = vessel.heading != null && vessel.heading >= 0 && vessel.heading <= 360
+      ? vessel.heading
+      : vessel.course;
+    const headingStr = headingVal != null ? `${Math.round(headingVal)}°` : '—';
+    const coordStr = `${vessel.lat.toFixed(4)}°, ${vessel.lon.toFixed(4)}°`;
+
+    return `
+      <div class="popup-header ais">
+        <span class="popup-title">🚢 ${name}</span>
+        <button class="popup-close" aria-label="Close">×</button>
+      </div>
+      <div class="popup-body">
+        <div class="popup-subtitle">${escapeHtml(shipTypeName)}</div>
+        <div class="popup-stats">
+          <div class="popup-stat">
+            <span class="stat-label">Speed</span>
+            <span class="stat-value">${speedStr}</span>
+          </div>
+          <div class="popup-stat">
+            <span class="stat-label">Heading</span>
+            <span class="stat-value">${headingStr}</span>
+          </div>
+          <div class="popup-stat">
+            <span class="stat-label">MMSI</span>
+            <span class="stat-value">${mmsi}</span>
+          </div>
+          <div class="popup-stat">
+            <span class="stat-label">Position</span>
+            <span class="stat-value">${coordStr}</span>
+          </div>
+        </div>
       </div>
     `;
   }

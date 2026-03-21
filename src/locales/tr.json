@@ -664,6 +664,8 @@
         "europe": "AVRUPA",
         "americas": "AMERIKA",
         "asia": "ASYA",
+        "africa": "AFRİKA",
+        "oceania": "OKYANUSYA",
         "space": "UZAY"
       }
     },

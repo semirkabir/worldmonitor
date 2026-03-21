@@ -32,6 +32,7 @@ import { computeDefaultDisabledSources, getLocaleBoostedSources, getTotalFeedCou
 import { fetchBootstrapData } from '@/services/bootstrap';
 import { DesktopUpdater } from '@/app/desktop-updater';
 import { CountryIntelManager } from '@/app/country-intel';
+import { EntityIntelManager } from '@/app/entity-intel';
 import { SearchManager } from '@/app/search-manager';
 import { RefreshScheduler } from '@/app/refresh-scheduler';
 import { PanelLayoutManager } from '@/app/panel-layout';
@@ -54,6 +55,7 @@ export class App {
   private eventHandlers: EventHandlerManager;
   private searchManager: SearchManager;
   private countryIntel: CountryIntelManager;
+  private entityIntel: EntityIntelManager;
   private refreshScheduler: RefreshScheduler;
   private desktopUpdater: DesktopUpdater;
 
@@ -340,6 +342,7 @@ export class App {
       unifiedSettings: null,
       pizzintIndicator: null,
       countryBriefPage: null,
+      entityDetailPanel: null,
       predictionBriefPage: null,
       countryTimeline: null,
       positivePanel: null,
@@ -365,6 +368,7 @@ export class App {
     // Instantiate modules (callbacks wired after all modules exist)
     this.refreshScheduler = new RefreshScheduler(this.state);
     this.countryIntel = new CountryIntelManager(this.state);
+    this.entityIntel = new EntityIntelManager(this.state);
     this.desktopUpdater = new DesktopUpdater(this.state);
 
     this.dataLoader = new DataLoaderManager(this.state, {
@@ -407,6 +411,7 @@ export class App {
       this.desktopUpdater,
       this.panelLayout,
       this.countryIntel,
+      this.entityIntel,
       this.searchManager,
       this.dataLoader,
       this.refreshScheduler,
@@ -528,6 +533,7 @@ export class App {
     this.searchManager.init();
     this.eventHandlers.setupMapLayerHandlers();
     this.countryIntel.init();
+    this.entityIntel.init();
 
     // Phase 5: Event listeners + URL sync
     this.eventHandlers.init();

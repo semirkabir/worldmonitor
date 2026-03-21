@@ -359,41 +359,25 @@ if ('__TAURI_INTERNALS__' in window || '__TAURI__' in window) {
   });
 }
 
-if (!('__TAURI_INTERNALS__' in window) && !('__TAURI__' in window) && 'serviceWorker' in navigator) {
-  // One-time nuke: clear stale SWs and caches from old deploys, then re-register fresh.
-  // Safe to remove after 2026-03-20 when all users have cycled through.
-  const nukeKey = 'wm-sw-nuked-v2';
-  let alreadyNuked = false;
-  try { alreadyNuked = !!localStorage.getItem(nukeKey); } catch { /* private browsing */ }
-  if (!alreadyNuked) {
-    try { localStorage.setItem(nukeKey, '1'); } catch { /* best effort */ }
-    navigator.serviceWorker.getRegistrations().then(async (regs) => {
-      await Promise.all(regs.map(r => r.unregister()));
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-      console.log('[PWA] Nuked stale service workers and caches');
-      window.location.reload();
-    });
-  } else {
-    // Auto-reload when a new SW takes control (fixes stale HTML after deploys)
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (refreshing) return;
-      refreshing = true;
-      window.location.reload();
-    });
+if (!('__TAURI_INTERNALS__' in window) && !('__TAURI__' in window) && 'serviceWorker' in navigator && import.meta.env.PROD) {
+  // Auto-reload when a new SW takes control (fixes stale HTML after deploys)
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
 
-    navigator.serviceWorker.register('/sw.js', { scope: '/' })
-      .then((registration) => {
-        console.log('[PWA] Service worker registered');
-        const swUpdateInterval = setInterval(async () => {
-          if (!navigator.onLine) return;
-          try { await registration.update(); } catch {}
-        }, 5 * 60 * 1000);
-        (window as unknown as Record<string, unknown>).__swUpdateInterval = swUpdateInterval;
-      })
-      .catch((err) => {
-        console.warn('[PWA] Service worker registration failed:', err);
-      });
-  }
+  navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    .then((registration) => {
+      console.log('[PWA] Service worker registered');
+      const swUpdateInterval = setInterval(async () => {
+        if (!navigator.onLine) return;
+        try { await registration.update(); } catch {}
+      }, 5 * 60 * 1000);
+      (window as unknown as Record<string, unknown>).__swUpdateInterval = swUpdateInterval;
+    })
+    .catch((err) => {
+      console.warn('[PWA] Service worker registration failed:', err);
+    });
 }

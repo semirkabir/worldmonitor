@@ -664,6 +664,8 @@
         "europe": "欧洲",
         "americas": "美洲",
         "asia": "亚洲",
+        "africa": "非洲",
+        "oceania": "大洋洲",
         "space": "太空"
       }
     },

@@ -321,6 +321,12 @@ function getNearbyChokepoint(lat: number, lon: number): string | undefined {
  * Process incoming AIS position report for military vessel detection
  * Called via callback from shared AIS stream
  */
+function processAisBatch(batch: AisPositionData[]): void {
+  for (const data of batch) {
+    processAisPosition(data);
+  }
+}
+
 function processAisPosition(data: AisPositionData): void {
   const mmsi = data.mmsi;
   const name = data.name || '';
@@ -513,7 +519,7 @@ export function initMilitaryVesselStream(): void {
   breaker.clearCache();  // Clear circuit breaker's 5-minute cache too!
 
   // Register callback with shared AIS stream
-  registerAisCallback(processAisPosition);
+  registerAisCallback(processAisBatch);
   isTracking = true;
 
   // Ensure AIS stream is running
@@ -528,7 +534,7 @@ export function initMilitaryVesselStream(): void {
 export function disconnectMilitaryVesselStream(): void {
   if (!isTracking) return;
 
-  unregisterAisCallback(processAisPosition);
+  unregisterAisCallback(processAisBatch);
   isTracking = false;
 }
 

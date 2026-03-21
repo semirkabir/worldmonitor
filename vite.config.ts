@@ -451,6 +451,176 @@ const RSS_PROXY_ALLOWED_DOMAINS = new Set([
   'www.sciencedaily.com', 'feeds.nature.com', 'www.livescience.com', 'www.newscientist.com',
 ]);
 
+function camerasPlugin(): Plugin {
+  const WINDY_API_BASE = 'https://api.windy.com/webcams/api/v3/webcams';
+  let cached: { key: string; body: string; at: number } | null = null;
+  const CACHE_TTL = 5 * 60 * 1000;
+
+  return {
+    name: 'cameras-proxy',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url?.startsWith('/api/cameras')) return next();
+
+        const apiKey = process.env.WINDY_API_KEY;
+        if (!apiKey) {
+          res.statusCode = 503;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'WINDY_API_KEY not configured' }));
+          return;
+        }
+
+        const url = new URL(req.url, 'http://localhost');
+        const continent = url.searchParams.get('continent') || '';
+        const limit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10), 200);
+        const offset = parseInt(url.searchParams.get('offset') || '0', 10);
+        const cacheKey = `${continent}:${limit}:${offset}`;
+
+        if (cached && cached.key === cacheKey && Date.now() - cached.at < CACHE_TTL) {
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.end(cached.body);
+          return;
+        }
+
+        try {
+          const params = new URLSearchParams({
+            limit: String(limit),
+            offset: String(offset),
+            include: 'location,images',
+            status: 'active',
+          });
+          if (continent) params.set('continent', continent);
+
+          const response = await fetch(`${WINDY_API_BASE}?${params}`, {
+            headers: { 'x-windy-api-key': apiKey },
+          });
+
+          if (!response.ok) {
+            const errText = await response.text();
+            console.error('[cameras] Windy API error:', response.status, errText);
+            res.statusCode = 502;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Windy API error', status: response.status }));
+            return;
+          }
+
+          const data = await response.json() as any;
+          const cameras = (data.webcams || []).map((cam: any) => ({
+            id: String(cam.webcamId || cam.id),
+            title: cam.title || '',
+            status: cam.status || 'active',
+            image: {
+              current: cam.images?.current?.preview || cam.images?.current?.thumbnail || '',
+              daylight: cam.images?.daylight?.preview || cam.images?.daylight?.thumbnail || '',
+            },
+            player: {
+              day: `https://webcams.windy.com/webcams/public/embed/player/${cam.webcamId || cam.id}/day`,
+              lifetime: `https://webcams.windy.com/webcams/public/embed/player/${cam.webcamId || cam.id}/lifetime`,
+            },
+            location: {
+              city: cam.location?.city || '',
+              region: cam.location?.region || '',
+              country: cam.location?.country || '',
+              countryCode: cam.location?.countryCode || '',
+              continent: cam.location?.continent || '',
+              continentCode: cam.location?.continentCode || '',
+              latitude: cam.location?.latitude || 0,
+              longitude: cam.location?.longitude || 0,
+            },
+            lastUpdatedOn: cam.lastUpdatedOn || null,
+          }));
+
+          const body = JSON.stringify({
+            cameras,
+            total: data.total || cameras.length,
+            limit,
+            offset,
+            cached: false,
+            timestamp: Date.now(),
+          });
+
+          cached = { key: cacheKey, body, at: Date.now() };
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', 'public, max-age=300');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.end(body);
+        } catch (error: any) {
+          console.error('[cameras]', error.message);
+          res.statusCode = 502;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Failed to fetch cameras' }));
+        }
+      });
+    },
+  };
+}
+
+function telegramFeedPlugin(): Plugin {
+  const RELAY_BASE = 'http://localhost:3004';
+  return {
+    name: 'telegram-feed-proxy',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url?.startsWith('/api/telegram-feed')) return next();
+
+        const url = new URL(req.url, 'http://localhost');
+        const params = new URLSearchParams();
+        for (const [k, v] of url.searchParams) params.set(k, v);
+
+        try {
+          const response = await fetch(`${RELAY_BASE}/telegram/feed?${params}`, {
+            signal: AbortSignal.timeout(15000),
+          });
+          const data = await response.text();
+          res.statusCode = response.status;
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', 'public, max-age=30');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.end(data);
+        } catch {
+          res.statusCode = 502;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Relay unavailable', enabled: false, count: 0, items: [] }));
+        }
+      });
+    },
+  };
+}
+
+function aisSnapshotPlugin(): Plugin {
+  const RELAY_URL = 'http://localhost:3004/ais/snapshot';
+  return {
+    name: 'ais-snapshot-proxy',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url?.startsWith('/api/ais-snapshot')) return next();
+
+        const url = new URL(req.url, 'http://localhost');
+        const candidates = url.searchParams.get('candidates') || 'false';
+
+        try {
+          const response = await fetch(`${RELAY_URL}?candidates=${candidates}`, {
+            signal: AbortSignal.timeout(12000),
+          });
+          const data = await response.text();
+          res.statusCode = response.status;
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', 'public, max-age=60');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.end(data);
+        } catch (err: any) {
+          res.statusCode = 502;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'AIS relay unavailable' }));
+        }
+      });
+    },
+  };
+}
+
 function rssProxyPlugin(): Plugin {
   return {
     name: 'rss-proxy',
@@ -582,6 +752,9 @@ export default defineConfig({
   plugins: [
     htmlVariantPlugin(),
     polymarketPlugin(),
+    camerasPlugin(),
+    telegramFeedPlugin(),
+    aisSnapshotPlugin(),
     rssProxyPlugin(),
     youtubeLivePlugin(),
     sebufApiPlugin(),
@@ -589,6 +762,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: false,
+      disable: process.env.NODE_ENV !== 'production',
 
       includeAssets: [
         'favico/favicon.ico',

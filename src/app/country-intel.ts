@@ -101,6 +101,8 @@ export class CountryIntelManager implements AppModule {
     });
 
     this.ctx.map.onCountryClicked(async (countryClick) => {
+      // Close entity detail panel when opening country brief
+      this.ctx.entityDetailPanel?.hide();
       if (countryClick.code && countryClick.name) {
         trackCountrySelected(countryClick.code, countryClick.name, 'map');
         this.openCountryBriefByCode(countryClick.code, countryClick.name);
