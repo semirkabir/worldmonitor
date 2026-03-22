@@ -2,7 +2,7 @@ import type { MapLayers } from '@/types';
 import { isDesktopRuntime } from '@/services/runtime';
 
 export type MapRenderer = 'flat' | 'globe';
-export type MapVariant = 'full' | 'tech' | 'finance' | 'happy' | 'commodity';
+export type MapVariant = 'full' | 'tech' | 'finance' | 'happy' | 'commodity' | 'conflicts';
 
 const _desktop = isDesktopRuntime();
 
@@ -185,9 +185,7 @@ const VARIANT_LAYER_ORDER: Record<MapVariant, Array<keyof MapLayers>> = {
   ],
   finance: [
     'stockExchanges', 'financialCenters', 'centralBanks', 'commodityHubs',
-    'gulfInvestments', 'tradeRoutes', 'cables', 'pipelines',
-    'outages', 'weather', 'economic', 'waterways',
-    'natural', 'cyberThreats', 'dayNight',
+    'gulfInvestments', 'tradeRoutes', 'economic',
   ],
   happy: [
     'positiveEvents', 'kindness', 'happiness',
@@ -196,7 +194,16 @@ const VARIANT_LAYER_ORDER: Record<MapVariant, Array<keyof MapLayers>> = {
   commodity: [
     'miningSites', 'processingPlants', 'commodityPorts', 'commodityHubs',
     'minerals', 'pipelines', 'waterways', 'tradeRoutes',
-    'natural', 'weather', 'outages', 'dayNight',
+    'natural', 'weather',
+  ],
+  conflicts: [
+    'iranAttacks', 'hotspots', 'conflicts',
+    'bases', 'nuclear', 'irradiators', 'gpsJamming',
+    'military', 'ais', 'flights', 'protests',
+    'ucdpEvents', 'displacement', 'ciiChoropleth',
+    'cables', 'pipelines', 'waterways',
+    'climate', 'weather', 'natural', 'fires',
+    'cyberThreats', 'outages', 'minerals',
   ],
 };
 

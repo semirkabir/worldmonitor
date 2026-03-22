@@ -844,6 +844,7 @@ export class MapContainer {
 
   public onEntityClicked(callback: (type: string, data: unknown) => void): void {
     this.cachedOnEntityClicked = callback;
+    if (this.useGlobe) { this.globeMap?.setOnEntityClick(callback); }
     if (this.useDeckGL) { this.deckGLMap?.setOnEntityClick(callback); }
   }
 
