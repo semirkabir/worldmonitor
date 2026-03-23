@@ -34,6 +34,10 @@ Keep `App` as a thin composition root.
 3. Update `App` constructor and `init()` to instantiate and wire controllers.
 4. Ensure `App.destroy()` delegates to each controller's `destroy()`.
 
+**Status update**
+The codebase has already moved most orchestration out of `App.ts` into `src/app/` managers such as `data-loader.ts`, `panel-layout.ts`, `event-handlers.ts`, `country-intel.ts`, and `search-manager.ts`.
+Treat the remaining work as hotspot reduction inside those managers, not a greenfield `src/controllers/` migration.
+
 ---
 
 ### TODO-002 — Add Server-Side RSS Aggregation and Caching
@@ -56,6 +60,11 @@ Move RSS fetching to a server-side edge function (or Vercel cron) that:
 
 **AI instructions**
 Create `api/news.js` edge function. Use `@upstash/redis`. Implement feed XML parsing identical to `src/services/rss.ts`. Add a `stale-while-revalidate` cache header. On the client side, replace ~40 proxy rules in `vite.config.ts` with a single fetch to `/api/news`.
+
+**Status update**
+This item is partially stale.
+The current codebase already has proto-first news endpoints, digest fetching via `/api/news/v1/list-feed-digest`, bootstrap hydration, and persisted fallback logic in `src/app/data-loader.ts`.
+Future work here should focus on resilience and test coverage, not introducing a brand new `api/news.js` path.
 
 ---
 
@@ -118,6 +127,10 @@ All `VITE_VARIANT=…` and `VITE_E2E=…` scripts break on Windows.
 Install `cross-env` as a devDependency.
 Prefix every inline env-var assignment with `cross-env`, e.g.:
 `"build:tech": "cross-env VITE_VARIANT=tech tsc && cross-env VITE_VARIANT=tech vite build"`.
+
+**Status update**
+This item is already implemented in `package.json`.
+Keep it only as a regression check when adding new scripts.
 
 ---
 

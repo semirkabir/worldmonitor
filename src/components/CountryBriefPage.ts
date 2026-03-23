@@ -13,6 +13,7 @@ import type { Port } from '@/config/ports';
 import { exportCountryBriefJSON, exportCountryBriefCSV } from '@/utils/export';
 import type { CountryBriefExport } from '@/utils/export';
 import { ME_STRIKE_BOUNDS } from '@/services/country-geometry';
+import { formatBriefRichText } from './country-brief-format';
 
 type BriefAssetType = AssetType | 'port';
 
@@ -658,24 +659,10 @@ export class CountryBriefPage implements CountryBriefPanel {
   }
 
   private formatBrief(text: string, headlineCount = 0): string {
-    let html = escapeHtml(text)
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n\n/g, '</p><p>')
-      .replace(/\n/g, '<br>')
-      .replace(/^/, '<p>')
-      .replace(/$/, '</p>');
-
-    if (headlineCount > 0) {
-      html = html.replace(/\[(\d{1,2})\]/g, (_match, numStr) => {
-        const n = parseInt(numStr, 10);
-        if (n >= 1 && n <= headlineCount) {
-          return `<a href="#cb-news-${n}" class="cb-citation" title="${t('components.countryBrief.sourceRef', { n: String(n) })}">[${n}]</a>`;
-        }
-        return `[${numStr}]`;
-      });
-    }
-
-    return html;
+    return formatBriefRichText(text, {
+      headlineCount,
+      getCitationTitle: (n) => t('components.countryBrief.sourceRef', { n: String(n) }),
+    });
   }
 
   private exportBrief(format: 'json' | 'csv'): void {

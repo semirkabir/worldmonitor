@@ -201,8 +201,7 @@ const VARIANT_LAYER_ORDER: Record<MapVariant, Array<keyof MapLayers>> = {
     'bases', 'nuclear', 'irradiators', 'gpsJamming',
     'military', 'ais', 'flights', 'protests',
     'ucdpEvents', 'displacement', 'ciiChoropleth',
-    'cables', 'pipelines', 'waterways',
-    'climate', 'weather', 'natural', 'fires',
+    'cables', 'pipelines',
     'cyberThreats', 'outages', 'minerals',
   ],
 };

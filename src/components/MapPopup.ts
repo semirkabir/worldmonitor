@@ -399,6 +399,13 @@ export class MapPopup {
   private list(items: string[]): string {
     return `<ul class="popup-list">${items.map(i => `<li>${i}</li>`).join('')}</ul>`;
   }
+  private externalLink(url: string, className: string, labelHtml: string): string {
+    const safeUrl = sanitizeUrl(url);
+    if (!safeUrl) {
+      return `<span class="${className} disabled-link">${labelHtml}</span>`;
+    }
+    return `<a href="${safeUrl}" target="_blank" rel="noopener" class="${className}">${labelHtml}</a>`;
+  }
   // ───────────────────────────────────────────────────────────────────────────
 
   private renderContent(data: PopupData): string {
@@ -705,7 +712,7 @@ export class MapPopup {
               ${relatedNews.slice(0, 5).map(n => `
                 <div class="popup-news-item">
                   <span class="news-source">${escapeHtml(n.source)}</span>
-                  <a href="${sanitizeUrl(n.link)}" target="_blank" class="news-title">${escapeHtml(n.title)}</a>
+                  ${this.externalLink(n.link, 'news-title', escapeHtml(n.title))}
                 </div>
               `).join('')}
             </div>
@@ -759,13 +766,13 @@ export class MapPopup {
     const timeAgo = formatArticleDate(article.date);
 
     return `
-      <a href="${sanitizeUrl(article.url)}" target="_blank" rel="noopener" class="hotspot-gdelt-article">
+      ${this.externalLink(article.url, 'hotspot-gdelt-article', `
         <div class="article-meta">
           <span>${escapeHtml(domain)}</span>
           <span>${escapeHtml(timeAgo)}</span>
         </div>
         <div class="article-title">${escapeHtml(article.title)}</div>
-      </a>
+      `)}
     `;
   }
 
@@ -797,7 +804,7 @@ export class MapPopup {
             <span class="stat-value">${timeAgo}</span>
           </div>
         </div>
-        <a href="${sanitizeUrl(earthquake.sourceUrl)}" target="_blank" class="popup-link">${t('popups.viewUSGS')} →</a>
+        ${this.externalLink(earthquake.sourceUrl, 'popup-link', `${t('popups.viewUSGS')} →`)}
       </div>
     `;
   }

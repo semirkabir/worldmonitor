@@ -1,4 +1,5 @@
 import { t } from '@/services/i18n';
+import { h } from '@/utils/dom-utils';
 
 const DISMISS_KEY = 'wm-layer-warning-dismissed';
 let activeDialog: HTMLElement | null = null;
@@ -9,28 +10,42 @@ export function showLayerWarning(threshold: number): void {
 
   const overlay = document.createElement('div');
   overlay.className = 'layer-warn-overlay';
-  overlay.innerHTML = `
-    <div class="layer-warn-dialog">
-      <div class="layer-warn-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
-      </div>
-      <div class="layer-warn-text">
-        <strong>${t('components.deckgl.layerWarningTitle')}</strong>
-        <p>${t('components.deckgl.layerWarningBody', { threshold })}</p>
-      </div>
-      <label class="layer-warn-dismiss">
-        <input type="checkbox" />
-        <span>${t('components.deckgl.layerWarningDismiss')}</span>
-      </label>
-      <button class="layer-warn-ok">${t('components.deckgl.layerWarningOk')}</button>
-    </div>`;
+  const createSvgEl = (tag: string, attrs = {}) => {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    for (const [key, value] of Object.entries(attrs)) {
+      el.setAttribute(key, String(value));
+    }
+    return el;
+  };
+  const dismissCheckbox = h('input', { type: 'checkbox' }) as HTMLInputElement;
+  const warningSvg = createSvgEl('svg', {
+    width: '24',
+    height: '24',
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    'stroke-width': '2',
+  });
+  warningSvg.append(
+    createSvgEl('path', { d: 'M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z' }),
+    createSvgEl('line', { x1: '12', y1: '9', x2: '12', y2: '13' }),
+    createSvgEl('line', { x1: '12', y1: '17', x2: '12.01', y2: '17' }),
+  );
+  const dialog = h('div', { className: 'layer-warn-dialog' },
+    h('div', { className: 'layer-warn-icon' },
+      warningSvg),
+    h('div', { className: 'layer-warn-text' },
+      h('strong', {}, t('components.deckgl.layerWarningTitle')),
+      h('p', {}, t('components.deckgl.layerWarningBody', { threshold }))),
+    h('label', { className: 'layer-warn-dismiss' },
+      dismissCheckbox,
+      h('span', {}, t('components.deckgl.layerWarningDismiss'))),
+    h('button', { className: 'layer-warn-ok', type: 'button' }, t('components.deckgl.layerWarningOk')),
+  );
+  overlay.appendChild(dialog);
 
   const close = () => {
-    const cb = overlay.querySelector<HTMLInputElement>('.layer-warn-dismiss input');
-    if (cb?.checked) localStorage.setItem(DISMISS_KEY, '1');
+    if (dismissCheckbox.checked) localStorage.setItem(DISMISS_KEY, '1');
     overlay.classList.add('layer-warn-out');
     setTimeout(() => { overlay.remove(); activeDialog = null; }, 200);
   };

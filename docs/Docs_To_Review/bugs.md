@@ -16,12 +16,13 @@ Each entry includes severity, description, affected files, and dependencies on o
 | **Depends on** | — |
 
 **Description**
-`App.ts` holds the entire application orchestration in a single 4 357-line class with 136 methods.
-Any change risks regressions elsewhere; HMR is fragile because the whole class must reload after every edit.
+This entry is stale as written.
+`App.ts` is now a composition root that delegates heavily into `src/app/` managers, but complexity still remains concentrated in `data-loader.ts`, `panel-layout.ts`, `event-handlers.ts`, and large map components.
+The architectural risk has shifted from one god class to several oversized managers.
 
 **AI instructions**
-Split `App.ts` into focused controllers (e.g., `DataLoader`, `PanelManager`, `MapController`, `RefreshScheduler`, `DeepLinkHandler`), each in a separate file under `src/controllers/`.
-Keep the `App` class as a thin composition root that wires controllers together.
+Continue reducing hotspot size inside `src/app/` and map-related modules.
+Prefer focused extractions such as layout shell rendering, event/view helpers, popup renderers, and domain-specific data-loader helpers.
 
 **Resolution progress**
 
@@ -152,7 +153,7 @@ Wrap each cluster card render in a try/catch. Log the bad cluster and render a "
 |---|---|
 | **Severity** | High (memory leak on HMR) |
 | **Affected** | `src/App.ts` (line ~523), `src/controllers/ui-setup.ts` |
-| **Status** | 🟡 Fixed in extracted controller; original `App.ts` still has the bug until Phase 2 wiring |
+| **Status** | ✅ Fixed in `src/app/event-handlers.ts` via `clockIntervalId` lifecycle cleanup |
 | **Depends on** | — |
 
 **Description**
@@ -161,7 +162,7 @@ On Vite HMR reload the old interval keeps ticking, doubling DOM writes each hot 
 
 **AI instructions**
 Store the interval ID and clear it in `App.destroy()`.
-Note: The extracted `UISetupController` already stores the interval in `clockIntervalId` and provides `clearClockInterval()`. Once BUG-001 Phase 2 wires the composition root, this bug will be fully resolved.
+The active implementation now stores the interval id and clears it during teardown.
 
 ---
 
@@ -243,12 +244,11 @@ Register all backend data sources in `data-freshness.ts` and call `dataFreshness
 | **Depends on** | — |
 
 **Description**
-Scripts like `"build:tech": "VITE_VARIANT=tech tsc && VITE_VARIANT=tech vite build"` use Unix shell syntax.
-On Windows (the project's primary development OS per user profile) these will silently ignore the variable, building the wrong variant.
+This entry is stale.
+The current `package.json` already uses `cross-env` / `cross-env-shell` for variant-aware scripts.
 
 **AI instructions**
-Use `cross-env` (npm package) to set environment variables portably, e.g., `"build:tech": "cross-env VITE_VARIANT=tech tsc && cross-env VITE_VARIANT=tech vite build"`.
-Alternatively, use `.env` file-based variant selection.
+Keep this as a regression check for newly added scripts and tests rather than an open bug against the current scripts.
 
 ---
 

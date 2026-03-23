@@ -20,20 +20,20 @@ const skipNodeRuntime = hasFlag('skip-node-runtime');
 const showHelp = hasFlag('help') || hasFlag('h');
 
 const validOs = new Set(['macos', 'windows', 'linux']);
-const validVariants = new Set(['full', 'tech']);
+const validVariants = new Set(['full', 'tech', 'finance']);
 
 if (showHelp) {
-  console.log('Usage: npm run desktop:package -- --os <macos|windows|linux> --variant <full|tech> [--sign] [--skip-node-runtime]');
+  console.log('Usage: npm run desktop:package -- --os <macos|windows|linux> --variant <full|tech|finance> [--sign] [--skip-node-runtime]');
   process.exit(0);
 }
 
 if (!validOs.has(os)) {
-  console.error('Usage: npm run desktop:package -- --os <macos|windows|linux> --variant <full|tech> [--sign] [--skip-node-runtime]');
+  console.error('Usage: npm run desktop:package -- --os <macos|windows|linux> --variant <full|tech|finance> [--sign] [--skip-node-runtime]');
   process.exit(1);
 }
 
 if (!validVariants.has(variant)) {
-  console.error('Invalid variant. Use --variant full or --variant tech.');
+  console.error('Invalid variant. Use --variant full, --variant tech, or --variant finance.');
   process.exit(1);
 }
 
@@ -66,6 +66,8 @@ if (!existsSync(tauriBin)) {
 
 if (variant === 'tech') {
   cliArgs.push('--config', 'src-tauri/tauri.tech.conf.json');
+} else if (variant === 'finance') {
+  cliArgs.push('--config', 'src-tauri/tauri.finance.conf.json');
 }
 
 const resolveNodeTarget = () => {

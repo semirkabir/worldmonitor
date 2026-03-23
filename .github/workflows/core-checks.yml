@@ -1,0 +1,35 @@
+name: Core Checks
+
+on:
+  pull_request:
+    paths-ignore:
+      - '*.md'
+      - '.planning/**'
+      - 'docs/**'
+
+jobs:
+  guardrails:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run check:unsafe-dom
+      - run: npm run check:size-budgets
+
+  tests:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run test:data:ci
+      - run: npm run test:sidecar:ci

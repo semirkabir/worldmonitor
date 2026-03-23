@@ -11,6 +11,7 @@ on:
         options:
           - full
           - tech
+          - finance
       draft:
         description: 'Create as draft release'
         required: false
@@ -289,6 +290,52 @@ jobs:
           args: --config src-tauri/tauri.tech.conf.json ${{ matrix.args }}
           retryAttempts: 1
 
+      # —— Build: Finance variant (signed) ——
+      - name: Build Tauri app (finance, signed)
+        if: env.BUILD_VARIANT == 'finance' && steps.apple-signing.outputs.available == 'true' && env.SKIP_SIGNING != 'true'
+        uses: tauri-apps/tauri-action@79c624843491f12ae9d63592534ed49df3bc4adb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_VARIANT: finance
+          VITE_DESKTOP_RUNTIME: '1'
+          VITE_WS_API_URL: https://worldmonitor.app
+          CONVEX_URL: ${{ secrets.CONVEX_URL }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ env.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          tagName: v__VERSION__-finance
+          releaseName: 'Finance Monitor v__VERSION__'
+          releaseBody: 'See changelog below.'
+          releaseDraft: ${{ github.event_name == 'workflow_dispatch' && fromJSON(github.event.inputs.draft) }}
+          prerelease: false
+          tauriScript: npx tauri
+          args: --config src-tauri/tauri.finance.conf.json ${{ matrix.args }}
+          retryAttempts: 1
+
+      # —— Build: Finance variant (unsigned — no Apple certs) ——
+      - name: Build Tauri app (finance, unsigned)
+        if: env.BUILD_VARIANT == 'finance' && (steps.apple-signing.outputs.available != 'true' || env.SKIP_SIGNING == 'true')
+        uses: tauri-apps/tauri-action@79c624843491f12ae9d63592534ed49df3bc4adb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_VARIANT: finance
+          VITE_DESKTOP_RUNTIME: '1'
+          VITE_WS_API_URL: https://worldmonitor.app
+          CONVEX_URL: ${{ secrets.CONVEX_URL }}
+        with:
+          tagName: v__VERSION__-finance
+          releaseName: 'Finance Monitor v__VERSION__'
+          releaseBody: 'See changelog below.'
+          releaseDraft: ${{ github.event_name == 'workflow_dispatch' && fromJSON(github.event.inputs.draft) }}
+          prerelease: false
+          tauriScript: npx tauri
+          args: --config src-tauri/tauri.finance.conf.json ${{ matrix.args }}
+          retryAttempts: 1
+
       - name: Verify signed macOS bundle + embedded runtime
         if: contains(matrix.platform, 'macos') && steps.apple-signing.outputs.available == 'true' && env.SKIP_SIGNING != 'true'
         shell: bash
@@ -412,6 +459,8 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           if [ "$BUILD_VARIANT" = "tech" ]; then
             TAG_NAME="v${VERSION}-tech"
+          elif [ "$BUILD_VARIANT" = "finance" ]; then
+            TAG_NAME="v${VERSION}-finance"
           else
             TAG_NAME="v${VERSION}"
           fi
@@ -501,10 +550,17 @@ jobs:
       - name: Generate and update release notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILD_VARIANT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.variant || 'full' }}
         shell: bash
         run: |
           VERSION=$(jq -r .version src-tauri/tauri.conf.json)
-          TAG="v${VERSION}"
+          if [ "$BUILD_VARIANT" = "tech" ]; then
+            TAG="v${VERSION}-tech"
+          elif [ "$BUILD_VARIANT" = "finance" ]; then
+            TAG="v${VERSION}-finance"
+          else
+            TAG="v${VERSION}"
+          fi
           PREV_TAG=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || echo "")
 
           if [ -z "$PREV_TAG" ]; then

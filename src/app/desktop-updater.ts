@@ -1,7 +1,7 @@
 import type { AppContext, AppModule } from '@/app/app-context';
 import { invokeTauri } from '@/services/tauri-bridge';
 import { trackUpdateShown, trackUpdateClicked, trackUpdateDismissed } from '@/services/analytics';
-import { escapeHtml } from '@/utils/sanitize';
+import { h } from '@/utils/dom-utils';
 
 interface DesktopRuntimeInfo {
   os: string;
@@ -168,21 +168,53 @@ export class DesktopUpdater implements AppModule {
     const toast = document.createElement('div');
     toast.className = 'update-toast';
     toast.dataset.version = version;
-    toast.innerHTML = `
-      <div class="update-toast-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-      </div>
-      <div class="update-toast-body">
-        <div class="update-toast-title">Update Available</div>
-        <div class="update-toast-detail">v${escapeHtml(__APP_VERSION__)} \u2192 v${escapeHtml(version)}</div>
-      </div>
-      <button class="update-toast-action" data-action="download">Download</button>
-      <button class="update-toast-dismiss" data-action="dismiss" aria-label="Dismiss">\u00d7</button>
-    `;
+
+    const createSvgEl = (tag: string, attrs = {}) => {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      for (const [key, value] of Object.entries(attrs)) {
+        el.setAttribute(key, String(value));
+      }
+      return el;
+    };
+
+    const icon = document.createElement('div');
+    icon.className = 'update-toast-icon';
+    const iconSvg = createSvgEl('svg', {
+      width: '20',
+      height: '20',
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      'stroke-width': '2',
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round',
+    });
+    iconSvg.append(
+      createSvgEl('path', { d: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4' }),
+      createSvgEl('polyline', { points: '7 10 12 15 17 10' }),
+      createSvgEl('line', { x1: '12', y1: '15', x2: '12', y2: '3' }),
+    );
+    icon.appendChild(iconSvg);
+
+    const body = h('div', { className: 'update-toast-body' },
+      h('div', { className: 'update-toast-title' }, 'Update Available'),
+      h('div', { className: 'update-toast-detail' }, `v${__APP_VERSION__} \u2192 v${version}`),
+    );
+
+    const actionButton = h('button', {
+      className: 'update-toast-action',
+      'data-action': 'download',
+      type: 'button',
+    }, 'Download');
+
+    const dismissButton = h('button', {
+      className: 'update-toast-dismiss',
+      'data-action': 'dismiss',
+      'aria-label': 'Dismiss',
+      type: 'button',
+    }, '\u00d7');
+
+    toast.append(icon, body, actionButton, dismissButton);
 
     const dismissToast = () => {
       localStorage.setItem(`wm-update-dismissed-${version}`, '1');

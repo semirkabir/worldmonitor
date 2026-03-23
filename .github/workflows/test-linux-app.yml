@@ -2,6 +2,16 @@ name: 'Test Linux App'
 
 on:
   workflow_dispatch:
+    inputs:
+      variant:
+        description: 'App variant'
+        required: true
+        default: 'full'
+        type: choice
+        options:
+          - full
+          - tech
+          - finance
 
 concurrency:
   group: test-linux-app-${{ github.ref }}
@@ -9,6 +19,7 @@ concurrency:
 
 env:
   CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
+  BUILD_VARIANT: ${{ github.event.inputs.variant || 'full' }}
 
 jobs:
   test-linux-app:
@@ -66,11 +77,11 @@ jobs:
         uses: tauri-apps/tauri-action@79c624843491f12ae9d63592534ed49df3bc4adb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VITE_VARIANT: full
+          VITE_VARIANT: ${{ env.BUILD_VARIANT }}
           VITE_DESKTOP_RUNTIME: '1'
           CONVEX_URL: ${{ secrets.CONVEX_URL }}
         with:
-          args: ''
+          args: ${{ env.BUILD_VARIANT == 'tech' && '--config src-tauri/tauri.tech.conf.json' || (env.BUILD_VARIANT == 'finance' && '--config src-tauri/tauri.finance.conf.json' || '') }}
           retryAttempts: 1
 
       - name: Smoke-test AppImage

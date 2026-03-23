@@ -7,6 +7,7 @@ import { sanitizeUrl } from '@/utils/sanitize';
 import { getCSSColor } from '@/utils';
 import type { CountryScore } from '@/services/country-instability';
 import type { PredictionMarket } from '@/services/prediction';
+import { formatBriefRichText } from './country-brief-format';
 
 interface CountryIntelData {
   brief: string;
@@ -259,12 +260,7 @@ export class CountryIntelModal {
   }
 
   private formatBrief(text: string): string {
-    return escapeHtml(text)
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\n\n/g, '</p><p>')
-      .replace(/\n/g, '<br>')
-      .replace(/^/, '<p>')
-      .replace(/$/, '</p>');
+    return formatBriefRichText(text);
   }
 
   public hide(): void {
