@@ -29,6 +29,8 @@ import { preloadCountryGeometry, getCountryNameByCode } from '@/services/country
 import { initI18n } from '@/services/i18n';
 
 import { computeDefaultDisabledSources, getLocaleBoostedSources, getTotalFeedCount } from '@/config/feeds';
+import { getVariantAllowedLayerKeys } from '@/config/map-layer-definitions';
+import type { MapVariant } from '@/config/map-layer-definitions';
 import { fetchBootstrapData } from '@/services/bootstrap';
 import { DesktopUpdater } from '@/app/desktop-updater';
 import { CountryIntelManager } from '@/app/country-intel';
@@ -111,10 +113,14 @@ export class App {
     } else {
       localStorage.setItem('worldmonitor-variant', currentVariant);
       mapLayers = loadFromStorage<MapLayers>(STORAGE_KEYS.mapLayers, defaultLayers);
-      // Happy variant: force non-happy layers off even if localStorage has stale true values
-      if (currentVariant === 'happy') {
-        const unhappyLayers: (keyof MapLayers)[] = ['conflicts', 'bases', 'hotspots', 'nuclear', 'irradiators', 'sanctions', 'military', 'protests', 'pipelines', 'waterways', 'ais', 'flights', 'spaceports', 'minerals', 'natural', 'fires', 'outages', 'cyberThreats', 'weather', 'economic', 'cables', 'datacenters', 'ucdpEvents', 'displacement', 'climate', 'iranAttacks'];
-        unhappyLayers.forEach(layer => { mapLayers[layer] = false; });
+      // For non-full variants, clamp any layer that isn't in this variant's allowed set to false.
+      // This prevents stale localStorage values from other variants (or the full variant) leaking
+      // markers onto the map that don't belong to the current category.
+      if (currentVariant !== 'full') {
+        const allowed = getVariantAllowedLayerKeys(currentVariant as MapVariant);
+        for (const key of Object.keys(mapLayers) as (keyof MapLayers)[]) {
+          if (!allowed.has(key)) mapLayers[key] = false;
+        }
       }
       panelSettings = loadFromStorage<Record<string, PanelConfig>>(
         STORAGE_KEYS.panels,
@@ -259,22 +265,15 @@ export class App {
     const effectiveSearch = window.location.search || savedLayoutSearch || '';
     let initialUrlState: ParsedMapUrlState | null = parseMapUrlState(effectiveSearch, mapLayers);
     if (initialUrlState.layers) {
-      if (currentVariant === 'tech') {
-        const geoLayers: (keyof MapLayers)[] = ['conflicts', 'bases', 'hotspots', 'nuclear', 'irradiators', 'sanctions', 'military', 'protests', 'pipelines', 'waterways', 'ais', 'flights', 'spaceports', 'minerals'];
-        const urlLayers = initialUrlState.layers;
-        geoLayers.forEach(layer => {
-          urlLayers[layer] = false;
-        });
-      }
-      // For happy variant, force off all non-happy layers (including natural events)
-      if (currentVariant === 'happy') {
-        const unhappyLayers: (keyof MapLayers)[] = ['conflicts', 'bases', 'hotspots', 'nuclear', 'irradiators', 'sanctions', 'military', 'protests', 'pipelines', 'waterways', 'ais', 'flights', 'spaceports', 'minerals', 'natural', 'fires', 'outages', 'cyberThreats', 'weather', 'economic', 'cables', 'datacenters', 'ucdpEvents', 'displacement', 'climate', 'iranAttacks'];
-        const urlLayers = initialUrlState.layers;
-        unhappyLayers.forEach(layer => {
-          urlLayers[layer] = false;
-        });
-      }
       mapLayers = initialUrlState.layers;
+      // Strip any layers not permitted in this variant — prevents cross-variant
+      // URL params or saved layout state from leaking foreign markers onto the map.
+      if (currentVariant !== 'full') {
+        const allowed = getVariantAllowedLayerKeys(currentVariant as MapVariant);
+        for (const key of Object.keys(mapLayers) as (keyof MapLayers)[]) {
+          if (!allowed.has(key)) mapLayers[key] = false;
+        }
+      }
       // URL layer params must not disable the active variant's core layer set.
       requiredLayers.forEach((layer) => {
         mapLayers[layer] = true;

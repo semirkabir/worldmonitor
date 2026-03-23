@@ -1200,7 +1200,7 @@ canvas,
   height: 100%;
   min-height: 200px;
   min-width: 0;
-  cursor: grab;
+  cursor: default;
   transition: transform 0.15s, box-shadow 0.15s;
   position: relative;
   contain: content;
@@ -1336,7 +1336,7 @@ body.panel-resize-active iframe {
 }
 
 .panel:active {
-  cursor: grabbing;
+  cursor: default;
 }
 
 .panel.hidden {
@@ -1360,6 +1360,11 @@ body.panel-resize-active iframe {
   flex-shrink: 0;
   position: relative;
   transition: background-color 0.3s ease, border-color 0.3s ease;
+  cursor: grab;
+}
+
+.panel-header:active {
+  cursor: grabbing;
 }
 
 .panel-header-error {
@@ -12368,6 +12373,7 @@ a.prediction-link:hover {
   border: 1px solid var(--border);
   border-radius: 4px;
   color: var(--text);
+  font-family: inherit;
   font-size: 11px;
   cursor: pointer;
   transition: all 0.2s;

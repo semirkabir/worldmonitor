@@ -143,7 +143,6 @@ const TECH_PANELS: Record<string, PanelConfig> = {
   layoffs:          p1('Layoffs Tracker'),
   markets:          p2('Tech Stocks'),
   finance:          p2('Financial News'),
-  crypto:           p2('Crypto'),
   hardware:         p2('Semiconductors & Hardware'),
   cloud:            p2('Cloud & Infrastructure'),
   dev:              p2('Developer Community'),
@@ -458,7 +457,7 @@ export const PANEL_CATEGORY_MAP: Record<string, { labelKey: string; panelKeys: s
   },
   techMarkets: {
     labelKey: 'header.panelCatMarkets',
-    panelKeys: ['markets', 'finance', 'crypto', 'polymarket', 'layoffs', 'monitors', 'world-clock'],
+    panelKeys: ['markets', 'finance', 'polymarket', 'layoffs', 'monitors', 'world-clock'],
     variants: ['tech'],
   },
 

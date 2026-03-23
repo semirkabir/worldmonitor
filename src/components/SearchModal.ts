@@ -226,7 +226,7 @@ export class SearchModal {
       this.overlay.innerHTML = `
         <div class="search-modal">
           <div class="search-header">
-            <span class="search-icon">\u2318</span>
+            <span class="search-icon">\u2325</span>
             <input type="text" class="search-input" placeholder="${this.placeholder}" autofocus />
             <kbd class="search-kbd">ESC</kbd>
           </div>

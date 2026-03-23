@@ -216,6 +216,11 @@ export function getLayersForVariant(variant: MapVariant, renderer: MapRenderer):
     .filter(d => d.renderers.includes(renderer));
 }
 
+/** Returns the set of layer keys permitted in a given variant's toggle panel. */
+export function getVariantAllowedLayerKeys(variant: MapVariant): Set<keyof MapLayers> {
+  return new Set(VARIANT_LAYER_ORDER[variant] ?? VARIANT_LAYER_ORDER.full);
+}
+
 export function resolveLayerLabel(def: LayerDefinition, tFn?: (key: string) => string): string {
   if (tFn) {
     const translated = tFn(I18N_PREFIX + def.i18nSuffix);
