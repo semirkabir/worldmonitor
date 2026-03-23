@@ -233,8 +233,16 @@ function getOverlayColors() {
     ucdpOneSided: [255, 255, 0, 200] as [number, number, number, number],
   };
 }
-// Initialize and refresh on every buildLayers() call
+// Cached overlay colors — only recomputed when the theme actually changes
 let COLORS = getOverlayColors();
+let _colorsTheme = getCurrentTheme();
+function refreshColorsIfThemeChanged(): void {
+  const theme = getCurrentTheme();
+  if (theme !== _colorsTheme) {
+    _colorsTheme = theme;
+    COLORS = getOverlayColors();
+  }
+}
 
 const SHARED_LAYER_ICON_MAPPING = { marker: { x: 0, y: 0, width: 32, height: 32, mask: false } };
 const SHARED_LAYER_ICON_ATLAS_CACHE = new Map<string, string>();
@@ -483,7 +491,7 @@ export class DeckGLMap {
     this.dayNightIntervalId = setInterval(() => {
       this.cachedNightPolygon = this.computeNightPolygon();
       this.render();
-    }, 5 * 60 * 1000);
+    }, 30 * 60 * 1000);
   }
 
   private stopDayNightTimer(): void {
@@ -1177,8 +1185,7 @@ export class DeckGLMap {
 
   private buildLayers(): LayersList {
     const startTime = performance.now();
-    // Refresh theme-aware overlay colors on each rebuild
-    COLORS = getOverlayColors();
+    refreshColorsIfThemeChanged();
     const layers: (Layer | null | false)[] = [];
     const { layers: mapLayers } = this.state;
     const filteredEarthquakes = mapLayers.natural ? this.filterByTime(this.earthquakes, (eq) => eq.occurredAt) : [];

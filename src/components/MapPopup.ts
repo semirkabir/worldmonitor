@@ -383,6 +383,24 @@ export class MapPopup {
     this.repairShips = repairShips;
   }
 
+  // ─── Template helpers ──────────────────────────────────────────────────────
+  private stat(label: string, value: string): string {
+    return `<div class="popup-stat"><span class="stat-label">${label}</span><span class="stat-value">${value}</span></div>`;
+  }
+  private pbadge(text: string, cls: string): string {
+    return `<span class="popup-badge ${cls}">${text}</span>`;
+  }
+  private section(title: string, content: string): string {
+    return `<div class="popup-section"><span class="section-label">${title}</span>${content}</div>`;
+  }
+  private tags(items: string[]): string {
+    return `<div class="popup-tags">${items.map(i => `<span class="popup-tag">${i}</span>`).join('')}</div>`;
+  }
+  private list(items: string[]): string {
+    return `<ul class="popup-list">${items.map(i => `<li>${i}</li>`).join('')}</ul>`;
+  }
+  // ───────────────────────────────────────────────────────────────────────────
+
   private renderContent(data: PopupData): string {
     switch (data.type) {
 
@@ -484,50 +502,22 @@ export class MapPopup {
 
   private renderConflictPopup(conflict: ConflictZone): string {
     const severityClass = conflict.intensity === 'high' ? 'high' : conflict.intensity === 'medium' ? 'medium' : 'low';
-    const severityLabel = escapeHtml(conflict.intensity?.toUpperCase() || t('popups.unknown').toUpperCase());
-
     return `
       <div class="popup-header conflict">
         <span class="popup-title">${escapeHtml(conflict.name.toUpperCase())}</span>
-        <span class="popup-badge ${severityClass}">${severityLabel}</span>
+        ${this.pbadge(escapeHtml(conflict.intensity?.toUpperCase() || t('popups.unknown').toUpperCase()), severityClass)}
         <button class="popup-close" aria-label="Close">×</button>
       </div>
       <div class="popup-body">
         <div class="popup-stats">
-          <div class="popup-stat">
-            <span class="stat-label">${t('popups.startDate')}</span>
-            <span class="stat-value">${escapeHtml(conflict.startDate || t('popups.unknown'))}</span>
-          </div>
-          <div class="popup-stat">
-            <span class="stat-label">${t('popups.casualties')}</span>
-            <span class="stat-value">${escapeHtml(conflict.casualties || t('popups.unknown'))}</span>
-          </div>
-          <div class="popup-stat">
-            <span class="stat-label">${t('popups.displaced')}</span>
-            <span class="stat-value">${escapeHtml(conflict.displaced || t('popups.unknown'))}</span>
-          </div>
-          <div class="popup-stat">
-            <span class="stat-label">${t('popups.location')}</span>
-            <span class="stat-value">${escapeHtml(conflict.location || `${conflict.center[1]}°N, ${conflict.center[0]}°E`)}</span>
-          </div>
+          ${this.stat(t('popups.startDate'), escapeHtml(conflict.startDate || t('popups.unknown')))}
+          ${this.stat(t('popups.casualties'), escapeHtml(conflict.casualties || t('popups.unknown')))}
+          ${this.stat(t('popups.displaced'), escapeHtml(conflict.displaced || t('popups.unknown')))}
+          ${this.stat(t('popups.location'), escapeHtml(conflict.location || `${conflict.center[1]}°N, ${conflict.center[0]}°E`))}
         </div>
         ${conflict.description ? `<p class="popup-description">${escapeHtml(conflict.description)}</p>` : ''}
-        ${conflict.parties && conflict.parties.length > 0 ? `
-          <div class="popup-section">
-            <span class="section-label">${t('popups.belligerents')}</span>
-            <div class="popup-tags">
-              ${conflict.parties.map(p => `<span class="popup-tag">${escapeHtml(p)}</span>`).join('')}
-            </div>
-          </div>
-        ` : ''}
-        ${conflict.keyDevelopments && conflict.keyDevelopments.length > 0 ? `
-          <div class="popup-section">
-            <span class="section-label">${t('popups.keyDevelopments')}</span>
-            <ul class="popup-list">
-              ${conflict.keyDevelopments.map(d => `<li>${escapeHtml(d)}</li>`).join('')}
-            </ul>
-          </div>
-        ` : ''}
+        ${conflict.parties?.length ? this.section(t('popups.belligerents'), this.tags(conflict.parties.map(p => escapeHtml(p)))) : ''}
+        ${conflict.keyDevelopments?.length ? this.section(t('popups.keyDevelopments'), this.list(conflict.keyDevelopments.map(d => escapeHtml(d)))) : ''}
       </div>
     `;
   }
@@ -2539,35 +2529,24 @@ export class MapPopup {
   }
 
   private renderSpaceportPopup(port: Spaceport): string {
-    const statusColors: Record<string, string> = {
-      'active': 'elevated',
-      'construction': 'high',
-      'inactive': 'low',
-    };
+    const statusColors: Record<string, string> = { active: 'elevated', construction: 'high', inactive: 'low' };
     const statusLabels: Record<string, string> = {
-      'active': t('popups.spaceport.status.active'),
-      'construction': t('popups.spaceport.status.construction'),
-      'inactive': t('popups.spaceport.status.inactive'),
+      active: t('popups.spaceport.status.active'),
+      construction: t('popups.spaceport.status.construction'),
+      inactive: t('popups.spaceport.status.inactive'),
     };
-
     return `
       <div class="popup-header spaceport ${port.status}">
         <span class="popup-icon">🚀</span>
         <span class="popup-title">${escapeHtml(port.name.toUpperCase())}</span>
-        <span class="popup-badge ${statusColors[port.status] || 'normal'}">${statusLabels[port.status] || port.status.toUpperCase()}</span>
+        ${this.pbadge(statusLabels[port.status] || port.status.toUpperCase(), statusColors[port.status] || 'normal')}
         <button class="popup-close" aria-label="Close">×</button>
       </div>
       <div class="popup-body">
         <div class="popup-subtitle">${escapeHtml(port.operator)} • ${escapeHtml(port.country)}</div>
         <div class="popup-stats">
-          <div class="popup-stat">
-            <span class="stat-label">${t('popups.spaceport.launchActivity')}</span>
-            <span class="stat-value">${escapeHtml(port.launches.toUpperCase())}</span>
-          </div>
-          <div class="popup-stat">
-            <span class="stat-label">${t('popups.coordinates')}</span>
-            <span class="stat-value">${port.lat.toFixed(2)}°, ${port.lon.toFixed(2)}°</span>
-          </div>
+          ${this.stat(t('popups.spaceport.launchActivity'), escapeHtml(port.launches.toUpperCase()))}
+          ${this.stat(t('popups.coordinates'), `${port.lat.toFixed(2)}°, ${port.lon.toFixed(2)}°`)}
         </div>
         <p class="popup-description">${t('popups.spaceport.description')}</p>
       </div>
@@ -2618,24 +2597,19 @@ export class MapPopup {
   }
 
   private renderStockExchangePopup(exchange: StockExchangePopupData): string {
-    const tierLabel = exchange.tier.toUpperCase();
     const tierClass = exchange.tier === 'mega' ? 'high' : exchange.tier === 'major' ? 'medium' : 'low';
-
     return `
       <div class="popup-header exchange">
         <span class="popup-title">${escapeHtml(exchange.shortName)}</span>
-        <span class="popup-badge ${tierClass}">${tierLabel}</span>
+        ${this.pbadge(exchange.tier.toUpperCase(), tierClass)}
         <button class="popup-close" aria-label="Close">×</button>
       </div>
       <div class="popup-body">
         <div class="popup-subtitle">${escapeHtml(exchange.name)}</div>
         <div class="popup-stats">
-          <div class="popup-stat">
-            <span class="stat-label">${t('popups.location')}</span>
-            <span class="stat-value">${escapeHtml(exchange.city)}, ${escapeHtml(exchange.country)}</span>
-          </div>
-          ${exchange.marketCap ? `<div class="popup-stat"><span class="stat-label">${t('popups.stockExchange.marketCap')}</span><span class="stat-value">$${exchange.marketCap}T</span></div>` : ''}
-          ${exchange.tradingHours ? `<div class="popup-stat"><span class="stat-label">${t('popups.tradingHours')}</span><span class="stat-value">${escapeHtml(exchange.tradingHours)}</span></div>` : ''}
+          ${this.stat(t('popups.location'), `${escapeHtml(exchange.city)}, ${escapeHtml(exchange.country)}`)}
+          ${exchange.marketCap ? this.stat(t('popups.stockExchange.marketCap'), `$${exchange.marketCap}T`) : ''}
+          ${exchange.tradingHours ? this.stat(t('popups.tradingHours'), escapeHtml(exchange.tradingHours)) : ''}
         </div>
         ${exchange.description ? `<p class="popup-description">${escapeHtml(exchange.description)}</p>` : ''}
       </div>
@@ -2643,52 +2617,35 @@ export class MapPopup {
   }
 
   private renderFinancialCenterPopup(center: FinancialCenterPopupData): string {
-    const typeLabel = center.type.toUpperCase();
-
     return `
       <div class="popup-header financial-center">
         <span class="popup-title">${escapeHtml(center.name)}</span>
-        <span class="popup-badge">${typeLabel}</span>
+        ${this.pbadge(center.type.toUpperCase(), '')}
         <button class="popup-close" aria-label="Close">×</button>
       </div>
       <div class="popup-body">
         <div class="popup-stats">
-          <div class="popup-stat">
-            <span class="stat-label">${t('popups.location')}</span>
-            <span class="stat-value">${escapeHtml(center.city)}, ${escapeHtml(center.country)}</span>
-          </div>
-          ${center.gfciRank ? `<div class="popup-stat"><span class="stat-label">${t('popups.financialCenter.gfciRank')}</span><span class="stat-value">#${center.gfciRank}</span></div>` : ''}
+          ${this.stat(t('popups.location'), `${escapeHtml(center.city)}, ${escapeHtml(center.country)}`)}
+          ${center.gfciRank ? this.stat(t('popups.financialCenter.gfciRank'), `#${center.gfciRank}`) : ''}
         </div>
-        ${center.specialties && center.specialties.length > 0 ? `
-          <div class="popup-section">
-            <span class="section-label">${t('popups.financialCenter.specialties')}</span>
-            <div class="popup-tags">
-              ${center.specialties.map(s => `<span class="popup-tag">${escapeHtml(s)}</span>`).join('')}
-            </div>
-          </div>
-        ` : ''}
+        ${center.specialties?.length ? this.section(t('popups.financialCenter.specialties'), this.tags(center.specialties.map(s => escapeHtml(s)))) : ''}
         ${center.description ? `<p class="popup-description">${escapeHtml(center.description)}</p>` : ''}
       </div>
     `;
   }
 
   private renderCentralBankPopup(bank: CentralBankPopupData): string {
-    const typeLabel = bank.type.toUpperCase();
-
     return `
       <div class="popup-header central-bank">
         <span class="popup-title">${escapeHtml(bank.shortName)}</span>
-        <span class="popup-badge">${typeLabel}</span>
+        ${this.pbadge(bank.type.toUpperCase(), '')}
         <button class="popup-close" aria-label="Close">×</button>
       </div>
       <div class="popup-body">
         <div class="popup-subtitle">${escapeHtml(bank.name)}</div>
         <div class="popup-stats">
-          <div class="popup-stat">
-            <span class="stat-label">${t('popups.location')}</span>
-            <span class="stat-value">${escapeHtml(bank.city)}, ${escapeHtml(bank.country)}</span>
-          </div>
-          ${bank.currency ? `<div class="popup-stat"><span class="stat-label">${t('popups.centralBank.currency')}</span><span class="stat-value">${escapeHtml(bank.currency)}</span></div>` : ''}
+          ${this.stat(t('popups.location'), `${escapeHtml(bank.city)}, ${escapeHtml(bank.country)}`)}
+          ${bank.currency ? this.stat(t('popups.centralBank.currency'), escapeHtml(bank.currency)) : ''}
         </div>
         ${bank.description ? `<p class="popup-description">${escapeHtml(bank.description)}</p>` : ''}
       </div>
@@ -2696,29 +2653,17 @@ export class MapPopup {
   }
 
   private renderCommodityHubPopup(hub: CommodityHubPopupData): string {
-    const typeLabel = hub.type.toUpperCase();
-
     return `
       <div class="popup-header commodity-hub">
         <span class="popup-title">${escapeHtml(hub.name)}</span>
-        <span class="popup-badge">${typeLabel}</span>
+        ${this.pbadge(hub.type.toUpperCase(), '')}
         <button class="popup-close" aria-label="Close">×</button>
       </div>
       <div class="popup-body">
         <div class="popup-stats">
-          <div class="popup-stat">
-            <span class="stat-label">${t('popups.location')}</span>
-            <span class="stat-value">${escapeHtml(hub.city)}, ${escapeHtml(hub.country)}</span>
-          </div>
+          ${this.stat(t('popups.location'), `${escapeHtml(hub.city)}, ${escapeHtml(hub.country)}`)}
         </div>
-        ${hub.commodities && hub.commodities.length > 0 ? `
-          <div class="popup-section">
-            <span class="section-label">${t('popups.commodityHub.commodities')}</span>
-            <div class="popup-tags">
-              ${hub.commodities.map(c => `<span class="popup-tag">${escapeHtml(c)}</span>`).join('')}
-            </div>
-          </div>
-        ` : ''}
+        ${hub.commodities?.length ? this.section(t('popups.commodityHub.commodities'), this.tags(hub.commodities.map(c => escapeHtml(c)))) : ''}
         ${hub.description ? `<p class="popup-description">${escapeHtml(hub.description)}</p>` : ''}
       </div>
     `;

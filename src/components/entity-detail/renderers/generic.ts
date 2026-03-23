@@ -1,3 +1,4 @@
+import { row } from '../types';
 import type { EntityRenderer, EntityRenderContext } from '../types';
 
 const SKIP_KEYS = new Set([
@@ -36,13 +37,6 @@ function formatValue(key: string, value: unknown): string {
   }
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
-}
-
-function row(ctx: EntityRenderContext, label: string, value: string): HTMLElement {
-  const r = ctx.el('div', 'edp-detail-row');
-  r.append(ctx.el('span', 'edp-detail-label', label));
-  r.append(ctx.el('span', 'edp-detail-value', value));
-  return r;
 }
 
 /**

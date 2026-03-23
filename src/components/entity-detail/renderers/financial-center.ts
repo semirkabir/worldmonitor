@@ -1,12 +1,6 @@
 import type { FinancialCenter, CentralBank, CommodityHub } from '@/config/finance-geo';
+import { row } from '../types';
 import type { EntityRenderer, EntityRenderContext } from '../types';
-
-function row(ctx: EntityRenderContext, label: string, value: string): HTMLElement {
-  const r = ctx.el('div', 'edp-detail-row');
-  r.append(ctx.el('span', 'edp-detail-label', label));
-  r.append(ctx.el('span', 'edp-detail-value', value));
-  return r;
-}
 
 export class FinancialCenterRenderer implements EntityRenderer {
   renderSkeleton(data: unknown, ctx: EntityRenderContext): HTMLElement {

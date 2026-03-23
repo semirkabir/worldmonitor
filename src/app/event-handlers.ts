@@ -64,24 +64,26 @@ export class EventHandlerManager implements AppModule {
   private ctx: AppContext;
   private callbacks: EventHandlerCallbacks;
 
-  private boundFullscreenHandler: (() => void) | null = null;
-  private boundResizeHandler: (() => void) | null = null;
-  private boundVisibilityHandler: (() => void) | null = null;
-  private boundDesktopExternalLinkHandler: ((e: MouseEvent) => void) | null = null;
-  private boundIdleResetHandler: (() => void) | null = null;
-  private boundStorageHandler: ((e: StorageEvent) => void) | null = null;
-  private boundTvKeydownHandler: ((e: KeyboardEvent) => void) | null = null;
-  private boundFocalPointsReadyHandler: (() => void) | null = null;
-  private boundThemeChangedHandler: (() => void) | null = null;
-  private boundMapResizeMoveHandler: ((e: MouseEvent) => void) | null = null;
-  private boundMapEndResizeHandler: (() => void) | null = null;
-  private boundBloombergKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+  private handlers = {
+    fullscreen:           null as (() => void) | null,
+    resize:               null as (() => void) | null,
+    visibility:           null as (() => void) | null,
+    desktopExternalLink:  null as ((e: MouseEvent) => void) | null,
+    idleReset:            null as ((e: Event) => void) | null,
+    storage:              null as ((e: StorageEvent) => void) | null,
+    tvKeydown:            null as ((e: KeyboardEvent) => void) | null,
+    focalPointsReady:     null as (() => void) | null,
+    themeChanged:         null as (() => void) | null,
+    mapResizeMove:        null as ((e: MouseEvent) => void) | null,
+    mapEndResize:         null as (() => void) | null,
+    bloombergKey:         null as ((e: KeyboardEvent) => void) | null,
+    mapResizeVisChange:   null as (() => void) | null,
+    mapFullscreenEsc:     null as ((e: KeyboardEvent) => void) | null,
+    mobileMenuKey:        null as ((e: KeyboardEvent) => void) | null,
+  };
   private kbShortcutsOverlay: HTMLElement | null = null;
   private statusDropdownEl: HTMLElement | null = null;
   private statusDropdownTimer: ReturnType<typeof setTimeout> | null = null;
-  private boundMapResizeVisChangeHandler: (() => void) | null = null;
-  private boundMapFullscreenEscHandler: ((e: KeyboardEvent) => void) | null = null;
-  private boundMobileMenuKeyHandler: ((e: KeyboardEvent) => void) | null = null;
   private idleTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private snapshotIntervalId: ReturnType<typeof setInterval> | null = null;
   private clockIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -135,7 +137,7 @@ export class EventHandlerManager implements AppModule {
       tvExitBtn.addEventListener('click', () => this.toggleTvMode());
     }
     // Keyboard shortcut: Shift+T
-    this.boundTvKeydownHandler = (e: KeyboardEvent) => {
+    this.handlers.tvKeydown = (e: KeyboardEvent) => {
       if (e.shiftKey && e.key === 'T' && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const active = document.activeElement;
         if (active?.tagName !== 'INPUT' && active?.tagName !== 'TEXTAREA') {
@@ -144,7 +146,7 @@ export class EventHandlerManager implements AppModule {
         }
       }
     };
-    document.addEventListener('keydown', this.boundTvKeydownHandler);
+    document.addEventListener('keydown', this.handlers.tvKeydown);
   }
 
   private toggleTvMode(): void {
@@ -167,31 +169,31 @@ export class EventHandlerManager implements AppModule {
 
   destroy(): void {
     this.debouncedUrlSync.cancel();
-    if (this.boundFullscreenHandler) {
-      document.removeEventListener('fullscreenchange', this.boundFullscreenHandler);
-      this.boundFullscreenHandler = null;
+    if (this.handlers.fullscreen) {
+      document.removeEventListener('fullscreenchange', this.handlers.fullscreen);
+      this.handlers.fullscreen = null;
     }
-    if (this.boundResizeHandler) {
-      window.removeEventListener('resize', this.boundResizeHandler);
-      this.boundResizeHandler = null;
+    if (this.handlers.resize) {
+      window.removeEventListener('resize', this.handlers.resize);
+      this.handlers.resize = null;
     }
-    if (this.boundVisibilityHandler) {
-      document.removeEventListener('visibilitychange', this.boundVisibilityHandler);
-      this.boundVisibilityHandler = null;
+    if (this.handlers.visibility) {
+      document.removeEventListener('visibilitychange', this.handlers.visibility);
+      this.handlers.visibility = null;
     }
-    if (this.boundDesktopExternalLinkHandler) {
-      document.removeEventListener('click', this.boundDesktopExternalLinkHandler, true);
-      this.boundDesktopExternalLinkHandler = null;
+    if (this.handlers.desktopExternalLink) {
+      document.removeEventListener('click', this.handlers.desktopExternalLink, true);
+      this.handlers.desktopExternalLink = null;
     }
     if (this.idleTimeoutId) {
       clearTimeout(this.idleTimeoutId);
       this.idleTimeoutId = null;
     }
-    if (this.boundIdleResetHandler) {
+    if (this.handlers.idleReset) {
       ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'].forEach(event => {
-        document.removeEventListener(event, this.boundIdleResetHandler!);
+        document.removeEventListener(event, this.handlers.idleReset!);
       });
-      this.boundIdleResetHandler = null;
+      this.handlers.idleReset = null;
     }
     if (this.snapshotIntervalId) {
       clearInterval(this.snapshotIntervalId);
@@ -201,46 +203,46 @@ export class EventHandlerManager implements AppModule {
       clearInterval(this.clockIntervalId);
       this.clockIntervalId = null;
     }
-    if (this.boundStorageHandler) {
-      window.removeEventListener('storage', this.boundStorageHandler);
-      this.boundStorageHandler = null;
+    if (this.handlers.storage) {
+      window.removeEventListener('storage', this.handlers.storage);
+      this.handlers.storage = null;
     }
-    if (this.boundTvKeydownHandler) {
-      document.removeEventListener('keydown', this.boundTvKeydownHandler);
-      this.boundTvKeydownHandler = null;
+    if (this.handlers.tvKeydown) {
+      document.removeEventListener('keydown', this.handlers.tvKeydown);
+      this.handlers.tvKeydown = null;
     }
-    if (this.boundFocalPointsReadyHandler) {
-      window.removeEventListener('focal-points-ready', this.boundFocalPointsReadyHandler);
-      this.boundFocalPointsReadyHandler = null;
+    if (this.handlers.focalPointsReady) {
+      window.removeEventListener('focal-points-ready', this.handlers.focalPointsReady);
+      this.handlers.focalPointsReady = null;
     }
-    if (this.boundThemeChangedHandler) {
-      window.removeEventListener('theme-changed', this.boundThemeChangedHandler);
-      this.boundThemeChangedHandler = null;
+    if (this.handlers.themeChanged) {
+      window.removeEventListener('theme-changed', this.handlers.themeChanged);
+      this.handlers.themeChanged = null;
     }
-    if (this.boundMapResizeMoveHandler) {
-      document.removeEventListener('mousemove', this.boundMapResizeMoveHandler);
-      this.boundMapResizeMoveHandler = null;
+    if (this.handlers.mapResizeMove) {
+      document.removeEventListener('mousemove', this.handlers.mapResizeMove);
+      this.handlers.mapResizeMove = null;
     }
-    if (this.boundMapEndResizeHandler) {
-      document.removeEventListener('mouseup', this.boundMapEndResizeHandler);
-      window.removeEventListener('blur', this.boundMapEndResizeHandler);
-      this.boundMapEndResizeHandler = null;
+    if (this.handlers.mapEndResize) {
+      document.removeEventListener('mouseup', this.handlers.mapEndResize);
+      window.removeEventListener('blur', this.handlers.mapEndResize);
+      this.handlers.mapEndResize = null;
     }
-    if (this.boundMapResizeVisChangeHandler) {
-      document.removeEventListener('visibilitychange', this.boundMapResizeVisChangeHandler);
-      this.boundMapResizeVisChangeHandler = null;
+    if (this.handlers.mapResizeVisChange) {
+      document.removeEventListener('visibilitychange', this.handlers.mapResizeVisChange);
+      this.handlers.mapResizeVisChange = null;
     }
-    if (this.boundMapFullscreenEscHandler) {
-      document.removeEventListener('keydown', this.boundMapFullscreenEscHandler);
-      this.boundMapFullscreenEscHandler = null;
+    if (this.handlers.mapFullscreenEsc) {
+      document.removeEventListener('keydown', this.handlers.mapFullscreenEsc);
+      this.handlers.mapFullscreenEsc = null;
     }
-    if (this.boundMobileMenuKeyHandler) {
-      document.removeEventListener('keydown', this.boundMobileMenuKeyHandler);
-      this.boundMobileMenuKeyHandler = null;
+    if (this.handlers.mobileMenuKey) {
+      document.removeEventListener('keydown', this.handlers.mobileMenuKey);
+      this.handlers.mobileMenuKey = null;
     }
-    if (this.boundBloombergKeyHandler) {
-      document.removeEventListener('keydown', this.boundBloombergKeyHandler);
-      this.boundBloombergKeyHandler = null;
+    if (this.handlers.bloombergKey) {
+      document.removeEventListener('keydown', this.handlers.bloombergKey);
+      this.handlers.bloombergKey = null;
     }
     this.kbShortcutsOverlay?.remove();
     this.kbShortcutsOverlay = null;
@@ -272,7 +274,7 @@ export class EventHandlerManager implements AppModule {
       }
     });
 
-    this.boundStorageHandler = (e: StorageEvent) => {
+    this.handlers.storage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEYS.panels && e.newValue) {
         try {
           this.ctx.panelSettings = JSON.parse(e.newValue) as Record<string, PanelConfig>;
@@ -287,7 +289,7 @@ export class EventHandlerManager implements AppModule {
         }
       }
     };
-    window.addEventListener('storage', this.boundStorageHandler);
+    window.addEventListener('storage', this.handlers.storage);
 
     document.getElementById('headerThemeToggle')?.addEventListener('click', () => {
       const next = getCurrentTheme() === 'dark' ? 'light' : 'dark';
@@ -312,11 +314,11 @@ export class EventHandlerManager implements AppModule {
     const fullscreenBtn = document.getElementById('fullscreenBtn');
     if (!this.ctx.isDesktopApp && fullscreenBtn) {
       fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
-      this.boundFullscreenHandler = () => {
+      this.handlers.fullscreen = () => {
         fullscreenBtn.textContent = document.fullscreenElement ? '\u26F6' : '\u26F6';
         fullscreenBtn.classList.toggle('active', !!document.fullscreenElement);
       };
-      document.addEventListener('fullscreenchange', this.boundFullscreenHandler);
+      document.addEventListener('fullscreenchange', this.handlers.fullscreen);
     }
 
     const regionSelect = document.getElementById('regionSelect') as HTMLSelectElement;
@@ -325,16 +327,16 @@ export class EventHandlerManager implements AppModule {
       trackMapViewChange(regionSelect.value);
     });
 
-    this.boundResizeHandler = debounce(() => {
+    this.handlers.resize = debounce(() => {
       this.ctx.map?.setIsResizing(false);
       this.ctx.map?.render();
     }, 150);
-    window.addEventListener('resize', this.boundResizeHandler);
+    window.addEventListener('resize', this.handlers.resize);
 
     this.setupMapResize();
     this.setupMapPin();
 
-    this.boundVisibilityHandler = () => {
+    this.handlers.visibility = () => {
       document.body?.classList.toggle('animations-paused', document.hidden);
       if (this.ctx.isDesktopApp) {
         this.ctx.map?.setRenderPaused(document.hidden);
@@ -342,33 +344,39 @@ export class EventHandlerManager implements AppModule {
       if (document.hidden) {
         this.callbacks.setHiddenSince(Date.now());
         mlWorker.unloadOptionalModels();
+        // Pause clock to avoid wasted CPU on hidden tabs
+        if (this.clockIntervalId) {
+          clearInterval(this.clockIntervalId);
+          this.clockIntervalId = null;
+        }
       } else {
         this.resetIdleTimer();
         this.callbacks.flushStaleRefreshes();
+        this.startHeaderClock(); // resume (no-op if already running)
       }
     };
-    document.addEventListener('visibilitychange', this.boundVisibilityHandler);
+    document.addEventListener('visibilitychange', this.handlers.visibility);
 
-    this.boundFocalPointsReadyHandler = () => {
+    this.handlers.focalPointsReady = () => {
       (this.ctx.panels['cii'] as CIIPanel)?.refresh(true);
       this.callbacks.refreshOpenCountryBrief?.();
     };
-    window.addEventListener('focal-points-ready', this.boundFocalPointsReadyHandler);
+    window.addEventListener('focal-points-ready', this.handlers.focalPointsReady);
 
-    this.boundThemeChangedHandler = () => {
+    this.handlers.themeChanged = () => {
       this.ctx.map?.render();
       this.updateHeaderThemeIcon();
       this.updateMobileMenuThemeItem();
     };
-    window.addEventListener('theme-changed', this.boundThemeChangedHandler);
+    window.addEventListener('theme-changed', this.handlers.themeChanged);
 
     this.setupMobileMenu();
 
     if (this.ctx.isDesktopApp) {
-      if (this.boundDesktopExternalLinkHandler) {
-        document.removeEventListener('click', this.boundDesktopExternalLinkHandler, true);
+      if (this.handlers.desktopExternalLink) {
+        document.removeEventListener('click', this.handlers.desktopExternalLink, true);
       }
-      this.boundDesktopExternalLinkHandler = (e: MouseEvent) => {
+      this.handlers.desktopExternalLink = (e: MouseEvent) => {
         if (!(e.target instanceof Element)) return;
         const anchor = e.target.closest('a[href]') as HTMLAnchorElement | null;
         if (!anchor) return;
@@ -390,7 +398,7 @@ export class EventHandlerManager implements AppModule {
           window.open(url.toString(), '_blank');
         });
       };
-      document.addEventListener('click', this.boundDesktopExternalLinkHandler, true);
+      document.addEventListener('click', this.handlers.desktopExternalLink, true);
     }
   }
 
@@ -468,7 +476,7 @@ export class EventHandlerManager implements AppModule {
       });
     });
 
-    this.boundMobileMenuKeyHandler = (e: KeyboardEvent) => {
+    this.handlers.mobileMenuKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (sheet?.classList.contains('open')) {
           this.closeRegionSheet();
@@ -477,7 +485,7 @@ export class EventHandlerManager implements AppModule {
         }
       }
     };
-    document.addEventListener('keydown', this.boundMobileMenuKeyHandler);
+    document.addEventListener('keydown', this.handlers.mobileMenuKey);
   }
 
   private openMobileMenu(): void {
@@ -518,7 +526,7 @@ export class EventHandlerManager implements AppModule {
   }
 
   private setupIdleDetection(): void {
-    this.boundIdleResetHandler = () => {
+    this.handlers.idleReset = () => {
       if (this.ctx.isIdle) {
         this.ctx.isIdle = false;
         document.body?.classList.remove('animations-paused');
@@ -527,7 +535,7 @@ export class EventHandlerManager implements AppModule {
     };
 
     ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove'].forEach(event => {
-      document.addEventListener(event, this.boundIdleResetHandler!, { passive: true });
+      document.addEventListener(event, this.handlers.idleReset!, { passive: true });
     });
 
     this.resetIdleTimer();
@@ -630,11 +638,10 @@ export class EventHandlerManager implements AppModule {
   }
 
   startHeaderClock(): void {
+    if (this.clockIntervalId) return; // already running
     const el = document.getElementById('headerClock');
     if (!el) return;
-    const tick = () => {
-      el.textContent = new Date().toUTCString().replace('GMT', 'UTC');
-    };
+    const tick = () => { el.textContent = new Date().toUTCString().replace('GMT', 'UTC'); };
     tick();
     this.clockIntervalId = setInterval(tick, 1000);
   }
@@ -965,7 +972,7 @@ export class EventHandlerManager implements AppModule {
     let startHeight = 0;
     let startMapWidth = 0;
 
-    this.boundMapEndResizeHandler = () => {
+    this.handlers.mapEndResize = () => {
       if (resizeMode === 'none') return;
       const endedMode = resizeMode;
       resizeMode = 'none';
@@ -988,7 +995,7 @@ export class EventHandlerManager implements AppModule {
         }
       }
     };
-    const endResize = this.boundMapEndResizeHandler;
+    const endResize = this.handlers.mapEndResize;
 
     if (bottomHandle) {
       bottomHandle.addEventListener('mousedown', (e) => {
@@ -1052,7 +1059,7 @@ export class EventHandlerManager implements AppModule {
       });
     }
 
-    this.boundMapResizeMoveHandler = (e: MouseEvent) => {
+    this.handlers.mapResizeMove = (e: MouseEvent) => {
       if (resizeMode === 'none') return;
 
       if (resizeMode === 'bottom') {
@@ -1077,14 +1084,14 @@ export class EventHandlerManager implements AppModule {
         this.ctx.map?.resize();
       }
     };
-    document.addEventListener('mousemove', this.boundMapResizeMoveHandler);
+    document.addEventListener('mousemove', this.handlers.mapResizeMove);
 
     document.addEventListener('mouseup', endResize);
     window.addEventListener('blur', endResize);
-    this.boundMapResizeVisChangeHandler = () => {
+    this.handlers.mapResizeVisChange = () => {
       if (document.hidden) endResize();
     };
-    document.addEventListener('visibilitychange', this.boundMapResizeVisChangeHandler);
+    document.addEventListener('visibilitychange', this.handlers.mapResizeVisChange);
   }
 
   setupMapPin(): void {
@@ -1111,7 +1118,7 @@ export class EventHandlerManager implements AppModule {
   // ─── Bloomberg Terminal-inspired keyboard shortcuts ───────────────────────
 
   private setupBloombergShortcuts(): void {
-    this.boundBloombergKeyHandler = (e: KeyboardEvent) => {
+    this.handlers.bloombergKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       if (
         target.tagName === 'INPUT' ||
@@ -1190,7 +1197,7 @@ export class EventHandlerManager implements AppModule {
           break;
       }
     };
-    document.addEventListener('keydown', this.boundBloombergKeyHandler);
+    document.addEventListener('keydown', this.handlers.bloombergKey);
   }
 
   private shareCurrentView(): void {
@@ -1447,10 +1454,10 @@ export class EventHandlerManager implements AppModule {
     };
 
     btn.addEventListener('click', toggle);
-    this.boundMapFullscreenEscHandler = (e: KeyboardEvent) => {
+    this.handlers.mapFullscreenEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isFullscreen) toggle();
     };
-    document.addEventListener('keydown', this.boundMapFullscreenEscHandler);
+    document.addEventListener('keydown', this.handlers.mapFullscreenEsc);
   }
 
   getLocalizedPanelName(panelKey: string, fallback: string): string {

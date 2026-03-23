@@ -1,4 +1,5 @@
 import type { Port } from '@/config/ports';
+import { row } from '../types';
 import type { EntityRenderer, EntityRenderContext } from '../types';
 
 const PORT_TYPE_LABELS: Record<string, string> = {
@@ -9,13 +10,6 @@ const PORT_TYPE_LABELS: Record<string, string> = {
   mixed: 'Mixed Port',
   bulk: 'Bulk Terminal',
 };
-
-function row(ctx: EntityRenderContext, label: string, value: string): HTMLElement {
-  const r = ctx.el('div', 'edp-detail-row');
-  r.append(ctx.el('span', 'edp-detail-label', label));
-  r.append(ctx.el('span', 'edp-detail-value', value));
-  return r;
-}
 
 export class PortRenderer implements EntityRenderer {
   renderSkeleton(data: unknown, ctx: EntityRenderContext): HTMLElement {

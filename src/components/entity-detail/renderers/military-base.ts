@@ -1,4 +1,5 @@
 import type { MilitaryBaseEnriched } from '@/types';
+import { row, statusBadgeClass } from '../types';
 import type { EntityRenderer, EntityRenderContext } from '../types';
 
 const BASE_TYPE_LABELS: Record<string, string> = {
@@ -6,13 +7,6 @@ const BASE_TYPE_LABELS: Record<string, string> = {
   'China': 'Chinese Military', 'UK': 'British Military', 'France': 'French Military',
   'Israel': 'Israeli Military', 'Iran': 'Iranian Military',
 };
-
-function row(ctx: EntityRenderContext, label: string, value: string): HTMLElement {
-  const r = ctx.el('div', 'edp-detail-row');
-  r.append(ctx.el('span', 'edp-detail-label', label));
-  r.append(ctx.el('span', 'edp-detail-value', value));
-  return r;
-}
 
 export class MilitaryBaseRenderer implements EntityRenderer {
   renderSkeleton(data: unknown, ctx: EntityRenderContext): HTMLElement {
@@ -28,10 +22,7 @@ export class MilitaryBaseRenderer implements EntityRenderer {
     const typeLabel = BASE_TYPE_LABELS[base.type] ?? base.type;
     badgeRow.append(ctx.badge(typeLabel, 'edp-badge'));
     if (base.status) {
-      const statusClass = base.status === 'active' ? 'edp-badge edp-badge-status'
-        : base.status === 'planned' ? 'edp-badge edp-badge-warning'
-          : 'edp-badge edp-badge-dim';
-      badgeRow.append(ctx.badge(base.status.toUpperCase(), statusClass));
+      badgeRow.append(ctx.badge(base.status.toUpperCase(), statusBadgeClass(base.status)));
     }
     header.append(badgeRow);
     container.append(header);

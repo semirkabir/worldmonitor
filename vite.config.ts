@@ -955,6 +955,18 @@ export default defineConfig({
           if (id.includes('/src/components/') && id.endsWith('Panel.ts')) {
             return 'panels';
           }
+          // Large static data config files — split into separate lazy-loadable chunks
+          // so they don't inflate the main bundle and can be cached independently.
+          if (id.includes('/src/config/')) {
+            const match = id.match(/\/src\/config\/([a-z-]+)\.ts$/);
+            if (match) {
+              const name = match[1];
+              // Largest files get their own chunk; smaller helpers stay in main
+              if (['geo', 'feeds', 'finance-geo', 'tech-geo', 'ports', 'pipelines'].includes(name)) {
+                return `config-${name}`;
+              }
+            }
+          }
           // Give lazy-loaded locale chunks a recognizable prefix so the
           // service worker can exclude them from precache (en.json is
           // statically imported into the main bundle).

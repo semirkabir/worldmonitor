@@ -1,12 +1,6 @@
 import type { AIDataCenter } from '@/types';
+import { row, statusBadgeClass } from '../types';
 import type { EntityRenderer, EntityRenderContext } from '../types';
-
-function row(ctx: EntityRenderContext, label: string, value: string): HTMLElement {
-  const r = ctx.el('div', 'edp-detail-row');
-  r.append(ctx.el('span', 'edp-detail-label', label));
-  r.append(ctx.el('span', 'edp-detail-value', value));
-  return r;
-}
 
 export class DatacenterRenderer implements EntityRenderer {
   renderSkeleton(data: unknown, ctx: EntityRenderContext): HTMLElement {
@@ -19,10 +13,7 @@ export class DatacenterRenderer implements EntityRenderer {
     header.append(ctx.el('div', 'edp-subtitle', `${dc.owner} · ${dc.country}`));
 
     const badgeRow = ctx.el('div', 'edp-badge-row');
-    const statusClass = dc.status === 'existing' ? 'edp-badge edp-badge-status'
-      : dc.status === 'planned' ? 'edp-badge edp-badge-warning'
-        : 'edp-badge edp-badge-dim';
-    badgeRow.append(ctx.badge(dc.status.toUpperCase(), statusClass));
+    badgeRow.append(ctx.badge(dc.status.toUpperCase(), statusBadgeClass(dc.status)));
     if (dc.sector) badgeRow.append(ctx.badge(dc.sector, 'edp-badge'));
     header.append(badgeRow);
     container.append(header);

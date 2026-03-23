@@ -10,304 +10,135 @@ const railwayRss = rssProxyUrl;
 // Tier 2: Major outlets - high-quality journalism
 // Tier 3: Specialty sources - domain expertise
 // Tier 4: Aggregators & blogs - useful but less authoritative
-export const SOURCE_TIERS: Record<string, number> = {
-  // Tier 1 - Wire Services
-  'Reuters': 1,
-  'AP News': 1,
-  'AFP': 1,
-  'Bloomberg': 1,
 
-  // Tier 2 - Major Outlets
-  'BBC World': 2,
-  'BBC Middle East': 2,
-  'Guardian World': 2,
-  'Guardian ME': 2,
-  'NPR News': 2,
-  'CNN World': 2,
-  'CNBC': 2,
-  'MarketWatch': 2,
-  'Al Jazeera': 2,
-  'Financial Times': 2,
-  'Politico': 2,
-  'Axios': 2,
-  'EuroNews': 2,
-  'France 24': 2,
-  'Le Monde': 2,
-  // Spanish
-  'El País': 2,
-  'El Mundo': 2,
-  'BBC Mundo': 2,
-  // German
-  'Tagesschau': 1,
-  'Der Spiegel': 2,
-  'Die Zeit': 2,
-  'DW News': 2,
-  // Italian
-  'ANSA': 1,
-  'Corriere della Sera': 2,
-  'Repubblica': 2,
-  // Dutch
-  'NOS Nieuws': 1,
-  'NRC': 2,
-  'De Telegraaf': 2,
-  // Swedish
-  'SVT Nyheter': 1,
-  'Dagens Nyheter': 2,
-  'Svenska Dagbladet': 2,
-  'Reuters World': 1,
-  'Reuters Business': 1,
-  'Reuters US': 1,
-  'Fox News': 2,
-  'NBC News': 2,
-  'CBS News': 2,
-  'ABC News': 2,
-  'PBS NewsHour': 2,
-  'Wall Street Journal': 1,
-  'The Hill': 3,
-  'The National': 2,
-  'Yonhap News': 2,
-  'Chosun Ilbo': 2,
-  'OpenAI News': 3,
+const TIER_1: string[] = [
+  // Wire services
+  'Reuters', 'Reuters World', 'Reuters Business', 'Reuters US',
+  'AP News', 'AFP', 'Bloomberg', 'Wall Street Journal',
+  // Public broadcasters
+  'Tagesschau', 'ANSA', 'NOS Nieuws', 'SVT Nyheter',
+  // Official government & international orgs
+  'White House', 'State Dept', 'Pentagon', 'UN News', 'CISA',
+  'UK MOD', 'IAEA', 'WHO', 'UNHCR',
+  'MIIT (China)', 'MOFCOM (China)',
+];
+
+const TIER_2: string[] = [
+  // Major global outlets
+  'BBC World', 'BBC Middle East', 'Guardian World', 'Guardian ME',
+  'NPR News', 'CNN World', 'CNBC', 'MarketWatch', 'Al Jazeera',
+  'Financial Times', 'Politico', 'Axios', 'EuroNews', 'France 24', 'Le Monde',
+  // US broadcast
+  'Fox News', 'NBC News', 'CBS News', 'ABC News', 'PBS NewsHour',
+  // Government agencies (secondary)
+  'Treasury', 'DOJ', 'DHS', 'CDC', 'FEMA',
+  // Military / defense
+  'Military Times', 'USNI News', 'Oryx OSINT',
+  // European regional
+  'Der Spiegel', 'Die Zeit', 'DW News',               // German
+  'Corriere della Sera', 'Repubblica',                 // Italian
+  'NRC', 'De Telegraaf',                               // Dutch
+  'Dagens Nyheter', 'Svenska Dagbladet',               // Swedish
+  'El País', 'El Mundo', 'BBC Mundo',                  // Spanish
+  'BBC Turkce', 'DW Turkish', 'Hurriyet',              // Turkish
+  'TVN24', 'Polsat News', 'Rzeczpospolita',            // Polish
+  'BBC Russian', 'Meduza', 'Novaya Gazeta Europe',     // Russian (independent)
+  'Kathimerini', 'Naftemporiki',                       // Greek
+  // Middle East / Africa
+  'The National', 'BBC Persian',
+  'Premium Times', 'Vanguard Nigeria', 'Channels TV', 'ThisDay', // Nigeria
+  // Asia-Pacific
+  'Yonhap News', 'Chosun Ilbo',                        // Korean
+  'Nikkei Tech', 'NHK World', 'Nikkei Asia',           // Japan
+  'Bangkok Post', 'Thai PBS',                          // Thai
+  'ABC News Australia', 'Guardian Australia',          // Australian
+  'VnExpress', 'Tuoi Tre News',                        // Vietnamese
   // Portuguese
-  'Brasil Paralelo': 2,
+  'Brasil Paralelo',
+  // VC / startup premium
+  'Y Combinator Blog', 'a16z Blog', 'Sequoia Blog',
+  'Crunchbase News', 'CB Insights', 'PitchBook News', 'The Information',
+  'Paul Graham Essays', 'Stratechery',
+  // Think tanks & policy (tier-2)
+  'Stanford HAI', 'OECD Digital', 'DigiChina',
+  'RUSI', 'CNAS',
+  'Arms Control Assn', 'Bulletin of Atomic Scientists',
+  'FAO GIEWS', 'War on the Rocks',
+  'Politico Tech', 'EU Commission Digital',
+  // Podcasts & newsletters
+  'Acquired Podcast', 'All-In Podcast', 'a16z Podcast', 'The Twenty Minute VC',
+  'Hard Fork (NYT)', 'Pivot (Vox)', 'Benedict Evans', 'The Pragmatic Engineer',
+  'Lenny Newsletter', 'How I Built This', 'Masters of Scale',
+  // Positive news (Happy variant)
+  'Good News Network', 'Positive.News', 'Reasons to be Cheerful',
+  'Optimist Daily', 'Yes! Magazine', 'My Modern Met',
+];
 
-  // Tier 1 - Official Government & International Orgs
-  'White House': 1,
-  'State Dept': 1,
-  'Pentagon': 1,
-  'UN News': 1,
-  'CISA': 1,
-  'Treasury': 2,
-  'DOJ': 2,
-  'DHS': 2,
-  'CDC': 2,
-  'FEMA': 2,
+const TIER_3: string[] = [
+  // US policy & general
+  'The Hill', 'OpenAI News',
+  // Defense & security specialty
+  'Defense One', 'Breaking Defense', 'The War Zone', 'Defense News', 'Janes',
+  'Task & Purpose', 'gCaptain',
+  // Foreign policy / geopolitics
+  'Foreign Policy', 'The Diplomat', 'Bellingcat', 'CrisisWatch',
+  'Atlantic Council', 'Foreign Affairs', 'Carnegie',
+  // Cybersecurity
+  'Krebs Security', 'Ransomware.live',
+  // Financial regulators / think tanks
+  'Federal Reserve', 'SEC', 'CSIS', 'RAND', 'Brookings',
+  // Tech outlets
+  'MIT Tech Review', 'Ars Technica',
+  // State-affiliated outlets
+  'Xinhua', 'TASS', 'RT', 'RT Russia',
+  // Iran
+  'Iran International', 'Fars News',
+  'Layoffs.fyi',
+  // Startup / VC regional
+  'EU Startups', 'Tech.eu', 'Sifted (Europe)', 'The Next Web',
+  'Tech in Asia', 'TechCabal (Africa)', 'Inc42 (India)', 'YourStory',
+  'e27 (SEA)', 'DealStreetAsia',
+  'Pandaily (China)', '36Kr English', 'TechNode (China)', 'China Tech News',
+  'The Bridge (Japan)', 'Japan Tech News',
+  'Korea Tech News', 'KED Global',
+  'Entrackr (India)', 'India Tech News', 'Taiwan Tech News',
+  'La Silla Vacía', 'LATAM Tech News', 'Startups.co (LATAM)', 'Contxto (LATAM)',
+  'Brazil Tech News', 'Mexico Tech News', 'LATAM Fintech',
+  'Wamda (MENA)', 'Magnitt',
+  // Nigeria / Greek regional
+  'Daily Trust', 'in.gr', 'iefimerida', 'Proto Thema',
+  // Tech think tanks
+  'Brookings Tech', 'CSIS Tech', 'MIT Tech Policy', 'AI Now Institute',
+  'Bruegel (EU)', 'Chatham House Tech', 'ISEAS (Singapore)',
+  'ORF Tech (India)', 'RIETI (Japan)', 'Lowy Institute', 'China Tech Analysis',
+  // Security / defense think tanks
+  'Wilson Center', 'GMF', 'Stimson Center',
+  'AEI', 'Responsible Statecraft', 'FPRI', 'Jamestown', 'EU ISS',
+  // Tech policy
+  'AI Regulation', 'Tech Antitrust', 'EFF News',
+  'EU Digital Policy', 'Euractiv Digital', 'China Tech Policy',
+  'UK Tech Policy', 'India Tech Policy',
+  // Podcasts & newsletters (tier-3)
+  'This Week in Startups', 'Lex Fridman Tech', 'The Vergecast', 'Decoder (Verge)',
+  'AI Podcast (NVIDIA)', 'Gradient Dissent', 'Eye on AI', 'The Pitch',
+  // Positive news (Happy variant, tier-3)
+  'Upworthy', 'DailyGood', 'Good Good Good', 'GOOD Magazine', 'Sunny Skyz',
+  'The Better India', 'Mongabay', 'Conservation Optimism', 'Shareable',
+  'GNN Heroes Spotlight', 'GNN Science', 'GNN Animals', 'GNN Health',
+  'GNN Heroes', 'GNN Earth',
+];
 
-  // Tier 3 - Specialty
-  'Defense One': 3,
-  'Breaking Defense': 3,
-  'The War Zone': 3,
-  'Defense News': 3,
-  'Janes': 3,
-  'Military Times': 2,
-  'Task & Purpose': 3,
-  'USNI News': 2,
-  'gCaptain': 3,
-  'Oryx OSINT': 2,
-  'UK MOD': 1,
-  'Foreign Policy': 3,
-  'The Diplomat': 3,
-  'Bellingcat': 3,
-  'Krebs Security': 3,
-  'Ransomware.live': 3,
-  'Federal Reserve': 3,
-  'SEC': 3,
-  'MIT Tech Review': 3,
-  'Ars Technica': 3,
-  'Atlantic Council': 3,
-  'Foreign Affairs': 3,
-  'CrisisWatch': 3,
-  'CSIS': 3,
-  'RAND': 3,
-  'Brookings': 3,
-  'Carnegie': 3,
-  'IAEA': 1,
-  'WHO': 1,
-  'UNHCR': 1,
-  'Xinhua': 3,
-  'TASS': 3,
-  'RT': 3,
-  'RT Russia': 3,
-  'Layoffs.fyi': 3,
-  'BBC Persian': 2,
-  'Iran International': 3,
-  'Fars News': 3,
-  'MIIT (China)': 1,
-  'MOFCOM (China)': 1,
-  // Turkish
-  'BBC Turkce': 2,
-  'DW Turkish': 2,
-  'Hurriyet': 2,
-  // Polish
-  'TVN24': 2,
-  'Polsat News': 2,
-  'Rzeczpospolita': 2,
-  // Russian (independent)
-  'BBC Russian': 2,
-  'Meduza': 2,
-  'Novaya Gazeta Europe': 2,
-  // Thai
-  'Bangkok Post': 2,
-  'Thai PBS': 2,
-  // Australian
-  'ABC News Australia': 2,
-  'Guardian Australia': 2,
-  // Vietnamese
-  'VnExpress': 2,
-  'Tuoi Tre News': 2,
+const TIER_4: string[] = [
+  'Hacker News', 'The Verge', 'The Verge AI', 'VentureBeat AI',
+  'Yahoo Finance', 'TechCrunch Layoffs', 'ArXiv AI', 'AI News', 'Layoffs News',
+  'GloNewswire (Taiwan)',
+];
 
-  // Tier 2 - Premium Startup/VC Sources
-  'Y Combinator Blog': 2,
-  'a16z Blog': 2,
-  'Sequoia Blog': 2,
-  'Crunchbase News': 2,
-  'CB Insights': 2,
-  'PitchBook News': 2,
-  'The Information': 2,
-
-  // Tier 3 - Regional/Specialty Startup Sources
-  'EU Startups': 3,
-  'Tech.eu': 3,
-  'Sifted (Europe)': 3,
-  'The Next Web': 3,
-  'Tech in Asia': 3,
-  'TechCabal (Africa)': 3,
-  'Inc42 (India)': 3,
-  'YourStory': 3,
-  'Paul Graham Essays': 2,
-  'Stratechery': 2,
-  // Asia - Regional
-  'e27 (SEA)': 3,
-  'DealStreetAsia': 3,
-  'Pandaily (China)': 3,
-  '36Kr English': 3,
-  'TechNode (China)': 3,
-  'China Tech News': 3,
-  'The Bridge (Japan)': 3,
-  'Japan Tech News': 3,
-  'Nikkei Tech': 2,
-  'NHK World': 2,
-  'Nikkei Asia': 2,
-  'Korea Tech News': 3,
-  'KED Global': 3,
-  'Entrackr (India)': 3,
-  'India Tech News': 3,
-  'Taiwan Tech News': 3,
-  'GloNewswire (Taiwan)': 4,
-  // LATAM
-  'La Silla Vacía': 3,
-  'LATAM Tech News': 3,
-  'Startups.co (LATAM)': 3,
-  'Contxto (LATAM)': 3,
-  'Brazil Tech News': 3,
-  'Mexico Tech News': 3,
-  'LATAM Fintech': 3,
-  // Africa & MENA
-  'Wamda (MENA)': 3,
-  'Magnitt': 3,
-  // Nigeria
-  'Premium Times': 2,
-  'Vanguard Nigeria': 2,
-  'Channels TV': 2,
-  'Daily Trust': 3,
-  'ThisDay': 2,
-  // Greek
-  'Kathimerini': 2,
-  'Naftemporiki': 2,
-  'in.gr': 3,
-  'iefimerida': 3,
-  'Proto Thema': 3,
-
-  // Tier 3 - Think Tanks
-  'Brookings Tech': 3,
-  'CSIS Tech': 3,
-  'MIT Tech Policy': 3,
-  'Stanford HAI': 2,
-  'AI Now Institute': 3,
-  'OECD Digital': 2,
-  'Bruegel (EU)': 3,
-  'Chatham House Tech': 3,
-  'ISEAS (Singapore)': 3,
-  'ORF Tech (India)': 3,
-  'RIETI (Japan)': 3,
-  'Lowy Institute': 3,
-  'China Tech Analysis': 3,
-  'DigiChina': 2,
-  // Security/Defense Think Tanks
-  'RUSI': 2,
-  'Wilson Center': 3,
-  'GMF': 3,
-  'Stimson Center': 3,
-  'CNAS': 2,
-  // Nuclear & Arms Control
-  'Arms Control Assn': 2,
-  'Bulletin of Atomic Scientists': 2,
-  // Food Security
-  'FAO GIEWS': 2,
-  'EU ISS': 3,
-  // New verified think tanks
-  'War on the Rocks': 2,
-  'AEI': 3,
-  'Responsible Statecraft': 3,
-  'FPRI': 3,
-  'Jamestown': 3,
-
-  // Tier 3 - Policy Sources
-  'Politico Tech': 2,
-  'AI Regulation': 3,
-  'Tech Antitrust': 3,
-  'EFF News': 3,
-  'EU Digital Policy': 3,
-  'Euractiv Digital': 3,
-  'EU Commission Digital': 2,
-  'China Tech Policy': 3,
-  'UK Tech Policy': 3,
-  'India Tech Policy': 3,
-
-  // Tier 2-3 - Podcasts & Newsletters
-  'Acquired Podcast': 2,
-  'All-In Podcast': 2,
-  'a16z Podcast': 2,
-  'This Week in Startups': 3,
-  'The Twenty Minute VC': 2,
-  'Lex Fridman Tech': 3,
-  'The Vergecast': 3,
-  'Decoder (Verge)': 3,
-  'Hard Fork (NYT)': 2,
-  'Pivot (Vox)': 2,
-  'Benedict Evans': 2,
-  'The Pragmatic Engineer': 2,
-  'Lenny Newsletter': 2,
-  'AI Podcast (NVIDIA)': 3,
-  'Gradient Dissent': 3,
-  'Eye on AI': 3,
-  'How I Built This': 2,
-  'Masters of Scale': 2,
-  'The Pitch': 3,
-
-  // Tier 4 - Aggregators
-  'Hacker News': 4,
-  'The Verge': 4,
-  'The Verge AI': 4,
-  'VentureBeat AI': 4,
-  'Yahoo Finance': 4,
-  'TechCrunch Layoffs': 4,
-  'ArXiv AI': 4,
-  'AI News': 4,
-  'Layoffs News': 4,
-
-  // Tier 2 - Positive News Sources (Happy variant)
-  'Good News Network': 2,
-  'Positive.News': 2,
-  'Reasons to be Cheerful': 2,
-  'Optimist Daily': 2,
-  'Yes! Magazine': 2,
-  'My Modern Met': 2,
-  'Upworthy': 3,
-  'DailyGood': 3,
-  'Good Good Good': 3,
-  'GOOD Magazine': 3,
-  'Sunny Skyz': 3,
-  'The Better India': 3,
-  'Mongabay': 3,
-  'Conservation Optimism': 3,
-  'Shareable': 3,
-  'GNN Heroes Spotlight': 3,
-  'GNN Science': 3,
-  'GNN Animals': 3,
-  'GNN Health': 3,
-  'GNN Heroes': 3,
-  'GNN Earth': 3,
+export const SOURCE_TIERS: Record<string, number> = {
+  ...Object.fromEntries(TIER_1.map(s => [s, 1])),
+  ...Object.fromEntries(TIER_2.map(s => [s, 2])),
+  ...Object.fromEntries(TIER_3.map(s => [s, 3])),
+  ...Object.fromEntries(TIER_4.map(s => [s, 4])),
 };
 
 export function getSourceTier(sourceName: string): number {

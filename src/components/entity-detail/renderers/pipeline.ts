@@ -1,12 +1,6 @@
 import type { Pipeline } from '@/types';
+import { row, rowTags, statusBadgeClass } from '../types';
 import type { EntityRenderer, EntityRenderContext } from '../types';
-
-function row(ctx: EntityRenderContext, label: string, value: string): HTMLElement {
-  const r = ctx.el('div', 'edp-detail-row');
-  r.append(ctx.el('span', 'edp-detail-label', label));
-  r.append(ctx.el('span', 'edp-detail-value', value));
-  return r;
-}
 
 const PIPELINE_DESC: Record<string, string> = {
   oil: 'Crude oil pipeline transporting petroleum between production fields and terminals.',
@@ -25,8 +19,7 @@ export class PipelineRenderer implements EntityRenderer {
 
     const badgeRow = ctx.el('div', 'edp-badge-row');
     badgeRow.append(ctx.badge(pipeline.type.toUpperCase(), 'edp-badge'));
-    const statusClass = pipeline.status === 'operating' ? 'edp-badge edp-badge-status' : 'edp-badge edp-badge-warning';
-    badgeRow.append(ctx.badge(pipeline.status.toUpperCase(), statusClass));
+    badgeRow.append(ctx.badge(pipeline.status.toUpperCase(), statusBadgeClass(pipeline.status)));
     header.append(badgeRow);
     container.append(header);
 
@@ -69,11 +62,3 @@ export class PipelineRenderer implements EntityRenderer {
   }
 }
 
-function rowTags(ctx: EntityRenderContext, body: HTMLElement, label: string, items: string[]): void {
-  const r = ctx.el('div', 'edp-detail-row');
-  r.append(ctx.el('span', 'edp-detail-label', label));
-  const tags = ctx.el('div', 'edp-tags');
-  for (const item of items) tags.append(ctx.badge(item, 'edp-tag'));
-  r.append(tags);
-  body.append(r);
-}

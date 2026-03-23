@@ -1,4 +1,5 @@
 import type { NuclearFacility, NuclearFacilityType } from '@/types';
+import { row, statusBadgeClass } from '../types';
 import type { EntityRenderer, EntityRenderContext } from '../types';
 
 const TYPE_LABELS: Record<NuclearFacilityType, string> = {
@@ -23,13 +24,6 @@ const TYPE_DESC: Record<NuclearFacilityType, string> = {
   research: 'Research reactor facility for scientific and medical isotope production.',
 };
 
-function row(ctx: EntityRenderContext, label: string, value: string): HTMLElement {
-  const r = ctx.el('div', 'edp-detail-row');
-  r.append(ctx.el('span', 'edp-detail-label', label));
-  r.append(ctx.el('span', 'edp-detail-value', value));
-  return r;
-}
-
 export class NuclearRenderer implements EntityRenderer {
   renderSkeleton(data: unknown, ctx: EntityRenderContext): HTMLElement {
     const facility = data as NuclearFacility;
@@ -42,10 +36,7 @@ export class NuclearRenderer implements EntityRenderer {
 
     const badgeRow = ctx.el('div', 'edp-badge-row');
     badgeRow.append(ctx.badge(TYPE_LABELS[facility.type] ?? facility.type, 'edp-badge edp-badge-nuclear'));
-    const statusClass = facility.status === 'active' ? 'edp-badge edp-badge-status'
-      : facility.status === 'construction' ? 'edp-badge edp-badge-warning'
-        : 'edp-badge edp-badge-dim';
-    badgeRow.append(ctx.badge(facility.status.toUpperCase(), statusClass));
+    badgeRow.append(ctx.badge(facility.status.toUpperCase(), statusBadgeClass(facility.status)));
     header.append(badgeRow);
     container.append(header);
 
