@@ -1,5 +1,6 @@
 import { Panel } from './Panel';
 import { escapeHtml } from '@/utils/sanitize';
+import { getCountryFlag } from '@/utils/country-flags';
 
 export interface EconomicEvent {
   date: string;       // ISO string
@@ -27,15 +28,6 @@ const CATEGORY_ICONS: Record<EconomicEvent['category'], string> = {
   'gdp': '📊',
   'trade': '🚢',
   'other': '📋',
-};
-
-const COUNTRY_FLAGS: Record<string, string> = {
-  US: '🇺🇸', EU: '🇪🇺', GB: '🇬🇧', JP: '🇯🇵', CN: '🇨🇳',
-  DE: '🇩🇪', FR: '🇫🇷', CA: '🇨🇦', AU: '🇦🇺', CH: '🇨🇭',
-  NZ: '🇳🇿', KR: '🇰🇷', IN: '🇮🇳', BR: '🇧🇷', MX: '🇲🇽',
-  ZA: '🇿🇦', RU: '🇷🇺', TK: '🇹🇷', IT: '🇮🇹', ES: '🇪🇸',
-  SE: '🇸🇪', NO: '🇳🇴', NL: '🇳🇱', PL: '🇵🇱', SG: '🇸🇬',
-  HK: '🇭🇰', MY: '🇲🇾', ID: '🇮🇩', PH: '🇵🇭', TH: '🇹🇭',
 };
 
 type FilterType = 'all' | 'high' | 'central-bank' | 'today' | 'week';
@@ -249,7 +241,7 @@ export class EconomicCalendarPanel extends Panel {
   }
 
   private renderEvent(ev: EconomicEvent): string {
-    const flag = COUNTRY_FLAGS[ev.countryCode] || '🌐';
+    const flag = getCountryFlag(ev.countryCode);
     const icon = CATEGORY_ICONS[ev.category];
     const impactColor = IMPACT_COLORS[ev.impact];
     const time = new Date(ev.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });

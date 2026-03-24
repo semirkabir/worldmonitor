@@ -3,61 +3,7 @@ import { t } from '@/services/i18n';
 import type { TechHubActivity } from '@/services/tech-activity';
 import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
 import { getCSSColor } from '@/utils';
-
-const COUNTRY_FLAGS: Record<string, string> = {
-  'USA': '🇺🇸', 'United States': '🇺🇸',
-  'UK': '🇬🇧', 'United Kingdom': '🇬🇧',
-  'China': '🇨🇳',
-  'India': '🇮🇳',
-  'Israel': '🇮🇱',
-  'Germany': '🇩🇪',
-  'France': '🇫🇷',
-  'Canada': '🇨🇦',
-  'Japan': '🇯🇵',
-  'South Korea': '🇰🇷',
-  'Singapore': '🇸🇬',
-  'Australia': '🇦🇺',
-  'Netherlands': '🇳🇱',
-  'Sweden': '🇸🇪',
-  'Switzerland': '🇨🇭',
-  'Brazil': '🇧🇷',
-  'Indonesia': '🇮🇩',
-  'UAE': '🇦🇪',
-  'Estonia': '🇪🇪',
-  'Ireland': '🇮🇪',
-  'Finland': '🇫🇮',
-  'Spain': '🇪🇸',
-  'Italy': '🇮🇹',
-  'Poland': '🇵🇱',
-  'Mexico': '🇲🇽',
-  'Argentina': '🇦🇷',
-  'Chile': '🇨🇱',
-  'Colombia': '🇨🇴',
-  'Nigeria': '🇳🇬',
-  'Kenya': '🇰🇪',
-  'South Africa': '🇿🇦',
-  'Egypt': '🇪🇬',
-  'Taiwan': '🇹🇼',
-  'Vietnam': '🇻🇳',
-  'Thailand': '🇹🇭',
-  'Malaysia': '🇲🇾',
-  'Philippines': '🇵🇭',
-  'New Zealand': '🇳🇿',
-  'Austria': '🇦🇹',
-  'Belgium': '🇧🇪',
-  'Denmark': '🇩🇰',
-  'Norway': '🇳🇴',
-  'Portugal': '🇵🇹',
-  'Czech Republic': '🇨🇿',
-  'Romania': '🇷🇴',
-  'Ukraine': '🇺🇦',
-  'Russia': '🇷🇺',
-  'Turkey': '🇹🇷',
-  'Saudi Arabia': '🇸🇦',
-  'Qatar': '🇶🇦',
-  'Pakistan': '🇵🇰',
-  'Bangladesh': '🇧🇩',
-};
+import { getCountryFlag } from '@/utils/country-flags';
 
 export class TechHubsPanel extends Panel {
   private activities: TechHubActivity[] = [];
@@ -87,7 +33,7 @@ export class TechHubsPanel extends Panel {
   }
 
   private getFlag(country: string): string {
-    return COUNTRY_FLAGS[country] || '🌐';
+    return getCountryFlag(country);
   }
 
   private render(): void {

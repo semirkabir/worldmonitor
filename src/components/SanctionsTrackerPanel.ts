@@ -1,5 +1,6 @@
 import { Panel } from './Panel';
 import { escapeHtml } from '@/utils/sanitize';
+import { getCountryFlag } from '@/utils/country-flags';
 
 export interface SanctionEntity {
   id: string;
@@ -40,12 +41,6 @@ const TYPE_ICONS: Record<SanctionEntity['type'], string> = {
   vessel: '🚢',
   aircraft: '✈️',
   other: '⚠️',
-};
-
-const COUNTRY_FLAGS: Record<string, string> = {
-  RU: '🇷🇺', KP: '🇰🇵', IR: '🇮🇷', CN: '🇨🇳', VE: '🇻🇪',
-  SY: '🇸🇾', BY: '🇧🇾', CU: '🇨🇺', MM: '🇲🇲', SO: '🇸🇴',
-  UNKNOWN: '🌐'
 };
 
 export class SanctionsTrackerPanel extends Panel {
@@ -106,7 +101,7 @@ export class SanctionsTrackerPanel extends Panel {
       if (!this.searchQuery) return true;
       const q = this.searchQuery;
       return e.name.toLowerCase().includes(q) ||
-        e.countries.some(c => c.toLowerCase().includes(q) || (COUNTRY_FLAGS[c] || '').includes(q)) ||
+        e.countries.some(c => c.toLowerCase().includes(q) || getCountryFlag(c).includes(q)) ||
         e.programs.some(p => p.toLowerCase().includes(q)) ||
         e.source.toLowerCase().includes(q) ||
         e.type.toLowerCase().includes(q);
@@ -119,7 +114,7 @@ export class SanctionsTrackerPanel extends Panel {
 
     container.innerHTML = filtered.map(e => {
       const icon = TYPE_ICONS[e.type];
-      const flags = e.countries.map(c => COUNTRY_FLAGS[c] || c).join(' ');
+      const flags = e.countries.map(c => getCountryFlag(c)).join(' ');
       const date = new Date(e.dateAdded).toLocaleDateString();
       const programs = e.programs.map(p => `<span class="sanction-program">${escapeHtml(p)}</span>`).join('');
       

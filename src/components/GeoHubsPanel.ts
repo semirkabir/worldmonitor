@@ -3,16 +3,7 @@ import type { GeoHubActivity } from '@/services/geo-activity';
 import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
 import { t } from '@/services/i18n';
 import { getCSSColor } from '@/utils';
-
-const COUNTRY_FLAGS: Record<string, string> = {
-  'USA': '🇺🇸', 'Russia': '🇷🇺', 'China': '🇨🇳', 'UK': '🇬🇧', 'Belgium': '🇧🇪',
-  'Israel': '🇮🇱', 'Iran': '🇮🇷', 'Ukraine': '🇺🇦', 'Taiwan': '🇹🇼', 'Japan': '🇯🇵',
-  'South Korea': '🇰🇷', 'North Korea': '🇰🇵', 'India': '🇮🇳', 'Saudi Arabia': '🇸🇦',
-  'Turkey': '🇹🇷', 'France': '🇫🇷', 'Germany': '🇩🇪', 'Egypt': '🇪🇬', 'Pakistan': '🇵🇰',
-  'Palestine': '🇵🇸', 'Yemen': '🇾🇪', 'Syria': '🇸🇾', 'Lebanon': '🇱🇧',
-  'Sudan': '🇸🇩', 'Ethiopia': '🇪🇹', 'Myanmar': '🇲🇲', 'Austria': '🇦🇹',
-  'International': '🌐',
-};
+import { getCountryFlag } from '@/utils/country-flags';
 
 const TYPE_ICONS: Record<string, string> = {
   capital: '🏛️',
@@ -57,7 +48,7 @@ export class GeoHubsPanel extends Panel {
   }
 
   private getFlag(country: string): string {
-    return COUNTRY_FLAGS[country] || '🌐';
+    return getCountryFlag(country);
   }
 
   private getTypeIcon(type: string): string {

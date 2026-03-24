@@ -1,6 +1,7 @@
 import { Panel } from './Panel';
 import type { FireRegionStats } from '@/services/wildfires';
 import { t } from '@/services/i18n';
+import { escapeHtml } from '@/utils/sanitize';
 
 export class SatelliteFiresPanel extends Panel {
   private stats: FireRegionStats[] = [];
@@ -83,10 +84,6 @@ export class SatelliteFiresPanel extends Panel {
       </div>
     `);
   }
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function timeSince(date: Date): string {
