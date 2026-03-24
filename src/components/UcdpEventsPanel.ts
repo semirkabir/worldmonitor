@@ -60,7 +60,8 @@ export class UcdpEventsPanel extends Panel {
     let bodyHtml: string;
 
     if (displayed.length === 0) {
-      bodyHtml = `<div class="panel-empty">${t('common.noEventsInCategory')}</div>`;
+      this.showEmptyState(t('common.noEventsInCategory'), 'filtered');
+      return;
     } else {
       const rows = displayed.map(e => {
         const deathsClass = e.type_of_violence === 'state-based' ? 'ucdp-deaths-state'

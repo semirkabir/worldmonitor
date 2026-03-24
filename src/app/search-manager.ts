@@ -24,6 +24,7 @@ import { t } from '@/services/i18n';
 import { saveToStorage, setTheme } from '@/utils';
 import { CountryIntelManager } from '@/app/country-intel';
 import { searchPredictions } from '@/services/prediction';
+import { getQuickActionCommandIds } from '@/components/search-ux';
 
 export interface SearchManagerCallbacks {
   openCountryBriefByCode: (code: string, country: string) => void;
@@ -202,6 +203,7 @@ export class SearchManager implements AppModule {
     this.ctx.searchModal.registerSource('country', this.buildCountrySearchItems());
 
     this.ctx.searchModal.setActivePanels(Object.keys(this.ctx.panels));
+    this.ctx.searchModal.setQuickActionIds(getQuickActionCommandIds(SITE_VARIANT));
     this.ctx.searchModal.setOnSelect((result) => this.handleSearchResult(result));
     this.ctx.searchModal.setOnCommand((cmd) => this.handleCommand(cmd));
 

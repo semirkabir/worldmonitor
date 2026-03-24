@@ -73,7 +73,8 @@ export class DisplacementPanel extends Panel {
     let tableHtml: string;
 
     if (displayed.length === 0) {
-      tableHtml = `<div class="panel-empty">${t('common.noDataShort')}</div>`;
+      this.showEmptyState(t('common.noDataShort'));
+      return;
     } else {
       const rows = displayed.map(c => {
         const hostTotal = c.hostTotal || 0;

@@ -210,6 +210,10 @@ export class PanelLayoutManager implements AppModule {
         <div class="header-right">
           <button class="search-btn" id="searchBtn"><kbd>⌥</kbd> ${t('header.search')}</button>
           ${this.ctx.isDesktopApp ? '' : `<button class="copy-link-btn" id="saveLayoutBtn">${t('header.saveLayout')}</button>`}
+          ${this.ctx.isDesktopApp ? '' : `<button class="copy-link-btn" id="shareLayoutBtn">Share</button>`}
+          ${this.ctx.isDesktopApp ? '' : `<button class="copy-link-btn shell-secondary-btn" id="resetLayoutBtn">${t('header.resetLayout')}</button>`}
+          <button class="shell-control-btn" id="densityToggleBtn" title="Toggle panel density">Density</button>
+          <button class="shell-control-btn" id="shellHelpBtn" title="Open help">Help</button>
           <button class="theme-toggle-btn" id="headerThemeToggle" title="${t('header.toggleTheme')}">
             ${getCurrentTheme() === 'dark'
         ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
@@ -218,6 +222,15 @@ export class PanelLayoutManager implements AppModule {
           ${this.ctx.isDesktopApp ? '' : `<button class="fullscreen-btn" id="fullscreenBtn" title="${t('header.fullscreen')}">⛶</button>`}
           ${SITE_VARIANT === 'happy' ? `<button class="tv-mode-btn" id="tvModeBtn" title="TV Mode (Shift+T)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></button>` : ''}
           <span id="unifiedSettingsMount"></span>
+        </div>
+      </div>
+      <div class="shell-guidance-strip" id="shellGuidanceStrip" role="note">
+        <div class="shell-guidance-copy">
+          <strong>Faster navigation:</strong> use Cmd/Ctrl+K to jump between regions, layers, and panels. Save your view, share it, or reset back to the default layout from the shell.
+        </div>
+        <div class="shell-guidance-actions">
+          <button type="button" class="shell-guidance-btn" id="shellGuidanceSearch">Open search</button>
+          <button type="button" class="shell-guidance-btn" id="shellGuidanceDismiss">Dismiss</button>
         </div>
       </div>
       <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
@@ -257,6 +270,10 @@ export class PanelLayoutManager implements AppModule {
           <span class="mobile-menu-item-icon">⚙️</span>
           <span class="mobile-menu-item-label">${t('header.settings')}</span>
         </button>
+        <button class="mobile-menu-item" id="mobileMenuHelp">
+          <span class="mobile-menu-item-icon">?</span>
+          <span class="mobile-menu-item-label">Help & shortcuts</span>
+        </button>
         <button class="mobile-menu-item" id="mobileMenuTheme">
           <span class="mobile-menu-item-icon">${getCurrentTheme() === 'dark' ? '☀️' : '🌙'}</span>
           <span class="mobile-menu-item-label">${getCurrentTheme() === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
@@ -264,6 +281,26 @@ export class PanelLayoutManager implements AppModule {
         <div class="mobile-menu-divider"></div>
         <div class="mobile-menu-version">v${__APP_VERSION__}</div>
       </nav>
+      <div class="mobile-help-overlay" id="mobileHelpOverlay">
+        <div class="mobile-help-sheet" id="mobileHelpSheet">
+          <div class="mobile-help-header">
+            <div>
+              <div class="mobile-help-eyebrow">World Monitor</div>
+              <div class="mobile-help-title">Mobile control guide</div>
+            </div>
+            <button class="mobile-help-close" id="mobileHelpClose" aria-label="Close">×</button>
+          </div>
+          <div class="mobile-help-list">
+            <div class="mobile-help-item"><strong>Search</strong><span>Use the floating search button to jump to regions, layers, and panels.</span></div>
+            <div class="mobile-help-item"><strong>Map</strong><span>Tap markers for details and drag the popup sheet upward for more context.</span></div>
+            <div class="mobile-help-item"><strong>Layout</strong><span>Save, share, or reset the current view directly from the header.</span></div>
+          </div>
+          <div class="mobile-help-actions">
+            <button type="button" class="shell-guidance-btn" id="mobileHelpDismiss">Don’t show again</button>
+            <button type="button" class="shell-guidance-btn primary" id="mobileHelpDone">Continue</button>
+          </div>
+        </div>
+      </div>
       <div class="region-sheet-backdrop" id="regionSheetBackdrop"></div>
       <div class="region-bottom-sheet" id="regionBottomSheet">
         <div class="region-sheet-header">${t('header.selectRegion')}</div>

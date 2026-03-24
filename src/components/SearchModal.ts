@@ -3,6 +3,7 @@ import { t } from '@/services/i18n';
 import { trackSearchUsed } from '@/services/analytics';
 import { getAllCommands, type Command } from '@/config/commands';
 import { isMobileDevice } from '@/utils';
+import { describeCommandAction, getSearchResultActionLabel } from './search-ux';
 
 interface CommandResult {
   command: Command;
@@ -95,6 +96,7 @@ export class SearchModal {
   private onCommand?: (command: Command) => void;
   private placeholder: string;
   private activePanelIds: Set<string> = new Set();
+  private quickActionIds: string[] = [];
   private isMobile: boolean;
   private asyncSearchTimer: ReturnType<typeof setTimeout> | null = null;
   private asyncSearchVersion = 0;
@@ -134,6 +136,10 @@ export class SearchModal {
 
   public setActivePanels(panelIds: string[]): void {
     this.activePanelIds = new Set(panelIds);
+  }
+
+  public setQuickActionIds(ids: string[]): void {
+    this.quickActionIds = ids;
   }
 
   public open(): void {
@@ -196,6 +202,11 @@ export class SearchModal {
             <input type="text" class="search-input" placeholder="${this.placeholder}" autofocus />
             <button class="search-sheet-cancel" aria-label="Close">\u00D7</button>
           </div>
+          <div class="search-command-row">
+            <span><kbd>Enter</kbd> open</span>
+            <span><kbd>\u2191\u2193</kbd> move</span>
+            <span><kbd>Esc</kbd> close</span>
+          </div>
           <div class="search-sheet-chips"></div>
           <div class="search-results"></div>
         </div>
@@ -230,11 +241,15 @@ export class SearchModal {
             <input type="text" class="search-input" placeholder="${this.placeholder}" autofocus />
             <kbd class="search-kbd">ESC</kbd>
           </div>
-          <div class="search-results"></div>
-          <div class="search-footer">
+          <div class="search-command-row">
             <span><kbd>\u2191\u2193</kbd> ${t('modals.search.navigate')}</span>
             <span><kbd>\u21B5</kbd> ${t('modals.search.select')}</span>
             <span><kbd>esc</kbd> ${t('modals.search.close')}</span>
+            <span><kbd>?</kbd> shortcuts</span>
+          </div>
+          <div class="search-results"></div>
+          <div class="search-footer">
+            <span>Search countries, layers, panels, and live entities</span>
           </div>
         </div>
       `;
@@ -346,6 +361,7 @@ export class SearchModal {
 
   private showRecentOrEmpty(): void {
     this.results = [];
+    this.selectedIndex = 0;
 
     if (this.recentSearches.length > 0) {
       this.renderRecent();
@@ -394,7 +410,9 @@ export class SearchModal {
   private renderRecent(): void {
     if (!this.resultsList) return;
 
-    this.resultsList.innerHTML = `<div class="search-section-header">${t('modals.search.recent')}</div>`;
+    const frag = document.createDocumentFragment();
+    this.appendQuickActions(frag);
+    frag.appendChild(this.makeSectionHeader(t('modals.search.recent')));
 
     this.recentSearches.forEach((term, i) => {
       const item = document.createElement('div');
@@ -417,8 +435,10 @@ export class SearchModal {
         this.handleSearch();
       });
 
-      this.resultsList?.appendChild(item);
+      frag.appendChild(item);
     });
+
+    this.resultsList.replaceChildren(frag);
   }
 
   private renderEmpty(): void {
@@ -435,20 +455,37 @@ export class SearchModal {
 
     const shuffled = tips.sort(() => Math.random() - 0.5).slice(0, this.isMobile ? 2 : 4);
 
-    let html = `<div class="search-section-header">${t('modals.search.empty')}</div>`;
+    const frag = document.createDocumentFragment();
+    this.appendQuickActions(frag);
+    frag.appendChild(this.makeSectionHeader(t('modals.search.empty')));
+
     shuffled.forEach((tip, i) => {
       const example = t(tip.exampleKey);
-      html += `
-        <div class="search-result-item tip-item${i === 0 ? ' selected' : ''}" data-tip-example="${escapeHtml(example)}">
-          <span class="search-result-icon">${tip.icon}</span>
-          <div class="search-result-content">
-            <div class="search-result-title">${escapeHtml(t(tip.key))}</div>
-          </div>
-          <kbd class="search-tip-example">${escapeHtml(example)}</kbd>
-        </div>`;
+      const item = document.createElement('div');
+      item.className = `search-result-item tip-item${i === 0 ? ' selected' : ''}`;
+      item.dataset.tipExample = example;
+
+      const icon = document.createElement('span');
+      icon.className = 'search-result-icon';
+      icon.textContent = tip.icon;
+
+      const content = document.createElement('div');
+      content.className = 'search-result-content';
+
+      const title = document.createElement('div');
+      title.className = 'search-result-title';
+      title.textContent = t(tip.key);
+      content.appendChild(title);
+
+      const exampleEl = document.createElement('kbd');
+      exampleEl.className = 'search-tip-example';
+      exampleEl.textContent = example;
+
+      item.append(icon, content, exampleEl);
+      frag.appendChild(item);
     });
 
-    this.resultsList.innerHTML = html;
+    this.resultsList.replaceChildren(frag);
 
     this.resultsList.querySelectorAll('.tip-item').forEach((el) => {
       el.addEventListener('click', () => {
@@ -569,6 +606,11 @@ export class SearchModal {
         titleEl.textContent = resolveCommandLabel(command);
         content.appendChild(titleEl);
 
+        const subtitleEl = document.createElement('div');
+        subtitleEl.className = 'search-result-subtitle';
+        subtitleEl.textContent = describeCommandAction(command);
+        content.appendChild(subtitleEl);
+
         const typeEl = document.createElement('span');
         typeEl.className = 'search-result-type';
         typeEl.textContent = resolveCategoryLabel(command);
@@ -611,10 +653,20 @@ export class SearchModal {
           sub.className = 'search-result-subtitle';
           sub.textContent = result.subtitle;
           content.appendChild(sub);
+        } else {
+          const sub = document.createElement('div');
+          sub.className = 'search-result-subtitle';
+          sub.textContent = getSearchResultActionLabel(result.type);
+          content.appendChild(sub);
         }
+
+        const actionEl = document.createElement('span');
+        actionEl.className = 'search-result-action';
+        actionEl.textContent = getSearchResultActionLabel(result.type);
 
         row.appendChild(iconEl);
         row.appendChild(content);
+        row.appendChild(actionEl);
         addItem(row, globalIndex++);
       }
     }
@@ -630,15 +682,12 @@ export class SearchModal {
     }
 
     const chips: { label: string; value: string }[] = [];
-    const commands = getAllCommands();
-    const navCmds = commands.filter(c => c.id.startsWith('country:'));
-    for (const cmd of navCmds.slice(0, 6)) {
-      chips.push({ label: cmd.label, value: cmd.label.toLowerCase() });
-    }
-    const actionCmds = commands.filter(c => c.category === 'actions' || c.category === 'view');
-    for (const cmd of actionCmds.slice(0, 4)) {
-      const label = resolveCommandLabel(cmd);
-      chips.push({ label, value: label.toLowerCase() });
+    const commandsById = new Map(getAllCommands().map((cmd) => [cmd.id, cmd]));
+    for (const id of this.quickActionIds) {
+      const cmd = commandsById.get(id);
+      if (!cmd) continue;
+      chips.push({ label: resolveCommandLabel(cmd), value: resolveCommandLabel(cmd).toLowerCase() });
+      if (chips.length >= 6) break;
     }
 
     this.chipsContainer.innerHTML = chips.map(c =>
@@ -747,5 +796,46 @@ export class SearchModal {
     } catch {
       // Storage full, ignore
     }
+  }
+
+  private appendQuickActions(parent: DocumentFragment): void {
+    const actions = this.getQuickActionCommands();
+    if (actions.length === 0) return;
+
+    parent.appendChild(this.makeSectionHeader('Quick actions'));
+
+    const wrap = document.createElement('div');
+    wrap.className = 'search-quick-actions';
+
+    actions.forEach((command) => {
+      const btn = document.createElement('button');
+      btn.className = 'search-quick-action';
+      btn.type = 'button';
+
+      const icon = document.createElement('span');
+      icon.className = 'search-quick-action-icon';
+      icon.textContent = command.icon;
+
+      const label = document.createElement('span');
+      label.className = 'search-quick-action-label';
+      label.textContent = resolveCommandLabel(command);
+
+      btn.append(icon, label);
+      btn.addEventListener('click', () => {
+        this.close();
+        this.onCommand?.(command);
+      });
+      wrap.appendChild(btn);
+    });
+
+    parent.appendChild(wrap);
+  }
+
+  private getQuickActionCommands(): Command[] {
+    if (this.quickActionIds.length === 0) return [];
+    const byId = new Map(getAllCommands().map((command) => [command.id, command]));
+    return this.quickActionIds
+      .map((id) => byId.get(id))
+      .filter((command): command is Command => Boolean(command));
   }
 }

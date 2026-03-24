@@ -6,6 +6,7 @@ import { trackPanelResized } from '@/services/analytics';
 import { getAiFlowSettings } from '@/services/ai-flow-settings';
 import { getSecretState } from '@/services/runtime-config';
 import { dataFreshness, type FreshnessStatus } from '@/services/data-freshness';
+import { buildPanelEmptyState, buildPanelErrorState, buildPanelLoadingState, type PanelEmptyKind } from './panel-state';
 
 // ─── SVG helpers (no innerHTML) ───────────────────────────────────────────────
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -740,15 +741,7 @@ export class Panel {
     if (this._locked) return;
     this.setErrorState(false);
     this.clearRetryCountdown();
-    replaceChildren(this.content,
-      h('div', { className: 'panel-loading' },
-        h('div', { className: 'panel-loading-radar' },
-          h('div', { className: 'panel-radar-sweep' }),
-          h('div', { className: 'panel-radar-dot' }),
-        ),
-        h('div', { className: 'panel-loading-text' }, message),
-      ),
-    );
+    replaceChildren(this.content, buildPanelLoadingState(message));
   }
 
   public showError(message?: string, onRetry?: () => void, autoRetrySeconds?: number): void {
@@ -756,15 +749,7 @@ export class Panel {
     this.clearRetryCountdown();
     this.setErrorState(true);
     if (onRetry !== undefined) this.retryCallback = onRetry;
-
-    const radarEl = h('div', { className: 'panel-loading-radar panel-error-radar' },
-      h('div', { className: 'panel-radar-sweep' }),
-      h('div', { className: 'panel-radar-dot error' }),
-    );
-
-    const msgEl = h('div', { className: 'panel-error-msg' }, message || t('common.failedToLoad'));
-
-    const children: (HTMLElement | string)[] = [radarEl, msgEl];
+    const children: HTMLElement[] = [];
 
     if (this.retryCallback) {
       const backoffSeconds = autoRetrySeconds ?? Math.min(15 * Math.pow(2, this.retryAttempt), 180);
@@ -784,7 +769,14 @@ export class Panel {
         countdownEl.textContent = `${t('common.retrying')} (${remaining}s)`;
       }, 1000);
     }
-    replaceChildren(this.content, h('div', { className: 'panel-error-state' }, ...children));
+    replaceChildren(this.content, buildPanelErrorState(message || t('common.failedToLoad'), ...children));
+  }
+
+  public showEmptyState(message: string, kind: PanelEmptyKind = 'empty', detail?: string): void {
+    if (this._locked) return;
+    this.setErrorState(false);
+    this.clearRetryCountdown();
+    replaceChildren(this.content, buildPanelEmptyState(message, kind, detail));
   }
 
   public resetRetryBackoff(): void {

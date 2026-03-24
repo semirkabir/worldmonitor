@@ -59,6 +59,7 @@ import { getCountryAtCoordinates, getCountryBbox } from '@/services/country-geom
 import type { CountryClickPayload } from './DeckGLMap';
 import { t } from '@/services/i18n';
 import { LAYER_REGISTRY, resolveLayerAccentColor, resolveLayerIcon, resolveLayerLabel, type MapVariant } from '@/config/map-layer-definitions';
+import { getTrayOpenPreference, setTrayOpenPreference } from '@/app/ui-preferences';
 
 export type TimeRange = '1h' | '6h' | '24h' | '48h' | '7d' | 'all';
 export type MapView = 'global' | 'america' | 'mena' | 'eu' | 'asia' | 'latam' | 'africa' | 'oceania';
@@ -427,9 +428,13 @@ export class MapComponent {
   private refreshLegend(): void {
     if (!this.legendEl) return;
     const itemsRoot = this.legendEl.querySelector('.map-legend-items') as HTMLElement | null;
+    const status = this.legendEl.querySelector('.map-tray-status') as HTMLElement | null;
     if (!itemsRoot) return;
 
     const activeLayers = this.getVariantLayerKeys().filter((layer) => this.state.layers[layer]);
+    if (status) {
+      status.textContent = activeLayers.length === 0 ? 'No active layers' : `${activeLayers.length} active`;
+    }
     if (activeLayers.length === 0) {
       itemsRoot.innerHTML = '<div class="map-legend-item"><span class="map-legend-empty">No active layers</span></div>';
       return;
@@ -448,13 +453,37 @@ export class MapComponent {
 
   private createLayerToggles(): HTMLElement {
     const toggles = document.createElement('div');
-    toggles.className = 'layer-toggles';
+    toggles.className = 'layer-toggles map-tray';
     toggles.id = 'layerToggles';
+    const header = document.createElement('div');
+    header.className = 'map-tray-header';
+    const title = document.createElement('span');
+    title.className = 'map-tray-title';
+    title.textContent = 'Layers';
+    const status = document.createElement('span');
+    status.className = 'map-tray-status';
+    const collapseBtn = document.createElement('button');
+    collapseBtn.className = 'map-tray-collapse';
+    collapseBtn.type = 'button';
+    const body = document.createElement('div');
+    body.className = 'map-tray-body';
+    const applyCollapsedState = (collapsed: boolean) => {
+      body.classList.toggle('collapsed', collapsed);
+      collapseBtn.textContent = collapsed ? '+' : '−';
+      toggles.classList.toggle('collapsed', collapsed);
+      setTrayOpenPreference('svgLayersCollapsed', collapsed);
+    };
+
+    collapseBtn.addEventListener('click', () => {
+      applyCollapsedState(!body.classList.contains('collapsed'));
+    });
+    header.append(title, status, collapseBtn);
+    toggles.append(header, body);
     const layers = this.getVariantLayerKeys();
 
     const MAX_SVG_LAYERS = 9;
     const enforceLayerLimit = () => {
-      const allBtns = Array.from(toggles.querySelectorAll<HTMLButtonElement>('.layer-toggle'));
+      const allBtns = Array.from(body.querySelectorAll<HTMLButtonElement>('.layer-toggle'));
       const activeBtns = allBtns.filter(b => b.classList.contains('active'));
       if (activeBtns.length > MAX_SVG_LAYERS) {
         const excess = activeBtns.slice(MAX_SVG_LAYERS);
@@ -474,6 +503,7 @@ export class MapComponent {
           b.classList.remove('limit-reached');
         }
       });
+      status.textContent = activeCount === 0 ? 'No active layers' : `${activeCount} active`;
     };
 
     layers.forEach((layer) => {
@@ -489,7 +519,7 @@ export class MapComponent {
         this.toggleLayer(layer);
         enforceLayerLimit();
       });
-      toggles.appendChild(btn);
+      body.appendChild(btn);
     });
 
     // Add help button
@@ -499,8 +529,9 @@ export class MapComponent {
     helpBtn.title = t('components.deckgl.layerGuide');
     helpBtn.setAttribute('aria-label', t('components.deckgl.layerGuide'));
     helpBtn.addEventListener('click', () => this.showLayerHelp());
-    toggles.appendChild(helpBtn);
+    body.appendChild(helpBtn);
     enforceLayerLimit();
+    applyCollapsedState(getTrayOpenPreference('svgLayersCollapsed', false));
 
     return toggles;
   }
@@ -669,9 +700,28 @@ export class MapComponent {
 
   private createLegend(): HTMLElement {
     const legend = document.createElement('div');
-    legend.className = 'map-legend';
-    legend.innerHTML = '<div class="map-legend-items"></div>';
+    legend.className = 'map-legend map-tray';
+    legend.innerHTML = `
+      <div class="map-tray-header">
+        <span class="map-tray-title">Legend</span>
+        <span class="map-tray-status"></span>
+        <button type="button" class="map-tray-collapse"></button>
+      </div>
+      <div class="map-legend-items map-tray-body"></div>
+    `;
     this.legendEl = legend;
+    const collapseBtn = legend.querySelector('.map-tray-collapse') as HTMLButtonElement | null;
+    const body = legend.querySelector('.map-tray-body') as HTMLElement | null;
+    const applyCollapsedState = (collapsed: boolean) => {
+      body?.classList.toggle('collapsed', collapsed);
+      legend.classList.toggle('collapsed', collapsed);
+      if (collapseBtn) collapseBtn.textContent = collapsed ? '+' : '−';
+      setTrayOpenPreference('svgLegendCollapsed', collapsed);
+    };
+    collapseBtn?.addEventListener('click', () => {
+      applyCollapsedState(!(body?.classList.contains('collapsed') ?? false));
+    });
+    applyCollapsedState(getTrayOpenPreference('svgLegendCollapsed', false));
     this.refreshLegend();
     return legend;
   }

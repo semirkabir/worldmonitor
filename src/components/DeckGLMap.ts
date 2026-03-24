@@ -107,6 +107,7 @@ import type { RenewableInstallation } from '@/services/renewable-installations';
 import type { SpeciesRecovery } from '@/services/conservation-data';
 import { getCountriesGeoJson, getCountryAtCoordinates, getCountryBbox } from '@/services/country-geometry';
 import type { FeatureCollection, Geometry } from 'geojson';
+import { getTrayOpenPreference, setTrayOpenPreference } from '@/app/ui-preferences';
 
 export type TimeRange = '1h' | '6h' | '24h' | '48h' | '7d' | 'all';
 export type DeckMapView = 'global' | 'america' | 'mena' | 'eu' | 'asia' | 'latam' | 'africa' | 'oceania';
@@ -3740,7 +3741,10 @@ export class DeckGLMap {
     const layersPanel = document.createElement('div');
     layersPanel.className = 'layers-panel deckgl-layers-panel deckgl-layer-toggles';
     layersPanel.id = 'layersPanel';
-    layersPanel.style.display = 'none';
+    const layersOpen = getTrayOpenPreference('deckLayersOpen', false);
+    layersPanel.style.display = layersOpen ? 'block' : 'none';
+    layersToggleBtn.classList.toggle('active', layersOpen);
+    layersRow.classList.toggle('active', layersOpen);
     slider.appendChild(layersPanel);
 
     slider.querySelectorAll('.time-btn').forEach(btn => {
@@ -3757,6 +3761,7 @@ export class DeckGLMap {
         panel.style.display = open ? 'block' : 'none';
         layersToggleBtn.classList.toggle('active', open);
         layersRow.classList.toggle('active', open);
+        setTrayOpenPreference('deckLayersOpen', open);
       }
     });
   }
@@ -3773,6 +3778,7 @@ export class DeckGLMap {
   private createLayerToggles(): void {
     const layersPanel = this.container.querySelector('#layersPanel') as HTMLElement;
     if (!layersPanel) return;
+    layersPanel.replaceChildren();
 
     const layerDefs = getLayersForVariant((SITE_VARIANT || 'full') as MapVariant, 'flat');
     const _wmKey = getSecretState('WORLDMONITOR_API_KEY').present;
@@ -3783,9 +3789,19 @@ export class DeckGLMap {
       premium: def.premium,
     }));
 
+    const header = document.createElement('div');
+    header.className = 'map-tray-header';
+    const title = document.createElement('span');
+    title.className = 'map-tray-title';
+    title.textContent = 'Layer filters';
+    const status = document.createElement('span');
+    status.className = 'map-tray-status';
+    header.append(title, status);
+    layersPanel.appendChild(header);
+
     // Build layer list
     const list = document.createElement('div');
-    list.className = 'toggle-list';
+    list.className = 'toggle-list map-tray-body';
     list.style.maxHeight = '32vh';
     list.style.overflowY = 'auto';
     list.style.setProperty('scrollbar-width', 'thin');
@@ -3845,10 +3861,12 @@ export class DeckGLMap {
           }
           this.refreshLegend();
           this.enforceLayerLimit();
+          status.textContent = `${layersPanel.querySelectorAll('.layer-toggle input:checked').length} active`;
         }
       });
     });
     this.enforceLayerLimit();
+    status.textContent = `${layersPanel.querySelectorAll('.layer-toggle input:checked').length} active`;
 
     // Manual scroll: intercept wheel, prevent map zoom, scroll the list ourselves
     const toggleList = toggles.querySelector('.toggle-list');
@@ -4105,10 +4123,14 @@ export class DeckGLMap {
 
   private createLegend(): void {
     const legend = document.createElement('div');
-    legend.className = 'map-legend deckgl-legend';
+    legend.className = 'map-legend deckgl-legend map-tray';
     legend.innerHTML = `
-      <span class="legend-label-title">${t('components.deckgl.legend.title')}</span>
-      <div class="legend-items"></div>
+      <div class="map-tray-header">
+        <span class="map-tray-title">${t('components.deckgl.legend.title')}</span>
+        <span class="map-tray-status"></span>
+        <button type="button" class="map-tray-collapse"></button>
+      </div>
+      <div class="legend-items map-tray-body"></div>
     `;
 
     // CII choropleth gradient legend (shown when layer is active)
@@ -4128,6 +4150,19 @@ export class DeckGLMap {
     legend.appendChild(ciiLegend);
     this.legendEl = legend;
     this.ciiLegendEl = ciiLegend;
+    const collapseBtn = legend.querySelector('.map-tray-collapse') as HTMLButtonElement | null;
+    const body = legend.querySelector('.map-tray-body') as HTMLElement | null;
+    const applyCollapsedState = (collapsed: boolean) => {
+      body?.classList.toggle('collapsed', collapsed);
+      legend.classList.toggle('collapsed', collapsed);
+      if (collapseBtn) collapseBtn.textContent = collapsed ? '+' : '−';
+      if (this.ciiLegendEl) this.ciiLegendEl.classList.toggle('collapsed', collapsed);
+      setTrayOpenPreference('deckLegendCollapsed', collapsed);
+    };
+    collapseBtn?.addEventListener('click', () => {
+      applyCollapsedState(!(body?.classList.contains('collapsed') ?? false));
+    });
+    applyCollapsedState(getTrayOpenPreference('deckLegendCollapsed', false));
     this.refreshLegend();
 
     this.container.appendChild(legend);
@@ -4136,11 +4171,15 @@ export class DeckGLMap {
   private refreshLegend(): void {
     if (!this.legendEl) return;
     const itemsRoot = this.legendEl.querySelector('.legend-items') as HTMLElement | null;
+    const status = this.legendEl.querySelector('.map-tray-status') as HTMLElement | null;
     if (!itemsRoot) return;
 
     const theme = getCurrentTheme() === 'light' ? 'light' : 'dark';
     const layerDefs = getLayersForVariant((SITE_VARIANT || 'full') as MapVariant, 'flat');
     const activeLayerDefs = layerDefs.filter(def => this.state.layers[def.key]);
+    if (status) {
+      status.textContent = activeLayerDefs.length === 0 ? 'No active layers' : `${activeLayerDefs.length} active`;
+    }
 
     if (activeLayerDefs.length === 0) {
       itemsRoot.innerHTML = '<span class="legend-item"><span class="legend-label">No active layers</span></span>';
@@ -4155,7 +4194,8 @@ export class DeckGLMap {
     }
 
     if (this.ciiLegendEl) {
-      this.ciiLegendEl.style.display = this.state.layers.ciiChoropleth ? 'block' : 'none';
+      const collapsed = this.legendEl.classList.contains('collapsed');
+      this.ciiLegendEl.style.display = this.state.layers.ciiChoropleth && !collapsed ? 'block' : 'none';
     }
   }
 

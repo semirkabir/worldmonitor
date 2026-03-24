@@ -112,7 +112,7 @@ export class SecurityAdvisoriesPanel extends Panel {
 
   private render(): void {
     if (this.advisories.length === 0) {
-      this.setContent(`<div class="panel-empty">${t('common.noDataAvailable')}</div>`);
+      this.showEmptyState(t('common.noDataAvailable'));
       return;
     }
 
@@ -155,7 +155,8 @@ export class SecurityAdvisoriesPanel extends Panel {
     let itemsHtml: string;
 
     if (displayed.length === 0) {
-      itemsHtml = `<div class="panel-empty">${t('components.securityAdvisories.noMatching')}</div>`;
+      this.showEmptyState(t('components.securityAdvisories.noMatching'), 'filtered');
+      return;
     } else {
       itemsHtml = displayed.map(a => {
         const levelCls = this.getLevelClass(a.level);

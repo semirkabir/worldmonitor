@@ -47,6 +47,15 @@ import { NotificationCenter } from '@/components/NotificationCenter';
 import { t } from '@/services/i18n';
 import { TvModeController } from '@/services/tv-mode';
 import { buildShareUrl, getHeaderThemeIconHtml } from './event-handler-view';
+import { confirmShellAction, showShellNotification } from './shell-notifications';
+import {
+  getPanelDensityPreference,
+  isDesktopOnboardingDismissed,
+  isMobileHelpDismissed,
+  setDesktopOnboardingDismissed,
+  setMobileHelpDismissed,
+  setPanelDensityPreference,
+} from './ui-preferences';
 
 export interface EventHandlerCallbacks {
   updateSearchIndex: () => void;
@@ -119,6 +128,9 @@ export class EventHandlerManager implements AppModule {
 
   init(): void {
     this.setupEventListeners();
+    this.applyPanelDensity();
+    this.setupShellGuidance();
+    this.setupMobileHelpSheet();
     this.setupIdleDetection();
     this.setupTvMode();
     this.setupBloombergShortcuts();
@@ -260,18 +272,36 @@ export class EventHandlerManager implements AppModule {
     document.getElementById('searchBtn')?.addEventListener('click', openSearch);
     document.getElementById('mobileSearchBtn')?.addEventListener('click', openSearch);
     document.getElementById('searchMobileFab')?.addEventListener('click', openSearch);
+    document.getElementById('shellGuidanceSearch')?.addEventListener('click', openSearch);
 
     document.getElementById('saveLayoutBtn')?.addEventListener('click', async () => {
       const shareUrl = this.getShareUrl();
       if (!shareUrl) return;
-      const button = document.getElementById('saveLayoutBtn');
       try {
         const urlObj = new URL(shareUrl);
         localStorage.setItem('worldmonitor-saved-map-layout', urlObj.search);
-        this.setCopyLinkFeedback(button, t('header.layoutSaved'));
+        showShellNotification(t('header.layoutSaved'), 'success');
       } catch (error) {
         console.warn('Failed to save layout:', error);
+        showShellNotification('Layout save failed', 'error');
       }
+    });
+
+    document.getElementById('shareLayoutBtn')?.addEventListener('click', () => {
+      this.shareCurrentView();
+    });
+
+    document.getElementById('resetLayoutBtn')?.addEventListener('click', () => {
+      void this.confirmAndResetLayout();
+    });
+
+    document.getElementById('densityToggleBtn')?.addEventListener('click', () => {
+      this.togglePanelDensity();
+    });
+
+    document.getElementById('shellHelpBtn')?.addEventListener('click', () => {
+      if (this.ctx.isMobile) this.openMobileHelpSheet();
+      else showShellNotification('Use Cmd/Ctrl+K for search, ? for shortcuts, and Shift+S to copy the current view.', 'info', 3600);
     });
 
     this.handlers.storage = (e: StorageEvent) => {
@@ -582,17 +612,83 @@ export class EventHandlerManager implements AppModule {
     );
   }
 
+  private applyPanelDensity(): void {
+    document.body.dataset.panelDensity = getPanelDensityPreference();
+    const button = document.getElementById('densityToggleBtn');
+    if (button) {
+      button.textContent = getPanelDensityPreference() === 'comfortable' ? 'Comfort' : 'Compact';
+    }
+  }
 
+  private togglePanelDensity(): void {
+    const next = getPanelDensityPreference() === 'comfortable' ? 'compact' : 'comfortable';
+    setPanelDensityPreference(next);
+    this.applyPanelDensity();
+    showShellNotification(
+      next === 'comfortable' ? 'Comfortable panel spacing enabled' : 'Compact panel spacing enabled',
+      'success',
+    );
+  }
 
-  private setCopyLinkFeedback(button: HTMLElement | null, message: string): void {
-    if (!button) return;
-    const originalText = button.textContent ?? '';
-    button.textContent = message;
-    button.classList.add('copied');
-    window.setTimeout(() => {
-      button.textContent = originalText;
-      button.classList.remove('copied');
-    }, 1500);
+  private setupShellGuidance(): void {
+    const strip = document.getElementById('shellGuidanceStrip');
+    if (!strip) return;
+    const shouldHide = this.ctx.isMobile || isDesktopOnboardingDismissed();
+    strip.classList.toggle('hidden', shouldHide);
+    document.getElementById('shellGuidanceDismiss')?.addEventListener('click', () => {
+      setDesktopOnboardingDismissed(true);
+      strip.classList.add('hidden');
+    });
+  }
+
+  private setupMobileHelpSheet(): void {
+    const overlay = document.getElementById('mobileHelpOverlay');
+    if (!overlay) return;
+
+    document.getElementById('mobileMenuHelp')?.addEventListener('click', () => this.openMobileHelpSheet());
+    document.getElementById('mobileHelpClose')?.addEventListener('click', () => this.closeMobileHelpSheet());
+    document.getElementById('mobileHelpDone')?.addEventListener('click', () => this.closeMobileHelpSheet());
+    document.getElementById('mobileHelpDismiss')?.addEventListener('click', () => {
+      setMobileHelpDismissed(true);
+      this.closeMobileHelpSheet();
+    });
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) this.closeMobileHelpSheet();
+    });
+
+    if (this.ctx.isMobile && !isMobileHelpDismissed()) {
+      window.setTimeout(() => this.openMobileHelpSheet(), 200);
+    }
+  }
+
+  private openMobileHelpSheet(): void {
+    document.getElementById('mobileHelpOverlay')?.classList.add('open');
+  }
+
+  private closeMobileHelpSheet(): void {
+    document.getElementById('mobileHelpOverlay')?.classList.remove('open');
+  }
+
+  private async confirmAndResetLayout(): Promise<void> {
+    const confirmed = await confirmShellAction({
+      title: 'Reset saved layout?',
+      message: 'This clears saved panel positions, map sizing, and shell layout preferences for this device.',
+      confirmLabel: 'Reset layout',
+      danger: true,
+    });
+    if (!confirmed) return;
+
+    localStorage.removeItem(this.ctx.PANEL_SPANS_KEY);
+    localStorage.removeItem('worldmonitor-panel-col-spans');
+    localStorage.removeItem(this.ctx.PANEL_ORDER_KEY);
+    localStorage.removeItem(this.ctx.PANEL_ORDER_KEY + '-bottom');
+    localStorage.removeItem(this.ctx.PANEL_ORDER_KEY + '-bottom-set');
+    localStorage.removeItem('map-height');
+    localStorage.removeItem('worldmonitor-sidebar-split');
+    localStorage.removeItem('worldmonitor-panels-collapsed');
+    localStorage.removeItem('worldmonitor-bottom-grid-collapsed');
+    showShellNotification('Resetting layout…', 'warning', 900);
+    window.setTimeout(() => window.location.reload(), 120);
   }
 
   toggleFullscreen(): void {
@@ -686,16 +782,7 @@ export class EventHandlerManager implements AppModule {
       getAllSourceNames: () => this.getAllSourceNames(),
       getLocalizedPanelName: (key: string, fallback: string) => this.getLocalizedPanelName(key, fallback),
       resetLayout: () => {
-        localStorage.removeItem(this.ctx.PANEL_SPANS_KEY);
-        localStorage.removeItem('worldmonitor-panel-col-spans');
-        localStorage.removeItem(this.ctx.PANEL_ORDER_KEY);
-        localStorage.removeItem(this.ctx.PANEL_ORDER_KEY + '-bottom');
-        localStorage.removeItem(this.ctx.PANEL_ORDER_KEY + '-bottom-set');
-        localStorage.removeItem('map-height');
-        localStorage.removeItem('worldmonitor-sidebar-split');
-        localStorage.removeItem('worldmonitor-panels-collapsed');
-        localStorage.removeItem('worldmonitor-bottom-grid-collapsed');
-        window.location.reload();
+        void this.confirmAndResetLayout();
       },
       isDesktopApp: this.ctx.isDesktopApp,
       onMapProviderChange: () => {
@@ -859,13 +946,7 @@ export class EventHandlerManager implements AppModule {
   }
 
   showToast(msg: string): void {
-    document.querySelector('.toast-notification')?.remove();
-    const el = document.createElement('div');
-    el.className = 'toast-notification';
-    el.textContent = msg;
-    document.body.appendChild(el);
-    requestAnimationFrame(() => el.classList.add('visible'));
-    setTimeout(() => { el.classList.remove('visible'); setTimeout(() => el.remove(), 300); }, 3000);
+    showShellNotification(msg, 'info');
   }
 
   shouldShowIntelligenceNotifications(): boolean {
@@ -1197,16 +1278,7 @@ export class EventHandlerManager implements AppModule {
   }
 
   private showWmToast(message: string): void {
-    document.querySelector('.wm-toast')?.remove();
-    const toast = document.createElement('div');
-    toast.className = 'wm-toast';
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    requestAnimationFrame(() => { toast.classList.add('wm-toast-visible'); });
-    setTimeout(() => {
-      toast.classList.remove('wm-toast-visible');
-      setTimeout(() => toast.remove(), 300);
-    }, 2500);
+    showShellNotification(message, 'success');
   }
 
   private toggleKbShortcutsOverlay(): void {
