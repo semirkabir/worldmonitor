@@ -5,6 +5,7 @@ import { calculateCII, isInLearningMode } from './country-instability';
 import { getCountryNameByCode } from './country-geometry';
 import { t } from '@/services/i18n';
 import type { TheaterPostureSummary } from '@/services/military-surge';
+import { haversineKm } from '@/utils/geo';
 
 export type AlertPriority = 'critical' | 'high' | 'medium' | 'low';
 export type AlertType = 'convergence' | 'cii_spike' | 'cascade' | 'composite';
@@ -63,25 +64,6 @@ const ALERT_MERGE_DISTANCE_KM = 200;
 let alertIdCounter = 0;
 function generateAlertId(): string {
   return `alert-${Date.now()}-${++alertIdCounter}`;
-}
-
-function haversineDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
 }
 
 function getPriorityFromCIIChange(change: number, level: CountryScore['level']): AlertPriority {
@@ -203,7 +185,7 @@ function shouldMergeAlerts(a: UnifiedAlert, b: UnifiedAlert): boolean {
   const sameLocation = !!(
     a.location &&
     b.location &&
-    haversineDistance(a.location.lat, a.location.lon, b.location.lat, b.location.lon) <
+    haversineKm(a.location.lat, a.location.lon, b.location.lat, b.location.lon) <
       ALERT_MERGE_DISTANCE_KM
   );
 

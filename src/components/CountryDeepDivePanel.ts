@@ -9,7 +9,7 @@ import type { AssetType, NewsItem, RelatedAsset } from '@/types';
 import { sanitizeUrl, escapeHtml } from '@/utils/sanitize';
 import { getCSSColor } from '@/utils';
 import { PORTS } from '@/config/ports';
-import { haversineDistanceKm } from '@/services/related-assets';
+import { haversineKm } from '@/utils/geo';
 import type {
   CountryBriefPanel,
   CountryIntelData,
@@ -401,7 +401,7 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
     const nearbyPorts = PORTS
       .map((port) => ({
         ...port,
-        distanceKm: haversineDistanceKm(centroid.lat, centroid.lon, port.lat, port.lon),
+        distanceKm: haversineKm(centroid.lat, centroid.lon, port.lat, port.lon),
       }))
       .filter((port) => port.distanceKm <= 1500)
       .sort((a, b) => a.distanceKm - b.distanceKm)

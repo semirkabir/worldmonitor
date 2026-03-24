@@ -3,6 +3,7 @@ import type { AirportDelayAlert } from '@/services/aviation';
 import type { SecurityAdvisory } from '@/services/security-advisories';
 import type { TemporalAnomaly } from '@/services/temporal-baseline';
 import { tokenizeForMatch, matchKeyword } from '@/utils/keyword-match';
+import { haversineKm } from '@/utils/geo';
 import { INTEL_HOTSPOTS, CONFLICT_ZONES, STRATEGIC_WATERWAYS } from '@/config/geo';
 import { CURATED_COUNTRIES, DEFAULT_BASELINE_RISK, DEFAULT_EVENT_MULTIPLIER, getHotspotCountries } from '@/config/countries';
 import { focalPointDetector } from './focal-point-detector';
@@ -325,14 +326,6 @@ export function ingestClimateForCII(anomalies: ClimateAnomaly[]): void {
 function getCountryFromLocation(lat: number, lon: number): string | null {
   const precise = getCountryAtCoordinates(lat, lon);
   return precise?.code ?? null;
-}
-
-function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 const hotspotActivityMap = new Map<string, number>();

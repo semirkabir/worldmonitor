@@ -1,6 +1,7 @@
 import type { ClusteredEvent, RelatedAsset, AssetType, RelatedAssetContext } from '@/types';
 import { tokenizeForMatch, matchKeyword } from '@/utils/keyword-match';
 import { t } from '@/services/i18n';
+import { haversineKm } from '@/utils/geo';
 import {
   INTEL_HOTSPOTS,
   CONFLICT_ZONES,
@@ -66,19 +67,6 @@ function inferOrigin(titles: string[]): AssetOrigin | null {
   return allCandidates.sort((a, b) => b.score - a.score)[0] ?? null;
 }
 
-function haversineDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const toRad = (value: number) => (value * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const originLat = toRad(lat1);
-  const destLat = toRad(lat2);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(originLat) * Math.cos(destLat) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return 6371 * c;
-}
-
 function midpoint(points: [number, number][]): { lat: number; lon: number } | null {
   if (points.length === 0) return null;
   const mid = points[Math.floor(points.length / 2)] as [number, number];
@@ -118,7 +106,7 @@ function findNearbyAssets(origin: AssetOrigin, types: AssetType[]): RelatedAsset
       .filter((asset): asset is { id: string; name: string; lat: number; lon: number } => !!asset)
       .map((asset) => ({
         ...asset,
-        distanceKm: haversineDistanceKm(origin.lat, origin.lon, asset.lat, asset.lon),
+        distanceKm: haversineKm(origin.lat, origin.lon, asset.lat, asset.lon),
       }))
       .filter(asset => asset.distanceKm <= MAX_DISTANCE_KM)
       .sort((a, b) => a.distanceKm - b.distanceKm)
@@ -158,7 +146,5 @@ export function getNearbyInfrastructure(
 ): RelatedAsset[] {
   return findNearbyAssets({ lat, lon, label: 'country-centroid' }, types);
 }
-
-export { haversineDistanceKm };
 
 export { MAX_DISTANCE_KM };

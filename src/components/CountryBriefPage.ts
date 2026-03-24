@@ -7,7 +7,8 @@ import type { PredictionMarket } from '@/services/prediction';
 import type { AssetType } from '@/types';
 import type { CountryBriefSignals } from '@/app/app-context';
 import type { CountryBriefPanel, CountryIntelData, StockIndexData } from '@/components/CountryBriefPanel';
-import { getNearbyInfrastructure, haversineDistanceKm } from '@/services/related-assets';
+import { getNearbyInfrastructure } from '@/services/related-assets';
+import { haversineKm } from '@/utils/geo';
 import { PORTS } from '@/config/ports';
 import type { Port } from '@/config/ports';
 import { exportCountryBriefJSON, exportCountryBriefCSV } from '@/utils/export';
@@ -597,7 +598,7 @@ export class CountryBriefPage implements CountryBriefPanel {
     const assets = getNearbyInfrastructure(centroidLat, centroidLon, ['pipeline', 'cable', 'datacenter', 'base', 'nuclear']);
 
     const nearbyPorts = PORTS
-      .map((p: Port) => ({ port: p, dist: haversineDistanceKm(centroidLat, centroidLon, p.lat, p.lon) }))
+      .map((p: Port) => ({ port: p, dist: haversineKm(centroidLat, centroidLon, p.lat, p.lon) }))
       .filter(({ dist }) => dist <= 600)
       .sort((a, b) => a.dist - b.dist)
       .slice(0, 5);

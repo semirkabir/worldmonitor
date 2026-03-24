@@ -28,9 +28,3 @@ export async function fetchLiveVideoInfo(channelHandle: string): Promise<LiveVid
     return { videoId: null, hlsUrl: null };
   }
 }
-
-/** @deprecated Use fetchLiveVideoInfo instead */
-export async function fetchLiveVideoId(channelHandle: string): Promise<string | null> {
-  const info = await fetchLiveVideoInfo(channelHandle);
-  return info.videoId;
-}

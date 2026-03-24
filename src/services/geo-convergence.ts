@@ -3,6 +3,7 @@ import type { Earthquake } from '@/services/earthquakes';
 import { generateSignalId } from '@/utils/analysis-constants';
 import type { CorrelationSignalCore } from './analysis-core';
 import { INTEL_HOTSPOTS, CONFLICT_ZONES, STRATEGIC_WATERWAYS } from '@/config/geo';
+import { haversineKm } from '@/utils/geo';
 
 export type GeoEventType = 'protest' | 'military_flight' | 'military_vessel' | 'earthquake';
 
@@ -128,15 +129,6 @@ const TYPE_LABELS: Record<GeoEventType, string> = {
   military_vessel: 'naval vessels',
   earthquake: 'seismic activity',
 };
-
-// Haversine distance in km
-function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 // Reverse geocode coordinates to human-readable location
 export function getLocationName(lat: number, lon: number): string {

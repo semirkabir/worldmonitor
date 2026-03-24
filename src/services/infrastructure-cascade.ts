@@ -12,28 +12,8 @@ import type { Port } from '@/config/ports';
 import { UNDERSEA_CABLES, STRATEGIC_WATERWAYS } from '@/config/geo';
 import { PIPELINES } from '@/config/pipelines';
 import { PORTS } from '@/config/ports';
-
-// Country name lookup
-const COUNTRY_NAMES: Record<string, string> = {
-  US: 'United States', GB: 'United Kingdom', ES: 'Spain', FR: 'France',
-  DE: 'Germany', IT: 'Italy', PT: 'Portugal', NO: 'Norway', DK: 'Denmark',
-  NL: 'Netherlands', BE: 'Belgium', SE: 'Sweden', FI: 'Finland', IE: 'Ireland',
-  AT: 'Austria', CH: 'Switzerland', GR: 'Greece', CZ: 'Czech Republic',
-  JP: 'Japan', CN: 'China', TW: 'Taiwan', HK: 'Hong Kong', SG: 'Singapore',
-  KR: 'South Korea', AU: 'Australia', NZ: 'New Zealand', IN: 'India', PK: 'Pakistan',
-  AE: 'UAE', SA: 'Saudi Arabia', EG: 'Egypt', KW: 'Kuwait', BH: 'Bahrain',
-  OM: 'Oman', QA: 'Qatar', IR: 'Iran', IQ: 'Iraq', TR: 'Turkey', IL: 'Israel',
-  JO: 'Jordan', LB: 'Lebanon', SY: 'Syria', YE: 'Yemen',
-  NG: 'Nigeria', ZA: 'South Africa', KE: 'Kenya', TZ: 'Tanzania',
-  MZ: 'Mozambique', MG: 'Madagascar', SN: 'Senegal', GH: 'Ghana',
-  CI: 'Ivory Coast', AO: 'Angola', ET: 'Ethiopia', UG: 'Uganda',
-  BR: 'Brazil', AR: 'Argentina', CL: 'Chile',
-  PE: 'Peru', CO: 'Colombia', MX: 'Mexico', PA: 'Panama', VE: 'Venezuela',
-  IS: 'Iceland', FO: 'Faroe Islands', FJ: 'Fiji', ID: 'Indonesia',
-  VN: 'Vietnam', TH: 'Thailand', MY: 'Malaysia', PH: 'Philippines',
-  RU: 'Russia', UA: 'Ukraine', PL: 'Poland', RO: 'Romania', HU: 'Hungary',
-  CA: 'Canada', DJ: 'Djibouti', BD: 'Bangladesh', LK: 'Sri Lanka', MM: 'Myanmar',
-};
+import { haversineKm } from '@/utils/geo';
+import { getCountryNameByCode } from './country-geometry';
 
 export interface DependencyGraph {
   nodes: Map<string, InfrastructureNode>;
@@ -134,7 +114,7 @@ function addCountriesAsNodes(graph: DependencyGraph): void {
     graph.nodes.set(`country:${code}`, {
       id: `country:${code}`,
       type: 'country',
-      name: COUNTRY_NAMES[code] || code,
+      name: getCountryNameByCode(code) || code,
       metadata: { code },
     });
   }
@@ -246,7 +226,7 @@ function buildPortCountryEdges(graph: DependencyGraph): void {
       graph.nodes.set(countryId, {
         id: countryId,
         type: 'country',
-        name: COUNTRY_NAMES[countryCode] || port.country,
+        name: getCountryNameByCode(countryCode) || port.country,
         metadata: { code: countryCode },
       });
     }
@@ -275,7 +255,7 @@ function buildPortCountryEdges(graph: DependencyGraph): void {
         graph.nodes.set(affectedCountryId, {
           id: affectedCountryId,
           type: 'country',
-          name: COUNTRY_NAMES[affected.code] || affected.code,
+          name: getCountryNameByCode(affected.code) || affected.code,
           metadata: { code: affected.code },
         });
       }
@@ -355,7 +335,7 @@ function buildChokepointEdges(graph: DependencyGraph): void {
 
     // Find ports near this chokepoint
     const nearbyPorts = PORTS.filter(port => {
-      const dist = haversineDistance(waterway.lat, waterway.lon, port.lat, port.lon);
+      const dist = haversineKm(waterway.lat, waterway.lon, port.lat, port.lon);
       return dist < 500; // Within 500km
     });
 
@@ -380,7 +360,7 @@ function buildChokepointEdges(graph: DependencyGraph): void {
         graph.nodes.set(countryId, {
           id: countryId,
           type: 'country',
-          name: COUNTRY_NAMES[dep.code] || dep.code,
+          name: getCountryNameByCode(dep.code) || dep.code,
           metadata: { code: dep.code },
         });
       }
@@ -447,15 +427,6 @@ function getChokepointDependentCountries(chokepointId: string): { code: string; 
     ],
   };
   return dependencies[chokepointId] || [];
-}
-
-// Haversine distance for chokepoint proximity
-function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 export function buildDependencyGraph(): DependencyGraph {
