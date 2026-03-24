@@ -29,7 +29,7 @@
   <a href="https://github.com/koala73/worldmonitor/releases/latest"><strong>All Releases</strong></a>
 </p>
 
-![World Monitor Dashboard](docs/images/new-world-monitor.png)
+![World Monitor Dashboard](docs/images/new-world-monitor.jpg)
 
 ---
 

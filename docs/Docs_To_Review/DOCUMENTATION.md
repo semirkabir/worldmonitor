@@ -9,7 +9,7 @@ AI-powered real-time global intelligence dashboard aggregating news, markets, ge
 ![D3.js](https://img.shields.io/badge/D3.js-F9A03C?style=flat&logo=d3.js&logoColor=white)
 ![Version](https://img.shields.io/badge/version-2.1.4-blue)
 
-![World Monitor Dashboard](images/new-world-monitor.png)
+![World Monitor Dashboard](images/new-world-monitor.jpg)
 
 ## Platform Variants
 
