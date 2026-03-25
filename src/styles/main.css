@@ -831,7 +831,6 @@ canvas,
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-right: 8px;
 }
 
 .search-btn:hover {
@@ -859,6 +858,44 @@ canvas,
   background: var(--text);
   color: var(--bg);
   border-color: var(--text);
+}
+
+.save-reset-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.save-reset-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: var(--bg-card, var(--bg));
+  border: 1px solid var(--border);
+  z-index: 100;
+  min-width: 100%;
+}
+
+.save-reset-dropdown:hover .save-reset-menu {
+  display: block;
+}
+
+.save-reset-menu button {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.save-reset-menu button:hover {
+  background: var(--bg-hover, var(--border));
 }
 
 .download-wrapper {
@@ -6248,6 +6285,60 @@ a.prediction-link:hover {
   padding-top: 8px;
 }
 
+.panels-layout-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.panels-layout-trigger {
+  padding: 6px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.panels-layout-trigger:hover {
+  border-color: var(--text-dim);
+}
+
+.panels-layout-menu {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  min-width: 100%;
+  z-index: 10;
+}
+
+.panels-layout-dropdown:hover .panels-layout-menu {
+  display: block;
+}
+
+.panels-layout-menu button {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.panels-layout-menu button:hover {
+  background: var(--bg-hover, var(--border));
+}
+
 .panels-reset-layout {
   padding: 6px 12px;
   background: var(--bg);
@@ -6297,10 +6388,10 @@ a.prediction-link:hover {
   width: 380px;
   max-height: calc(100vh - 120px);
   background: var(--bg);
-  border: 1px solid var(--red);
+  border: 1px solid var(--border);
   z-index: 1000;
   overflow-y: auto;
-  box-shadow: 0 4px 24px rgba(255, 68, 68, 0.3);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
 }
 
 .map-popup.map-popup-sheet {
@@ -13502,8 +13593,7 @@ a.prediction-link:hover {
 }
 
 .deckgl-controls .map-btn:hover {
-  background: var(--bg);
-  border-color: var(--green);
+  background: var(--border);
 }
 
 .deckgl-controls .view-selector {
@@ -13525,6 +13615,77 @@ a.prediction-link:hover {
 
 .deckgl-controls .view-select:hover {
   border-color: var(--green);
+}
+
+/* Map Theme Picker (on-map) */
+.map-theme-picker {
+  position: relative;
+}
+
+.map-theme-picker-btn svg {
+  pointer-events: none;
+}
+
+.map-theme-picker-panel {
+  position: absolute;
+  right: 40px;
+  top: 0;
+  width: 158px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+  pointer-events: none;
+  z-index: 600;
+  display: flex;
+  flex-direction: column;
+}
+
+.map-theme-picker.open .map-theme-picker-panel {
+  max-height: 480px;
+  opacity: 1;
+  pointer-events: auto;
+  overflow-y: auto;
+}
+
+.mtp-group-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim, var(--text));
+  opacity: 0.55;
+  padding: 8px 10px 3px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.mtp-group-label:first-child {
+  padding-top: 6px;
+}
+
+.mtp-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 5px 10px;
+  font-size: 11px;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.mtp-item:hover {
+  background: var(--border);
+}
+
+.mtp-item--active {
+  color: var(--green, #4caf50);
+  font-weight: 600;
 }
 
 /* deck.gl Time Slider */
@@ -14884,6 +15045,24 @@ a.prediction-link:hover {
   background: rgba(68, 255, 136, 0.08);
   border-color: rgba(68, 255, 136, 0.4);
   color: var(--green);
+}
+
+/* Clock row: timezone + format inline */
+.us-clock-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+.us-clock-row .unified-settings-select {
+  margin-top: 0;
+}
+.us-clock-tz {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.us-clock-fmt {
+  flex: 0 0 60px;
+  width: 60px;
 }
 
 /* Unified settings selects */

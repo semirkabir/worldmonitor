@@ -2,7 +2,6 @@ import { FEEDS, INTEL_SOURCES, SOURCE_REGION_MAP } from '@/config/feeds';
 import { PANEL_CATEGORY_MAP } from '@/config/panels';
 import { SITE_VARIANT } from '@/config/variant';
 import { t } from '@/services/i18n';
-import type { MapProvider } from '@/config/basemap';
 import { escapeHtml } from '@/utils/sanitize';
 import type { PanelConfig } from '@/types';
 import { renderPreferences } from '@/services/preferences-content';
@@ -18,8 +17,8 @@ export interface UnifiedSettingsConfig {
   getAllSourceNames: () => string[];
   getLocalizedPanelName: (key: string, fallback: string) => string;
   resetLayout: () => void;
+  saveLayout: () => void;
   isDesktopApp: boolean;
-  onMapProviderChange?: (provider: MapProvider) => void;
 }
 
 type TabId = 'settings' | 'panels' | 'sources';
@@ -75,6 +74,11 @@ export class UnifiedSettings {
         if (searchInput) searchInput.value = '';
         this.renderPanelCategoryPills();
         this.renderPanelsTab();
+        return;
+      }
+
+      if (target.closest('.panels-save-layout')) {
+        this.config.saveLayout();
         return;
       }
 
@@ -185,7 +189,6 @@ export class UnifiedSettings {
     const tabClass = (id: TabId) => `unified-settings-tab${this.activeTab === id ? ' active' : ''}`;
     const prefs = renderPreferences({
       isDesktopApp: this.config.isDesktopApp,
-      onMapProviderChange: this.config.onMapProviderChange,
     });
 
     this.overlay.innerHTML = `
@@ -211,7 +214,13 @@ export class UnifiedSettings {
           </div>
           <div class="panel-toggle-grid" id="usPanelToggles"></div>
           <div class="panels-footer">
-            <button class="panels-reset-layout">${t('header.resetLayout')}</button>
+            <div class="panels-layout-dropdown">
+              <button class="panels-layout-trigger">${t('header.saveResetLayout')}</button>
+              <div class="panels-layout-menu">
+                <button class="panels-save-layout">${t('header.saveLayout')}</button>
+                <button class="panels-reset-layout">${t('header.resetLayout')}</button>
+              </div>
+            </div>
           </div>
         </div>
         <div class="unified-settings-tab-panel${this.activeTab === 'sources' ? ' active' : ''}" data-panel-id="sources" id="us-tab-panel-sources" role="tabpanel" aria-labelledby="us-tab-sources">

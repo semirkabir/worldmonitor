@@ -1,6 +1,6 @@
 import { LANGUAGES, getCurrentLanguage, changeLanguage, t } from '@/services/i18n';
 import { getAiFlowSettings, setAiFlowSetting, getStreamQuality, setStreamQuality, STREAM_QUALITY_OPTIONS } from '@/services/ai-flow-settings';
-import { getMapProvider, setMapProvider, MAP_PROVIDER_OPTIONS, MAP_THEME_OPTIONS, getMapTheme, setMapTheme, type MapProvider } from '@/config/basemap';
+import { getUnifiedTheme, setUnifiedTheme, UNIFIED_THEME_OPTIONS } from '@/config/basemap';
 import { getLiveStreamsAlwaysOn, setLiveStreamsAlwaysOn } from '@/services/live-stream-settings';
 import { getGlobeVisualPreset, setGlobeVisualPreset, GLOBE_VISUAL_PRESET_OPTIONS, type GlobeVisualPreset } from '@/services/globe-render-settings';
 import type { StreamQuality } from '@/services/ai-flow-settings';
@@ -11,9 +11,60 @@ import { exportSettings, importSettings, type ImportResult } from '@/utils/setti
 
 const DESKTOP_RELEASES_URL = 'https://github.com/koala73/worldmonitor/releases';
 
+const HEADER_TZ_KEY = 'worldmonitor-header-timezone';
+const HEADER_FMT_KEY = 'worldmonitor-header-clock-format';
+
+export function getHeaderTimezone(): string {
+  return localStorage.getItem(HEADER_TZ_KEY) || 'UTC';
+}
+
+export function setHeaderTimezone(tz: string): void {
+  localStorage.setItem(HEADER_TZ_KEY, tz);
+}
+
+export function getClockFormat(): '12h' | '24h' {
+  return (localStorage.getItem(HEADER_FMT_KEY) as '12h' | '24h') || '24h';
+}
+
+export function setClockFormat(fmt: '12h' | '24h'): void {
+  localStorage.setItem(HEADER_FMT_KEY, fmt);
+}
+
+const TIMEZONE_OPTIONS: { value: string; label: string; group: string }[] = [
+  { value: 'UTC',                              label: 'UTC',               group: '' },
+  { value: 'local',                            label: 'Local (auto-detect)', group: '' },
+  { value: 'America/New_York',                 label: 'New York (ET)',     group: 'Americas' },
+  { value: 'America/Chicago',                  label: 'Chicago (CT)',      group: 'Americas' },
+  { value: 'America/Denver',                   label: 'Denver (MT)',       group: 'Americas' },
+  { value: 'America/Los_Angeles',              label: 'Los Angeles (PT)',  group: 'Americas' },
+  { value: 'America/Toronto',                  label: 'Toronto (ET)',      group: 'Americas' },
+  { value: 'America/Mexico_City',              label: 'Mexico City',       group: 'Americas' },
+  { value: 'America/Sao_Paulo',               label: 'São Paulo',         group: 'Americas' },
+  { value: 'America/Argentina/Buenos_Aires',   label: 'Buenos Aires',      group: 'Americas' },
+  { value: 'Europe/London',                    label: 'London (GMT/BST)',  group: 'Europe' },
+  { value: 'Europe/Paris',                     label: 'Paris (CET)',       group: 'Europe' },
+  { value: 'Europe/Berlin',                    label: 'Frankfurt (CET)',   group: 'Europe' },
+  { value: 'Europe/Zurich',                    label: 'Zurich (CET)',      group: 'Europe' },
+  { value: 'Europe/Moscow',                    label: 'Moscow (MSK)',      group: 'Europe' },
+  { value: 'Europe/Istanbul',                  label: 'Istanbul (TRT)',    group: 'Europe' },
+  { value: 'Asia/Riyadh',                      label: 'Riyadh (AST)',      group: 'Middle East & Africa' },
+  { value: 'Asia/Dubai',                       label: 'Dubai (GST)',       group: 'Middle East & Africa' },
+  { value: 'Africa/Cairo',                     label: 'Cairo (EET)',       group: 'Middle East & Africa' },
+  { value: 'Africa/Lagos',                     label: 'Lagos (WAT)',       group: 'Middle East & Africa' },
+  { value: 'Africa/Johannesburg',              label: 'Johannesburg (SAST)', group: 'Middle East & Africa' },
+  { value: 'Asia/Kolkata',                     label: 'Mumbai (IST)',      group: 'Asia-Pacific' },
+  { value: 'Asia/Bangkok',                     label: 'Bangkok (ICT)',     group: 'Asia-Pacific' },
+  { value: 'Asia/Singapore',                   label: 'Singapore (SGT)',   group: 'Asia-Pacific' },
+  { value: 'Asia/Hong_Kong',                   label: 'Hong Kong (HKT)',   group: 'Asia-Pacific' },
+  { value: 'Asia/Shanghai',                    label: 'Shanghai (CST)',    group: 'Asia-Pacific' },
+  { value: 'Asia/Seoul',                       label: 'Seoul (KST)',       group: 'Asia-Pacific' },
+  { value: 'Asia/Tokyo',                       label: 'Tokyo (JST)',       group: 'Asia-Pacific' },
+  { value: 'Australia/Sydney',                 label: 'Sydney (AEST)',     group: 'Asia-Pacific' },
+  { value: 'Pacific/Auckland',                 label: 'Auckland (NZST)',   group: 'Asia-Pacific' },
+];
+
 export interface PreferencesHost {
   isDesktopApp: boolean;
-  onMapProviderChange?: (provider: MapProvider) => void;
 }
 
 export interface PreferencesResult {
@@ -36,14 +87,6 @@ function toggleRowHtml(id: string, label: string, desc: string, checked: boolean
   `;
 }
 
-function renderMapThemeDropdown(container: HTMLElement, provider: MapProvider): void {
-  const select = container.querySelector<HTMLSelectElement>('#us-map-theme');
-  if (!select) return;
-  const currentTheme = getMapTheme(provider);
-  select.innerHTML = MAP_THEME_OPTIONS[provider]
-    .map(opt => `<option value="${opt.value}"${opt.value === currentTheme ? ' selected' : ''}>${escapeHtml(opt.label)}</option>`)
-    .join('');
-}
 
 function updateAiStatus(container: HTMLElement): void {
   const settings = getAiFlowSettings();
@@ -96,23 +139,8 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
   }
   html += `</select>`;
 
-  // Map tile provider
-  const currentProvider = getMapProvider();
-  html += `<div class="ai-flow-toggle-row">
-    <div class="ai-flow-toggle-label-wrap">
-      <div class="ai-flow-toggle-label">${t('preferences.mapProvider')}</div>
-      <div class="ai-flow-toggle-desc">${t('preferences.mapProviderDesc')}</div>
-    </div>
-  </div>`;
-  html += `<select class="unified-settings-select" id="us-map-provider">`;
-  for (const opt of MAP_PROVIDER_OPTIONS) {
-    const selected = opt.value === currentProvider ? ' selected' : '';
-    html += `<option value="${opt.value}"${selected}>${escapeHtml(opt.label)}</option>`;
-  }
-  html += `</select>`;
-
-  // Map theme
-  const currentMapTheme = getMapTheme(currentProvider);
+  // Map theme (unified — all providers in one grouped dropdown)
+  const currentUnifiedTheme = getUnifiedTheme();
   html += `<div class="ai-flow-toggle-row">
     <div class="ai-flow-toggle-label-wrap">
       <div class="ai-flow-toggle-label">${t('preferences.mapTheme')}</div>
@@ -120,10 +148,16 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
     </div>
   </div>`;
   html += `<select class="unified-settings-select" id="us-map-theme">`;
-  for (const opt of MAP_THEME_OPTIONS[currentProvider]) {
-    const selected = opt.value === currentMapTheme ? ' selected' : '';
-    html += `<option value="${opt.value}"${selected}>${escapeHtml(opt.label)}</option>`;
+  const seenGroups = new Set<string>();
+  for (const opt of UNIFIED_THEME_OPTIONS) {
+    if (!seenGroups.has(opt.group)) {
+      if (seenGroups.size > 0) html += `</optgroup>`;
+      html += `<optgroup label="${escapeHtml(opt.group)}">`;
+      seenGroups.add(opt.group);
+    }
+    html += `<option value="${opt.value}"${opt.value === currentUnifiedTheme ? ' selected' : ''}>${escapeHtml(opt.label)}</option>`;
   }
+  if (seenGroups.size > 0) html += `</optgroup>`;
   html += `</select>`;
 
   html += toggleRowHtml('us-map-flash', t('components.insights.mapFlashLabel'), t('components.insights.mapFlashDesc'), settings.mapNewsFlash);
@@ -142,6 +176,45 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
     html += `<option value="${opt.value}"${selected}>${escapeHtml(opt.label)}</option>`;
   }
   html += `</select>`;
+
+  // Clock (timezone + format inline)
+  const currentTz = getHeaderTimezone();
+  const currentFmt = getClockFormat();
+  html += `<div class="ai-flow-toggle-row">
+    <div class="ai-flow-toggle-label-wrap">
+      <div class="ai-flow-toggle-label">${t('preferences.clock')}</div>
+      <div class="ai-flow-toggle-desc">${t('preferences.clockDesc')}</div>
+    </div>
+  </div>`;
+  html += `<div class="us-clock-row">`;
+
+  // Timezone select
+  const tzGroups: Record<string, { value: string; label: string }[]> = {};
+  const tzTopLevel: { value: string; label: string }[] = [];
+  for (const opt of TIMEZONE_OPTIONS) {
+    if (!opt.group) { tzTopLevel.push(opt); continue; }
+    (tzGroups[opt.group] ??= []).push(opt);
+  }
+  html += `<select class="unified-settings-select us-clock-tz" id="us-header-timezone">`;
+  for (const opt of tzTopLevel) {
+    html += `<option value="${opt.value}"${opt.value === currentTz ? ' selected' : ''}>${escapeHtml(opt.label)}</option>`;
+  }
+  for (const [group, opts] of Object.entries(tzGroups)) {
+    html += `<optgroup label="${escapeHtml(group)}">`;
+    for (const opt of opts) {
+      html += `<option value="${opt.value}"${opt.value === currentTz ? ' selected' : ''}>${escapeHtml(opt.label)}</option>`;
+    }
+    html += `</optgroup>`;
+  }
+  html += `</select>`;
+
+  // Format select
+  html += `<select class="unified-settings-select us-clock-fmt" id="us-header-clock-format">
+    <option value="24h"${currentFmt === '24h' ? ' selected' : ''}>24h</option>
+    <option value="12h"${currentFmt === '12h' ? ' selected' : ''}>12h</option>
+  </select>`;
+
+  html += `</div>`;
 
   // Language
   html += `<div class="ai-flow-section-label">${t('header.languageLabel')}</div>`;
@@ -254,6 +327,14 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
           return;
         }
 
+        if (target.id === 'us-header-timezone') {
+          setHeaderTimezone(target.value);
+          return;
+        }
+        if (target.id === 'us-header-clock-format') {
+          setClockFormat(target.value as '12h' | '24h');
+          return;
+        }
         if (target.id === 'us-stream-quality') {
           setStreamQuality(target.value as StreamQuality);
           return;
@@ -266,17 +347,8 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
           setThemePreference(target.value as ThemePreference);
           return;
         }
-        if (target.id === 'us-map-provider') {
-          const provider = target.value as MapProvider;
-          setMapProvider(provider);
-          renderMapThemeDropdown(container, provider);
-          host.onMapProviderChange?.(provider);
-          window.dispatchEvent(new CustomEvent('map-theme-changed'));
-          return;
-        }
         if (target.id === 'us-map-theme') {
-          const provider = getMapProvider();
-          setMapTheme(provider, target.value);
+          setUnifiedTheme(target.value);
           window.dispatchEvent(new CustomEvent('map-theme-changed'));
           return;
         }

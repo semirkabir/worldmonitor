@@ -7,7 +7,7 @@ import { MapboxOverlay } from '@deck.gl/mapbox';
 import type { Layer, LayersList, PickingInfo } from '@deck.gl/core';
 import { GeoJsonLayer, ScatterplotLayer, PathLayer, IconLayer, TextLayer, PolygonLayer } from '@deck.gl/layers';
 import maplibregl from 'maplibre-gl';
-import { registerPMTilesProtocol, FALLBACK_DARK_STYLE, FALLBACK_LIGHT_STYLE, getMapProvider, getMapTheme, getStyleForProvider, isLightMapTheme } from '@/config/basemap';
+import { registerPMTilesProtocol, FALLBACK_DARK_STYLE, FALLBACK_LIGHT_STYLE, getUnifiedTheme, setUnifiedTheme, resolveUnifiedTheme, UNIFIED_THEME_OPTIONS, THEME_LAYER_OVERRIDES, getStyleForProvider, isLightMapTheme } from '@/config/basemap';
 import Supercluster from 'supercluster';
 import type {
   MapLayers,
@@ -449,8 +449,7 @@ export class DeckGLMap {
         this.switchBasemap();
         return;
       }
-      const provider = getMapProvider();
-      const mapTheme = getMapTheme(provider);
+      const { theme: mapTheme } = resolveUnifiedTheme(getUnifiedTheme());
       const paintTheme = isLightMapTheme(mapTheme) ? 'light' as const : 'dark' as const;
       this.updateCountryLayerPaint(paintTheme);
       this.refreshLegend();
@@ -467,6 +466,7 @@ export class DeckGLMap {
 
     this.maplibreMap?.on('load', () => {
       localizeMapLabels(this.maplibreMap);
+      this.applyThemeLayerOverrides();
       this.rebuildTechHQSupercluster();
       this.rebuildDatacenterSupercluster();
       this.initDeck();
@@ -533,11 +533,13 @@ export class DeckGLMap {
       );
     }
 
-    const initialProvider = isHappyVariant ? 'openfreemap' as const : getMapProvider();
+    const initialUnified = getUnifiedTheme();
+    const { provider: initialProvider, theme: initialMapTheme } = isHappyVariant
+      ? { provider: 'openfreemap' as const, theme: 'positron' }
+      : resolveUnifiedTheme(initialUnified);
     if (initialProvider === 'pmtiles' || initialProvider === 'auto') registerPMTilesProtocol();
 
     const preset = VIEW_PRESETS[this.state.view];
-    const initialMapTheme = getMapTheme(initialProvider);
     const primaryStyle = isHappyVariant
       ? (getCurrentTheme() === 'light' ? HAPPY_LIGHT_STYLE : HAPPY_DARK_STYLE)
       : getStyleForProvider(initialProvider, initialMapTheme);
@@ -3651,11 +3653,39 @@ export class DeckGLMap {
   private createControls(): void {
     const controls = document.createElement('div');
     controls.className = 'map-controls deckgl-controls';
+
+    // Build theme picker panel HTML
+    const currentTheme = getUnifiedTheme();
+    const groups: Record<string, typeof UNIFIED_THEME_OPTIONS> = {};
+    for (const opt of UNIFIED_THEME_OPTIONS) {
+      (groups[opt.group] ??= []).push(opt);
+    }
+    let pickerHtml = '';
+    for (const [group, opts] of Object.entries(groups)) {
+      pickerHtml += `<div class="mtp-group-label">${group}</div>`;
+      for (const opt of opts) {
+        const active = opt.value === currentTheme ? ' mtp-item--active' : '';
+        pickerHtml += `<button class="mtp-item${active}" data-theme="${opt.value}">${opt.label}</button>`;
+      }
+    }
+
     controls.innerHTML = `
       <div class="zoom-controls">
-        <button class="map-btn zoom-in" title="${t('components.deckgl.zoomIn')}">+</button>
-        <button class="map-btn zoom-out" title="${t('components.deckgl.zoomOut')}">-</button>
-        <button class="map-btn zoom-reset" title="${t('components.deckgl.resetView')}">&#8962;</button>
+        <button class="map-btn zoom-in" aria-label="${t('components.deckgl.zoomIn')}">+</button>
+        <button class="map-btn zoom-out" aria-label="${t('components.deckgl.zoomOut')}">-</button>
+        <button class="map-btn zoom-reset" aria-label="${t('components.deckgl.resetView')}">&#8962;</button>
+        <div class="map-theme-picker">
+          <button class="map-btn map-theme-picker-btn" aria-label="Change map style" title="Map Style">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" stroke="none"/>
+              <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" stroke="none"/>
+              <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" stroke="none"/>
+              <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" stroke="none"/>
+              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+            </svg>
+          </button>
+          <div class="map-theme-picker-panel">${pickerHtml}</div>
+        </div>
       </div>
       <div class="view-selector">
         <select class="view-select">
@@ -3673,12 +3703,39 @@ export class DeckGLMap {
 
     this.container.appendChild(controls);
 
-    // Bind events - use event delegation for reliability
+    // Zoom + reset buttons
     controls.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
-      if (target.classList.contains('zoom-in')) this.zoomIn();
-      else if (target.classList.contains('zoom-out')) this.zoomOut();
-      else if (target.classList.contains('zoom-reset')) this.resetView();
+      if (target.classList.contains('zoom-in')) { this.zoomIn(); return; }
+      if (target.classList.contains('zoom-out')) { this.zoomOut(); return; }
+      if (target.classList.contains('zoom-reset')) { this.resetView(); return; }
+    });
+
+    // Theme picker toggle + item selection
+    const picker = controls.querySelector('.map-theme-picker') as HTMLElement;
+    const pickerBtn = controls.querySelector('.map-theme-picker-btn') as HTMLButtonElement;
+    const pickerPanel = controls.querySelector('.map-theme-picker-panel') as HTMLElement;
+
+    pickerBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      picker.classList.toggle('open');
+    });
+
+    pickerPanel.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.mtp-item');
+      if (!btn) return;
+      const value = btn.dataset.theme;
+      if (!value) return;
+      setUnifiedTheme(value);
+      window.dispatchEvent(new CustomEvent('map-theme-changed'));
+      // Update active state
+      pickerPanel.querySelectorAll('.mtp-item').forEach(el => el.classList.remove('mtp-item--active'));
+      btn.classList.add('mtp-item--active');
+      picker.classList.remove('open');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!picker.contains(e.target as Node)) picker.classList.remove('open');
     });
 
     const viewSelect = controls.querySelector('.view-select') as HTMLSelectElement;
@@ -5262,8 +5319,7 @@ export class DeckGLMap {
         });
 
         if (!this.countryHoverSetup) this.setupCountryHover();
-        const paintProvider = getMapProvider();
-        const paintMapTheme = getMapTheme(paintProvider);
+        const { theme: paintMapTheme } = resolveUnifiedTheme(getUnifiedTheme());
         this.updateCountryLayerPaint(isLightMapTheme(paintMapTheme) ? 'light' : 'dark');
         if (this.highlightedCountryCode) this.highlightCountry(this.highlightedCountryCode);
       })
@@ -5341,10 +5397,37 @@ export class DeckGLMap {
     } catch { /* layer not ready */ }
   }
 
+  private applyThemeLayerOverrides(): void {
+    if (!this.maplibreMap) return;
+    const override = THEME_LAYER_OVERRIDES[getUnifiedTheme()];
+    if (!override) return;
+    try {
+      for (const layer of this.maplibreMap.getStyle().layers) {
+        const id = layer.id.toLowerCase();
+        if (override.hide?.length && layer.type === 'symbol' && override.hide.some(p => id.includes(p))) {
+          this.maplibreMap!.setLayoutProperty(layer.id, 'visibility', 'none');
+        }
+        if (override.paint) {
+          for (const po of override.paint) {
+            if (id.includes(po.match) && (!po.type || layer.type === po.type)) {
+              this.maplibreMap!.setPaintProperty(layer.id, po.property, po.value);
+            }
+          }
+        }
+        if (override.layout) {
+          for (const lo of override.layout) {
+            if (id.includes(lo.match) && (!lo.type || layer.type === lo.type)) {
+              this.maplibreMap!.setLayoutProperty(layer.id, lo.property, lo.value);
+            }
+          }
+        }
+      }
+    } catch { /* style may not be fully ready */ }
+  }
+
   private switchBasemap(): void {
     if (!this.maplibreMap) return;
-    const provider = getMapProvider();
-    const mapTheme = getMapTheme(provider);
+    const { provider, theme: mapTheme } = resolveUnifiedTheme(getUnifiedTheme());
     const style = isHappyVariant
       ? (getCurrentTheme() === 'light' ? HAPPY_LIGHT_STYLE : HAPPY_DARK_STYLE)
       : (this.usedFallbackStyle && provider === 'auto')
@@ -5354,6 +5437,7 @@ export class DeckGLMap {
     this.countryGeoJsonLoaded = false;
     this.maplibreMap.once('style.load', () => {
       localizeMapLabels(this.maplibreMap);
+      this.applyThemeLayerOverrides();
       this.loadCountryBoundaries();
       const paintTheme = isLightMapTheme(mapTheme) ? 'light' as const : 'dark' as const;
       this.updateCountryLayerPaint(paintTheme);
@@ -5424,7 +5508,7 @@ export class DeckGLMap {
 
   public reloadBasemap(): void {
     if (!this.maplibreMap) return;
-    const provider = getMapProvider();
+    const { provider } = resolveUnifiedTheme(getUnifiedTheme());
     if (provider === 'pmtiles' || provider === 'auto') registerPMTilesProtocol();
     this.usedFallbackStyle = false;
     this.switchBasemap();

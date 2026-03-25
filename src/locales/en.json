@@ -132,7 +132,8 @@
     "settings": "SETTINGS",
     "sources": "SOURCES",
     "copyLink": "Link",
-    "saveLayout": "Save",
+    "saveLayout": "Save Layout",
+    "saveResetLayout": "Save/Reset Layout",
     "layoutSaved": "Saved!",
     "downloadApp": "Download App",
     "fullscreen": "Fullscreen",
@@ -2391,12 +2392,12 @@
     "themeAuto": "Auto (follow system)",
     "themeDark": "Dark",
     "themeLight": "Light",
-    "mapProvider": "Map Tile Provider",
-    "mapProviderDesc": "Choose where map tiles are loaded from. Auto uses self-hosted PMTiles with OpenFreeMap fallback.",
-    "mapTheme": "Map Theme",
-    "mapThemeDesc": "Visual style of the map tiles. Options vary by provider.",
+    "mapTheme": "Map Style",
+    "mapThemeDesc": "Visual style of the map. Also accessible from the map controls.",
     "globePreset": "Visual Preset",
-    "globePresetDesc": "Switch between classic and enhanced globe visuals to compare."
+    "globePresetDesc": "Switch between classic and enhanced globe visuals to compare.",
+    "clock": "Clock",
+    "clockDesc": "Timezone and format for the header clock."
   },
   "premium": {
     "pro": "PRO",

@@ -10,7 +10,7 @@ import { getTheaterPostureSummaries } from '@/services/military-surge';
 import { isMobileDevice } from '@/utils';
 import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
 import { SITE_VARIANT } from '@/config';
-import { deletePersistentCache, getPersistentCache, setPersistentCache } from '@/services/persistent-cache';
+import { deletePersistentCache, getPersistentCache, setPersistentCache, describeFreshness } from '@/services/persistent-cache';
 import { t } from '@/services/i18n';
 import { isDesktopRuntime } from '@/services/runtime';
 import { getAiFlowSettings, isAnyAiProviderEnabled, subscribeAiFlowChange } from '@/services/ai-flow-settings';
@@ -27,8 +27,10 @@ export class InsightsPanel extends Panel {
   private lastClusters: ClusteredEvent[] = [];
   private aiFlowUnsubscribe: (() => void) | null = null;
   private updateGeneration = 0;
-  private static readonly BRIEF_COOLDOWN_MS = 120000; // 2 min cooldown (API has limits)
+  private static readonly BRIEF_COOLDOWN_MS = 120_000; // 2 min cooldown (API has limits)
   private static readonly BRIEF_CACHE_KEY = 'summary:world-brief';
+  private static readonly CONTENT_CACHE_KEY = 'insights:rendered-content';
+  private static readonly CONTENT_CACHE_MS = 300_000; // 5 min
 
   constructor() {
     super({
@@ -263,6 +265,16 @@ export class InsightsPanel extends Panel {
       return;
     }
 
+    // Serve cached render immediately if fresh enough (5 min), skip full pipeline
+    const cached = await getPersistentCache<{ html: string; badge: string }>(InsightsPanel.CONTENT_CACHE_KEY);
+    if (cached && Date.now() - cached.updatedAt < InsightsPanel.CONTENT_CACHE_MS) {
+      if (this.updateGeneration !== thisGeneration) return;
+      this.setDataBadge('cached');
+      if (this.statusBadgeEl) this.statusBadgeEl.textContent = `UPDATED ${describeFreshness(cached.updatedAt)}`;
+      this.setContent(cached.data.html);
+      return;
+    }
+
     // Try server-side pre-computed insights first (instant)
     const serverInsights = getServerInsights();
     if (serverInsights) {
@@ -324,7 +336,9 @@ export class InsightsPanel extends Panel {
       if (this.updateGeneration !== thisGeneration) return;
 
       this.setDataBadge('live');
-      this.renderServerInsights(serverInsights, sentiments);
+      const html = this.renderServerInsights(serverInsights, sentiments);
+      this.setContent(html);
+      void setPersistentCache(InsightsPanel.CONTENT_CACHE_KEY, { html, badge: 'live' });
     } catch (error) {
       console.error('[InsightsPanel] Server path error, falling back:', error);
       await this.updateFromClient(clusters, thisGeneration);
@@ -458,7 +472,8 @@ export class InsightsPanel extends Panel {
         this.setProgress(3, totalSteps, 'Using cached brief...');
       }
 
-      this.setDataBadge(worldBrief ? 'live' : 'unavailable');
+      this.setDataBadge('live');
+      const badge = 'live';
 
       // Step 4: Wait for parallel analysis to complete
       this.setProgress(4, totalSteps, 'Multi-perspective analysis...');
@@ -466,7 +481,9 @@ export class InsightsPanel extends Panel {
 
       if (this.updateGeneration !== thisGeneration) return;
 
-      this.renderInsights(importantClusters, sentiments, worldBrief);
+      const html = this.renderInsights(importantClusters, sentiments, worldBrief);
+      this.setContent(html);
+      void setPersistentCache(InsightsPanel.CONTENT_CACHE_KEY, { html, badge });
     } catch (error) {
       console.error('[InsightsPanel] Error:', error);
       this.showError();
@@ -477,7 +494,7 @@ export class InsightsPanel extends Panel {
     clusters: ClusteredEvent[],
     sentiments: Array<{ label: string; score: number }> | null,
     worldBrief: string | null
-  ): void {
+  ): string {
     const briefHtml = worldBrief ? this.renderWorldBrief(worldBrief) : '';
     const focalPointsHtml = this.renderFocalPoints();
     const convergenceHtml = this.renderConvergenceZones();
@@ -486,7 +503,7 @@ export class InsightsPanel extends Panel {
     const statsHtml = this.renderStats(clusters);
     const missedHtml = this.renderMissedStories();
 
-    this.setContent(`
+    return `
       ${briefHtml}
       ${focalPointsHtml}
       ${convergenceHtml}
@@ -497,13 +514,13 @@ export class InsightsPanel extends Panel {
         ${breakingHtml}
       </div>
       ${missedHtml}
-    `);
+    `;
   }
 
   private renderServerInsights(
     insights: ServerInsights,
     sentiments: Array<{ label: string; score: number }> | null,
-  ): void {
+  ): string {
     const briefHtml = insights.worldBrief ? this.renderWorldBrief(insights.worldBrief) : '';
     const focalPointsHtml = this.renderFocalPoints();
     const convergenceHtml = this.renderConvergenceZones();
@@ -512,7 +529,7 @@ export class InsightsPanel extends Panel {
     const statsHtml = this.renderServerStats(insights);
     const missedHtml = this.renderMissedStories();
 
-    this.setContent(`
+    return `
       ${briefHtml}
       ${focalPointsHtml}
       ${convergenceHtml}
@@ -523,7 +540,7 @@ export class InsightsPanel extends Panel {
         ${storiesHtml}
       </div>
       ${missedHtml}
-    `);
+    `;
   }
 
   private renderServerStories(
@@ -830,7 +847,10 @@ export class InsightsPanel extends Panel {
     this.cachedBrief = null;
     this.lastBriefUpdate = 0;
     try {
-      await deletePersistentCache(InsightsPanel.BRIEF_CACHE_KEY);
+      await Promise.all([
+        deletePersistentCache(InsightsPanel.BRIEF_CACHE_KEY),
+        deletePersistentCache(InsightsPanel.CONTENT_CACHE_KEY),
+      ]);
     } catch {
       // Best effort; fallback regeneration still works from memory reset.
     }

@@ -56,6 +56,30 @@ import {
   setMobileHelpDismissed,
   setPanelDensityPreference,
 } from './ui-preferences';
+import { getHeaderTimezone, getClockFormat } from '@/services/preferences-content';
+
+function formatClockTime(tz: string): string {
+  const now = new Date();
+  const resolvedTz = tz === 'local'
+    ? (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')
+    : tz;
+  const use12h = getClockFormat() === '12h';
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: resolvedTz,
+      weekday: 'short', day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: use12h, timeZoneName: 'short',
+    }).formatToParts(now);
+    const get = (type: string) => parts.find(p => p.type === type)?.value ?? '';
+    const time = use12h
+      ? `${get('hour')}:${get('minute')}:${get('second')} ${get('dayPeriod')}`
+      : `${get('hour')}:${get('minute')}:${get('second')}`;
+    return `${get('weekday')}, ${get('day')} ${get('month')} ${get('year')} ${time} ${get('timeZoneName')}`;
+  } catch {
+    return now.toUTCString().replace('GMT', 'UTC');
+  }
+}
 
 export interface EventHandlerCallbacks {
   updateSearchIndex: () => void;
@@ -724,7 +748,7 @@ export class EventHandlerManager implements AppModule {
     if (this.clockIntervalId) return; // already running
     const el = document.getElementById('headerClock');
     if (!el) return;
-    const tick = () => { el.textContent = new Date().toUTCString().replace('GMT', 'UTC'); };
+    const tick = () => { el.textContent = formatClockTime(getHeaderTimezone()); };
     tick();
     this.clockIntervalId = setInterval(tick, 1000);
   }
@@ -784,10 +808,19 @@ export class EventHandlerManager implements AppModule {
       resetLayout: () => {
         void this.confirmAndResetLayout();
       },
-      isDesktopApp: this.ctx.isDesktopApp,
-      onMapProviderChange: () => {
-        this.ctx.map?.reloadBasemap();
+      saveLayout: () => {
+        const shareUrl = this.getShareUrl();
+        if (!shareUrl) return;
+        try {
+          const urlObj = new URL(shareUrl);
+          localStorage.setItem('worldmonitor-saved-map-layout', urlObj.search);
+          showShellNotification(t('header.layoutSaved'), 'success');
+        } catch (error) {
+          console.warn('Failed to save layout:', error);
+          showShellNotification('Layout save failed', 'error');
+        }
       },
+      isDesktopApp: this.ctx.isDesktopApp,
     });
 
     const mount = document.getElementById('unifiedSettingsMount');
