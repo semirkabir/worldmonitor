@@ -1,3 +1,6 @@
+import { getCorsHeaders } from './_cors.js';
+import { redisPipeline } from './_redis.js';
+
 export const config = { runtime: 'edge' };
 
 const BOOTSTRAP_KEYS = {
@@ -109,20 +112,6 @@ const CASCADE_GROUPS = {
 
 const NEG_SENTINEL = '__WM_NEG__';
 
-async function redisPipeline(commands) {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) throw new Error('Redis not configured');
-
-  const resp = await fetch(`${url}/pipeline`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(commands),
-    signal: AbortSignal.timeout(8_000),
-  });
-  if (!resp.ok) throw new Error(`Redis HTTP ${resp.status}`);
-  return resp.json();
-}
 
 function parseRedisValue(raw) {
   if (!raw || raw === NEG_SENTINEL) return null;
@@ -147,10 +136,11 @@ function dataSize(parsed) {
 }
 
 export default async function handler(req) {
+  const corsHeaders = getCorsHeaders(req);
   const headers = {
     'Content-Type': 'application/json',
     'Cache-Control': 'no-cache, no-store',
-    'Access-Control-Allow-Origin': '*',
+    ...corsHeaders,
   };
 
   if (req.method === 'OPTIONS') {

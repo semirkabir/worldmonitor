@@ -1,4 +1,5 @@
 import { getCorsHeaders } from './_cors.js';
+import { redisPipeline, redisScan } from './_redis.js';
 
 export const config = { runtime: 'edge' };
 
@@ -30,54 +31,6 @@ function json(body, status, corsHeaders) {
     status,
     headers: { 'Content-Type': 'application/json', ...corsHeaders },
   });
-}
-
-function getRedisCredentials() {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) throw new Error('Redis not configured');
-  return { url, token };
-}
-
-async function redisPipeline(commands) {
-  const { url, token } = getRedisCredentials();
-  const resp = await fetch(`${url}/pipeline`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(commands),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!resp.ok) throw new Error(`Redis pipeline HTTP ${resp.status}`);
-  return resp.json();
-}
-
-async function redisScan(pattern, maxIterations) {
-  const { url, token } = getRedisCredentials();
-  const keys = [];
-  let cursor = '0';
-  let truncated = false;
-
-  for (let i = 0; i < maxIterations; i++) {
-    const resp = await fetch(
-      `${url}/scan/${encodeURIComponent(cursor)}/MATCH/${encodeURIComponent(pattern)}/COUNT/100`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        signal: AbortSignal.timeout(5_000),
-      }
-    );
-    if (!resp.ok) throw new Error(`Redis SCAN HTTP ${resp.status}`);
-    const data = await resp.json();
-    const [nextCursor, batch] = data.result;
-    if (batch?.length) keys.push(...batch);
-    cursor = String(nextCursor);
-    if (cursor === '0') break;
-    if (i === maxIterations - 1) truncated = true;
-  }
-
-  return { keys, truncated };
 }
 
 async function timingSafeEqual(a, b) {
@@ -189,7 +142,7 @@ export default async function handler(req) {
   let deleted = 0;
   try {
     const commands = keyList.map(k => ['DEL', prefix ? `${prefix}${k}` : k]);
-    const results = await redisPipeline(commands);
+    const results = await redisPipeline(commands, 10_000);
     deleted = results.reduce((sum, r) => sum + (r.result || 0), 0);
   } catch (err) {
     console.log('[cache-purge]', { mode: 'purge-error', matched: keyList.length, error: err.message, ip, ts });

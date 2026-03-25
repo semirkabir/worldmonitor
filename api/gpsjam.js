@@ -1,4 +1,5 @@
 import { getCorsHeaders, isDisallowedOrigin } from './_cors.js';
+import { redisGet } from './_redis.js';
 
 export const config = { runtime: 'edge' };
 
@@ -16,20 +17,11 @@ let negUntil = 0;
 const NEG_TTL = 300_000;
 
 async function readFromRedis() {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) return null;
-
-  const resp = await fetch(`${url}/get/${encodeURIComponent(REDIS_KEY)}`, {
-    headers: { Authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(3_000),
-  });
-  if (!resp.ok) return null;
-
-  const data = await resp.json();
-  if (!data.result) return null;
-
-  try { return JSON.parse(data.result); } catch { return null; }
+  try {
+    const raw = await redisGet(REDIS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
 }
 
 async function fetchDirectFromGpsJam() {

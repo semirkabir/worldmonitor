@@ -1,5 +1,6 @@
 import { getCorsHeaders, isDisallowedOrigin } from './_cors.js';
 import { validateApiKey } from './_api-key.js';
+import { redisPipeline } from './_redis.js';
 
 export const config = { runtime: 'edge' };
 
@@ -23,20 +24,13 @@ const SEED_DOMAINS = {
 };
 
 async function getMetaBatch(keys) {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) return new Map();
+  let data;
+  try {
+    data = await redisPipeline(keys.map((k) => ['GET', k]), 3000);
+  } catch {
+    return new Map();
+  }
 
-  const pipeline = keys.map((k) => ['GET', k]);
-  const resp = await fetch(`${url}/pipeline`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(pipeline),
-    signal: AbortSignal.timeout(3000),
-  });
-  if (!resp.ok) return new Map();
-
-  const data = await resp.json();
   const result = new Map();
   for (let i = 0; i < keys.length; i++) {
     const raw = data[i]?.result;
