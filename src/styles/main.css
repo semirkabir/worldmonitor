@@ -16126,64 +16126,73 @@ body.has-critical-banner .panels-grid {
 
 .breaking-news-container {
   position: fixed;
-  top: 50px;
-  left: 0;
-  right: 0;
+  top: 54px;
+  right: 8px;
+  left: auto;
   z-index: 1001;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
   pointer-events: none;
+  max-width: 380px;
+  width: 100%;
 }
 
 body:has(.tauri-titlebar) .breaking-news-container {
-  top: 70px;
+  top: 74px;
 }
 
 .breaking-alert {
   pointer-events: auto;
-  padding: 8px 16px;
+  padding: 10px 12px;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  animation: banner-slide-in 0.3s ease-out;
+  align-items: flex-start;
+  gap: 8px;
+  animation: toast-slide-in 0.3s ease-out;
   color: #fff;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 12px;
+  border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes toast-slide-in {
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 .breaking-alert.severity-critical {
-  background: linear-gradient(90deg, #8B0000, #DC143C);
-  border-bottom: 2px solid var(--semantic-critical);
+  background: linear-gradient(135deg, #8B0000, #DC143C);
 }
 
 .breaking-alert.severity-high {
-  background: linear-gradient(90deg, var(--semantic-high, #c2410c), #b45309);
-  border-bottom: 2px solid var(--semantic-high, #c2410c);
+  background: linear-gradient(135deg, var(--semantic-high, #c2410c), #b45309);
 }
 
 .breaking-alert-icon {
-  font-size: 18px;
+  font-size: 16px;
   flex-shrink: 0;
+  margin-top: 1px;
 }
 
 .breaking-alert-content {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 3px;
   flex: 1;
   min-width: 0;
-  overflow: hidden;
 }
 
 .breaking-alert-level {
   font-weight: 700;
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 0.5px;
-  padding: 1px 6px;
+  padding: 1px 5px;
   background: var(--overlay-heavy);
   border-radius: 3px;
   flex-shrink: 0;
+  align-self: flex-start;
 }
 
 .breaking-alert.severity-critical .breaking-alert-level {
@@ -16192,36 +16201,34 @@ body:has(.tauri-titlebar) .breaking-news-container {
 
 .breaking-alert-headline {
   font-weight: 600;
-  white-space: nowrap;
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .breaking-alert-meta {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
   white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .breaking-alert-dismiss {
-  background: var(--overlay-heavy);
+  background: none;
   border: none;
-  color: white;
-  padding: 4px 10px;
-  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 0;
   cursor: pointer;
   font-size: 16px;
   flex-shrink: 0;
+  line-height: 1;
 }
 
 .breaking-alert-dismiss:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-body.has-breaking-alert .panels-grid {
-  margin-top: var(--breaking-alert-offset, 0px);
-  transition: margin-top 0.3s ease;
+  color: #fff;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -18699,9 +18706,9 @@ body.has-breaking-alert .panels-grid {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
+  width: 14px;
+  height: 40px;
+  border-radius: 4px 0 0 4px;
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-muted);
@@ -18762,15 +18769,15 @@ body.has-breaking-alert .panels-grid {
 .bottom-grid-collapse-btn {
   position: absolute;
   left: 50%;
-  top: 4px;
+  top: 0;
   bottom: auto;
-  transform: translateX(-50%);
+  transform: translate(-50%, -100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
+  width: 40px;
+  height: 14px;
+  border-radius: 4px 4px 0 0;
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-muted);
@@ -18788,14 +18795,10 @@ body.has-breaking-alert .panels-grid {
 .bottom-grid-collapse-btn.on-map {
   left: 50%;
   top: auto;
-  bottom: 2px;
+  bottom: 0;
   transform: translateX(-50%);
+  border-radius: 4px 4px 0 0;
   z-index: 101;
-}
-.main-content.layout-side .bottom-grid-collapse-btn {
-  width: 18px;
-  height: 28px;
-  border-radius: 9px;
 }
 
 #layoutToggleBtn.active {

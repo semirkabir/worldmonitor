@@ -1188,7 +1188,8 @@ export class PanelLayoutManager implements AppModule {
 
     const updateBottomIcon = () => {
       while (bottomBtn.firstChild) bottomBtn.removeChild(bottomBtn.firstChild);
-      // Arrow points toward collapse direction (down), or toward expand direction (up)
+      // Collapsed: arrow points up (expand upward)
+      // Visible: arrow points down (collapse downward)
       bottomBtn.appendChild(this.buildChevronSvg(this.bottomGridHidden ? 'up' : 'down'));
       bottomBtn.title = this.bottomGridHidden ? 'Expand bottom panels' : 'Collapse bottom panels';
     };

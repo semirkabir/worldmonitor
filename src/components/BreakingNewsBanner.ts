@@ -4,7 +4,7 @@ import { getSourcePanelId } from '@/config/feeds';
 import { t } from '@/services/i18n';
 
 const MAX_ALERTS = 3;
-const CRITICAL_DISMISS_MS = 60_000;
+const CRITICAL_DISMISS_MS = 30_000;
 const HIGH_DISMISS_MS = 30_000;
 const SOUND_COOLDOWN_MS = 5 * 60 * 1000;
 
@@ -109,12 +109,7 @@ export class BreakingNewsBanner {
   }
 
   private updateOffset(): void {
-    const height = this.container.offsetHeight;
-    document.documentElement.style.setProperty(
-      '--breaking-alert-offset',
-      height > 0 ? `${height}px` : '0px'
-    );
-    document.body?.classList.toggle('has-breaking-alert', this.activeAlerts.length > 0);
+    // Toast notifications float over content — no layout shift needed
   }
 
   private isDismissedRecently(id: string): boolean {
