@@ -222,6 +222,12 @@ interface DatacenterMarker extends BaseMarker {
   country: string;
   chipType: string;
 }
+interface DatacenterClusterMarker extends BaseMarker {
+  _kind: 'datacenterCluster';
+  id: string;
+  count: number;
+  items: DatacenterMarker[];
+}
 interface WaterwayMarker extends BaseMarker {
   _kind: 'waterway';
   id: string;
@@ -367,7 +373,7 @@ type GlobeMarker =
   | CyberMarker | FireMarker | ProtestMarker
   | UcdpMarker | DisplacementMarker | ClimateMarker | GpsJamMarker | TechMarker
   | ConflictZoneMarker | MilBaseMarker | NuclearSiteMarker | IrradiatorSiteMarker | SpaceportSiteMarker
-  | EarthquakeMarker | EconomicMarker | DatacenterMarker | WaterwayMarker | MineralMarker
+  | EarthquakeMarker | EconomicMarker | DatacenterMarker | DatacenterClusterMarker | WaterwayMarker | MineralMarker
   | FlightDelayMarker | CableAdvisoryMarker | RepairShipMarker | AisDisruptionMarker
   | StockExchangeMarker | FinancialCenterMarker | CentralBankMarker | CommodityHubMarker
   | GulfInvestmentMarker | StartupHubMarker | AcceleratorMarker | TechHQMarker
@@ -462,6 +468,10 @@ export class GlobeMap {
   private timeRange: TimeRange;
   private currentView: MapView = 'global';
 
+  // Datacenter clustering state
+  private datacenterClusters: (DatacenterMarker | { _kind: 'datacenterCluster'; _lat: number; _lng: number; count: number; items: DatacenterMarker[] })[] = [];
+  private lastClusterZoom = -1;
+
   // Click callbacks
   private onHotspotClickCb: ((h: Hotspot) => void) | null = null;
   private onEntityClickCb: ((type: string, data: unknown) => void) | null = null;
@@ -469,9 +479,45 @@ export class GlobeMap {
   // Auto-rotate timer (like Sentinel: resume after 60 s idle)
   private autoRotateTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // Wheel zoom re-cluster timer
+  private wheelZoomTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Track hovered marker for consistent hover state
+  private hoveredMarkerId: string | null = null;
+
+  // Container mousemove handler — mirrors DeckGLMap's onHover approach.
+  // When the mouse is over a marker el (pointer-events: auto !important), the browser
+  // dispatches mousemove to that el first, then it bubbles up to the container.
+  // e.target is therefore the actual element under the cursor — no elementFromPoint needed.
+  private handleContainerMouseMove = (e: MouseEvent): void => {
+    if (!this.globe) return;
+
+    const markerEl = (e.target as HTMLElement | null)?.closest?.('[data-marker-id][data-has-popup]') as HTMLElement | null;
+    const markerId = markerEl?.getAttribute('data-marker-id') ?? null;
+
+    if (markerId && markerId !== this.hoveredMarkerId) {
+      this.hoveredMarkerId = markerId;
+      const marker = this.findMarkerById(markerId);
+      if (marker) {
+        const cr = this.container.getBoundingClientRect();
+        this.showMarkerTooltip(marker, e.clientX - cr.left, e.clientY - cr.top);
+      }
+    } else if (!markerId && this.hoveredMarkerId) {
+      this.hoveredMarkerId = null;
+      this.hideTooltip();
+    }
+  };
+
+  private handleWheelZoom = (): void => {
+    if (this.wheelZoomTimer) clearTimeout(this.wheelZoomTimer);
+    this.wheelZoomTimer = setTimeout(() => {
+      this.wheelZoomTimer = null;
+      this.flushMarkers();
+    }, 300);
+  };
+
   // Overlay UI elements
   private layerTogglesEl: HTMLElement | null = null;
-  private tooltipHoverTimer: ReturnType<typeof setTimeout> | null = null;
   private popup: MapPopup | null = null;
 
   // Callbacks
@@ -563,11 +609,6 @@ export class GlobeMap {
         'position:absolute;top:0;left:0;width:100% !important;height:100% !important;';
     }
 
-    // Globe attribution (texture + OpenStreetMap data)
-    const attribution = document.createElement('div');
-    attribution.className = 'map-attribution';
-    attribution.innerHTML = '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> © <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a>';
-    this.container.appendChild(attribution);
 
     // Upgrade material to MeshStandardMaterial + add scene enhancements
     // Save default material for classic preset restoration
@@ -611,6 +652,7 @@ export class GlobeMap {
       canvas.addEventListener('touchstart', pauseAutoRotate, { passive: true });
       canvas.addEventListener('mouseup', scheduleResumeAutoRotate);
       canvas.addEventListener('touchend', scheduleResumeAutoRotate);
+      canvas.addEventListener('wheel', this.handleWheelZoom, { passive: true });
     }
 
     // Wire HTML marker layer
@@ -625,6 +667,10 @@ export class GlobeMap {
         return 0.003;
       })
       .htmlElement((d: object) => this.buildMarkerElement(d as GlobeMarker));
+
+    // Hover detection: elementFromPoint on mousemove (mirrors DeckGLMap's onHover approach)
+    this.container.addEventListener('mousemove', this.handleContainerMouseMove);
+    this.container.addEventListener('mouseleave', () => this.hideTooltip());
 
     // Arc accessors — set once, only data changes on flush
 
@@ -746,12 +792,18 @@ export class GlobeMap {
   }
 
   private buildLayerIconGlyph(layer: keyof MapLayers, color: string, size = 12): string {
-    return `<div class="map-shared-icon" style="width:${size}px;height:${size}px;color:${color};filter:drop-shadow(0 0 4px ${color}88);">${resolveLayerIcon(layer)}</div>`;
+    return `<div class="map-shared-icon" style="width:${size}px;height:${size}px;min-width:${size}px;min-height:${size}px;color:${color};filter:drop-shadow(0 0 4px ${color}88);position:relative;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">${resolveLayerIcon(layer)}</div>`;
   }
 
   private buildMarkerElement(d: GlobeMarker): HTMLElement {
     const el = document.createElement('div');
-    el.style.cssText = 'pointer-events:auto;cursor:pointer;user-select:none;';
+    // padding expands the bounding-rect hit area (important for small 10px icons like techHQ);
+    // globe.gl centers the element at the geographic point so padding keeps the icon centered.
+    el.style.cssText = 'pointer-events:auto !important;cursor:pointer;user-select:none;display:inline-flex;align-items:center;justify-content:center;z-index:1000;position:relative;padding:8px;';
+    el.setAttribute('data-marker-id', d.id);
+    // flash markers have no tooltip — exclude them from hover detection so they don't
+    // block other markers that share a bounding-rect area.
+    if (d._kind !== 'flash') el.setAttribute('data-has-popup', 'true');
     const _theme = getCurrentTheme() === 'light' ? 'light' : 'dark';
     const _ac = (layer: keyof MapLayers) => resolveLayerAccentColor(layer, _theme);
 
@@ -881,9 +933,20 @@ export class GlobeMap {
       const sz = Math.max(8, Math.min(18, Math.round(d.magnitude * 2.5)));
       el.innerHTML = `<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:${mc}44;border:2px solid ${mc};box-shadow:0 0 6px 2px ${mc}55;"></div>`;
     } else if (d._kind === 'economic') {
-      el.innerHTML = this.buildLayerIconGlyph('economic', _ac('economic'), 11);
+      el.innerHTML = this.buildLayerIconGlyph('economic', _ac('economic'), 11);
     } else if (d._kind === 'datacenter') {
-      el.innerHTML = this.buildLayerIconGlyph('datacenters', _ac('datacenters'), 10);
+      el.innerHTML = this.buildLayerIconGlyph('datacenters', _ac('datacenters'), 10);
+    } else if (d._kind === 'datacenterCluster') {
+      const size = Math.min(32, 16 + d.count * 2);
+      el.innerHTML = `
+        <div style="
+          width:${size}px;height:${size}px;border-radius:50%;
+          background:rgba(68,136,255,0.7);
+          border:2px solid rgba(136,204,255,0.9);
+          display:flex;align-items:center;justify-content:center;
+          color:#fff;font-weight:bold;font-size:${size > 20 ? 12 : 10}px;
+          box-shadow:0 0 8px 2px rgba(68,136,255,0.5);
+        ">${d.count}</div>`;
     } else if (d._kind === 'waterway') {
       el.innerHTML = this.buildLayerIconGlyph('waterways', _ac('waterways'), 10);
     } else if (d._kind === 'mineral') {
@@ -950,28 +1013,16 @@ export class GlobeMap {
     // Remove native browser tooltip — we use our custom styled tooltip instead
     el.removeAttribute('title');
 
-    // Use pointerenter/leave with a short delay so the tooltip appears reliably
-    // on hover (globe.gl's 3D transforms can cause brief mouseenter/leave flicker)
-    el.addEventListener('pointerenter', () => {
-      if (this.tooltipHoverTimer) clearTimeout(this.tooltipHoverTimer);
-      this.tooltipHoverTimer = setTimeout(() => {
-        this.showMarkerTooltip(d, el);
-      }, 80);
-    });
-    el.addEventListener('pointerleave', () => {
-      if (this.tooltipHoverTimer) { clearTimeout(this.tooltipHoverTimer); this.tooltipHoverTimer = null; }
-      this.hideTooltip();
-    });
-
     el.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.handleMarkerClick(d, el);
+      const cr = this.container.getBoundingClientRect();
+      this.handleMarkerClick(d, e.clientX - cr.left, e.clientY - cr.top);
     });
 
     return el;
   }
 
-  private handleMarkerClick(d: GlobeMarker, anchor: HTMLElement): void {
+  private handleMarkerClick(d: GlobeMarker, x: number, y: number): void {
     if (d._kind === 'hotspot' && this.onHotspotClickCb) {
       this.onHotspotClickCb({
         id: d.id,
@@ -1010,6 +1061,7 @@ export class GlobeMap {
         earthquake: 'earthquake',
         economic: 'economic',
         datacenter: 'datacenter',
+        datacenterCluster: 'datacenterCluster',
         waterway: 'waterway',
         mineral: 'mineral',
         flightDelay: 'flight',
@@ -1032,11 +1084,11 @@ export class GlobeMap {
         this.onEntityClickCb(popupType, d);
       }
     } else {
-      this.showMarkerTooltip(d, anchor);
+      this.showMarkerTooltip(d, x, y);
     }
   }
 
-  private showMarkerTooltip(d: GlobeMarker, anchor: HTMLElement): void {
+  private showMarkerTooltip(d: GlobeMarker, x: number, y: number): void {
     this.hideTooltip();
     if (!this.popup) return;
 
@@ -1055,18 +1107,60 @@ export class GlobeMap {
       centralBank: 'centralBank', commodityHub: 'commodityHub',
       gulfInvestment: 'gulfInvestment', startupHub: 'startupHub',
       accelerator: 'accelerator', techHQ: 'techHQ',
+      newsLocation: 'newsLocation', datacenterCluster: 'datacenterCluster',
     };
     const popupType = kindToPopupType[d._kind];
     if (!popupType) return;
 
-    const ar = anchor.getBoundingClientRect();
-    const cr = this.container.getBoundingClientRect();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    this.popup.show({ type: popupType as any, data: ((d as any)._data ?? d) as any, x: ar.right + 8 - cr.left, y: ar.top - cr.top });
+    this.popup.show({ type: popupType as any, data: ((d as any)._data ?? d) as any, x, y });
+  }
+
+  private findMarkerById(id: string): GlobeMarker | null {
+    const allMarkers = [
+      ...this.hotspots,
+      ...this.conflictZoneMarkers,
+      ...this.milBaseMarkers,
+      ...this.nuclearSiteMarkers,
+      ...this.irradiatorSiteMarkers,
+      ...this.spaceportSiteMarkers,
+      ...this.flights,
+      ...this.vessels,
+      ...this.weatherMarkers,
+      ...this.naturalMarkers,
+      ...this.earthquakeMarkers,
+      ...this.iranMarkers,
+      ...this.outageMarkers,
+      ...this.cyberMarkers,
+      ...this.fireMarkers,
+      ...this.protestMarkers,
+      ...this.ucdpMarkers,
+      ...this.displacementMarkers,
+      ...this.climateMarkers,
+      ...this.gpsJamMarkers,
+      ...this.techMarkers,
+      ...this.economicMarkers,
+      ...this.datacenterMarkers,
+      ...this.waterwayMarkers,
+      ...this.mineralMarkers,
+      ...this.flightDelayMarkers,
+      ...this.cableAdvisoryMarkers,
+      ...this.repairShipMarkers,
+      ...this.aisMarkers,
+      ...this.stockExchangeMarkers,
+      ...this.financialCenterMarkers,
+      ...this.centralBankMarkers,
+      ...this.commodityHubMarkers,
+      ...this.gulfInvestmentMarkers,
+      ...this.startupHubMarkers,
+      ...this.acceleratorMarkers,
+      ...this.techHQMarkers,
+      ...this.newsLocationMarkers,
+    ];
+    return allMarkers.find(m => m.id === id) || null;
   }
 
   private hideTooltip(): void {
-    if (this.tooltipHoverTimer) { clearTimeout(this.tooltipHoverTimer); this.tooltipHoverTimer = null; }
     this.popup?.hide();
   }
 
@@ -1096,6 +1190,7 @@ export class GlobeMap {
     if (!pov) return;
     const alt = Math.max(0.05, (pov.altitude ?? 1.8) * 0.6);
     this.globe.pointOfView({ lat: pov.lat, lng: pov.lng, altitude: alt }, 500);
+    setTimeout(() => this.flushMarkers(), 600);
   }
 
   private zoomOutGlobe(): void {
@@ -1104,6 +1199,7 @@ export class GlobeMap {
     if (!pov) return;
     const alt = Math.min(4.0, (pov.altitude ?? 1.8) * 1.6);
     this.globe.pointOfView({ lat: pov.lat, lng: pov.lng, altitude: alt }, 500);
+    setTimeout(() => this.flushMarkers(), 600);
   }
 
   private createLayerToggles(): void {
@@ -1198,6 +1294,68 @@ export class GlobeMap {
     this.flushPolygons();
   }
 
+  // ─── Datacenter clustering ────────────────────────────────────────────────
+
+  private computeDatacenterClusters(): (DatacenterMarker | { _kind: 'datacenterCluster'; _lat: number; _lng: number; count: number; items: DatacenterMarker[] })[] {
+    if (!this.globe) return this.datacenterMarkers;
+
+    const pov = this.globe.pointOfView();
+    const altitude = pov?.altitude ?? 2;
+    const zoomLevel = Math.max(0, Math.min(4, Math.floor(5 - altitude * 1.2)));
+    
+    if (zoomLevel >= 3 || this.datacenterMarkers.length === 0) {
+      this.lastClusterZoom = zoomLevel;
+      return this.datacenterMarkers;
+    }
+
+    if (zoomLevel === this.lastClusterZoom) {
+      return this.datacenterClusters;
+    }
+
+    const clusterRadius = zoomLevel === 0 ? 8 : zoomLevel === 1 ? 5 : 3;
+    const clustered: Map<string, { _kind: 'datacenterCluster'; _lat: number; _lng: number; count: number; items: DatacenterMarker[] }> = new Map();
+    const clusteredIds = new Set<string>();
+
+    for (const dc of this.datacenterMarkers) {
+      if (clusteredIds.has(dc.id)) continue;
+
+      const key = `${Math.round(dc._lat / clusterRadius)}_${Math.round(dc._lng / clusterRadius)}`;
+      if (!clustered.has(key)) {
+        clustered.set(key, { _kind: 'datacenterCluster', _lat: dc._lat, _lng: dc._lng, count: 0, items: [] });
+      }
+      const cluster = clustered.get(key)!;
+      cluster.count++;
+      cluster.items.push(dc);
+      clusteredIds.add(dc.id);
+    }
+
+    this.lastClusterZoom = zoomLevel;
+    this.datacenterClusters = [...clustered.values()];
+    return this.datacenterClusters;
+  }
+
+  private getDatacenterClusterItems(): GlobeMarker[] {
+    const clusters = this.computeDatacenterClusters();
+    const markers: GlobeMarker[] = [];
+    
+    for (const item of clusters) {
+      if (item._kind === 'datacenterCluster') {
+        markers.push({
+          _kind: 'datacenterCluster' as const,
+          _lat: item._lat,
+          _lng: item._lng,
+          count: item.count,
+          items: item.items,
+          id: `cluster-${item._lat.toFixed(2)}-${item._lng.toFixed(2)}`,
+        });
+      } else {
+        markers.push(item);
+      }
+    }
+    
+    return markers;
+  }
+
   // ─── Flush all current data to globe ──────────────────────────────────────
 
   private flushMarkers(): void {
@@ -1239,7 +1397,7 @@ export class GlobeMap {
       markers.push(...this.earthquakeMarkers);
     }
     if (this.layers.economic) markers.push(...this.economicMarkers);
-    if (this.layers.datacenters) markers.push(...this.datacenterMarkers);
+    if (this.layers.datacenters) markers.push(...this.getDatacenterClusterItems());
     if (this.layers.waterways) markers.push(...this.waterwayMarkers);
     if (this.layers.minerals) markers.push(...this.mineralMarkers);
     if (this.layers.flights) markers.push(...this.flightDelayMarkers);
@@ -2345,6 +2503,7 @@ export class GlobeMap {
     this.unsubscribeGlobeTexture = null;
     this.unsubscribeVisualPreset?.();
     this.unsubscribeVisualPreset = null;
+    this.container.removeEventListener('mousemove', this.handleContainerMouseMove);
     this.destroyed = true;
     if (this.extrasAnimFrameId != null) {
       cancelAnimationFrame(this.extrasAnimFrameId);

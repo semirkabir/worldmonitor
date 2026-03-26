@@ -304,6 +304,7 @@ export class EventHandlerManager implements AppModule {
       try {
         const urlObj = new URL(shareUrl);
         localStorage.setItem('worldmonitor-saved-map-layout', urlObj.search);
+        this.savePanelLayoutSnapshot();
         showShellNotification(t('header.layoutSaved'), 'success');
       } catch (error) {
         console.warn('Failed to save layout:', error);
@@ -636,6 +637,27 @@ export class EventHandlerManager implements AppModule {
     );
   }
 
+  private savePanelLayoutSnapshot(): void {
+    const keys = [
+      this.ctx.PANEL_ORDER_KEY,
+      this.ctx.PANEL_ORDER_KEY + '-bottom-set',
+      'worldmonitor-layout-mode',
+      this.ctx.PANEL_SPANS_KEY,
+      'worldmonitor-panel-col-spans',
+      'map-height',
+      'worldmonitor-sidebar-split',
+      'worldmonitor-panels-collapsed',
+      'worldmonitor-bottom-grid-collapsed',
+    ];
+    const snapshot: Record<string, string | null> = {};
+    for (const key of keys) {
+      snapshot[key] = localStorage.getItem(key);
+    }
+    try {
+      localStorage.setItem('worldmonitor-saved-panel-layout', JSON.stringify(snapshot));
+    } catch { /* ignore */ }
+  }
+
   private applyPanelDensity(): void {
     document.body.dataset.panelDensity = getPanelDensityPreference();
     const button = document.getElementById('densityToggleBtn');
@@ -711,6 +733,7 @@ export class EventHandlerManager implements AppModule {
     localStorage.removeItem('worldmonitor-sidebar-split');
     localStorage.removeItem('worldmonitor-panels-collapsed');
     localStorage.removeItem('worldmonitor-bottom-grid-collapsed');
+    localStorage.removeItem('worldmonitor-saved-panel-layout');
     showShellNotification('Resetting layout…', 'warning', 900);
     window.setTimeout(() => window.location.reload(), 120);
   }
@@ -814,6 +837,7 @@ export class EventHandlerManager implements AppModule {
         try {
           const urlObj = new URL(shareUrl);
           localStorage.setItem('worldmonitor-saved-map-layout', urlObj.search);
+          this.savePanelLayoutSnapshot();
           showShellNotification(t('header.layoutSaved'), 'success');
         } catch (error) {
           console.warn('Failed to save layout:', error);

@@ -263,6 +263,23 @@ export class App {
 
     const savedLayoutSearch = localStorage.getItem('worldmonitor-saved-map-layout');
     const effectiveSearch = window.location.search || savedLayoutSearch || '';
+
+    // When no URL params are present and a saved layout exists, restore its panel snapshot
+    if (!window.location.search && savedLayoutSearch) {
+      try {
+        const panelSnapshot = localStorage.getItem('worldmonitor-saved-panel-layout');
+        if (panelSnapshot) {
+          const parsed = JSON.parse(panelSnapshot) as Record<string, string | null>;
+          for (const [key, value] of Object.entries(parsed)) {
+            if (value !== null) {
+              localStorage.setItem(key, value);
+            } else {
+              localStorage.removeItem(key);
+            }
+          }
+        }
+      } catch { /* ignore */ }
+    }
     let initialUrlState: ParsedMapUrlState | null = parseMapUrlState(effectiveSearch, mapLayers);
     if (initialUrlState.layers) {
       mapLayers = initialUrlState.layers;

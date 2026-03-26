@@ -17,9 +17,11 @@ export type StadiaMapsTheme =
   | 'outdoors'
   | 'osm_bright'
   | 'stamen_toner'
-  | 'stamen_toner_lite';
+  | 'stamen_toner_lite'
+  | 'stamen_terrain'
+  | 'stamen_watercolor';
 export type MapTheme = PmtilesTheme | OpenFreeMapTheme | CartoTheme | StadiaMapsTheme;
-export type MapProvider = 'pmtiles' | 'auto' | 'openfreemap' | 'carto' | 'stadia';
+export type MapProvider = 'pmtiles' | 'auto' | 'openfreemap' | 'carto' | 'stadia' | 'custom';
 
 const PMTILES_URL = (import.meta.env.VITE_PMTILES_URL ?? '').trim();
 const HAS_PMTILES_URL = PMTILES_URL.length > 0;
@@ -41,6 +43,8 @@ const STADIA_THEME_OPTIONS: Option<StadiaMapsTheme>[] = [
   { value: 'osm_bright', label: 'OSM Bright' },
   { value: 'stamen_toner', label: 'Stamen Toner (B&W)' },
   { value: 'stamen_toner_lite', label: 'Stamen Toner Lite' },
+  { value: 'stamen_terrain', label: 'Stamen Terrain' },
+  { value: 'stamen_watercolor', label: 'Stamen Watercolor' },
 ];
 
 const PMTILES_THEME_OPTIONS: Option<PmtilesTheme>[] = [
@@ -75,6 +79,11 @@ function buildUnifiedOptions(): UnifiedThemeOption[] {
     { value: 'carto:voyager',              label: 'Carto Voyager',     group: 'Light',     provider: 'carto',       theme: 'voyager' },
     { value: 'openfreemap:positron',       label: 'Positron',          group: 'Light',     provider: 'openfreemap', theme: 'positron' },
     { value: 'stadia:stamen_toner_lite',   label: 'Toner Lite',        group: 'Light',     provider: 'stadia',      theme: 'stamen_toner_lite' },
+    // ── Nature ──
+    { value: 'stadia:stamen_terrain',      label: 'Terrain',           group: 'Nature',    provider: 'stadia',      theme: 'stamen_terrain' },
+    { value: 'stadia:stamen_watercolor',   label: 'Watercolor',        group: 'Nature',    provider: 'stadia',      theme: 'stamen_watercolor' },
+    // ── Custom ──
+    { value: 'custom:matrix',              label: 'Matrix',            group: 'Dark',      provider: 'custom',      theme: 'matrix' },
   ];
   if (HAS_PMTILES_URL) {
     opts.unshift(
@@ -189,6 +198,7 @@ export const MAP_THEME_OPTIONS: Record<MapProvider, Option<MapTheme>[]> = {
     { value: 'positron', label: 'Positron (light)' },
   ],
   stadia: STADIA_THEME_OPTIONS,
+  custom: [{ value: 'dark', label: 'Matrix' }],
 };
 
 const DEFAULT_MAP_THEME: Record<MapProvider, MapTheme> = {
@@ -197,12 +207,13 @@ const DEFAULT_MAP_THEME: Record<MapProvider, MapTheme> = {
   openfreemap: 'dark',
   carto: 'dark-matter',
   stadia: 'alidade_smooth_dark',
+  custom: 'dark',
 };
 
 const LIGHT_MAP_THEMES = new Set<MapTheme>([
   'light', 'white', 'positron', 'voyager',
   'alidade_smooth', 'outdoors', 'osm_bright',
-  'stamen_toner_lite',
+  'stamen_toner_lite', 'stamen_terrain', 'stamen_watercolor',
 ]);
 
 const CARTO_DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
@@ -241,7 +252,7 @@ function writeStorage(key: string, value: string): void {
 }
 
 function isMapProvider(value: string): value is MapProvider {
-  return value === 'pmtiles' || value === 'auto' || value === 'openfreemap' || value === 'carto' || value === 'stadia';
+  return value === 'pmtiles' || value === 'auto' || value === 'openfreemap' || value === 'carto' || value === 'stadia' || value === 'custom';
 }
 
 function isValidThemeForProvider(provider: MapProvider, theme: string): theme is MapTheme {
@@ -315,6 +326,11 @@ export function isLightMapTheme(theme: string): boolean {
   return LIGHT_MAP_THEMES.has(theme as MapTheme);
 }
 
+/** CSS filter to apply to the MapLibre canvas for 'custom:matrix'. */
+export const CUSTOM_THEME_FILTERS: Partial<Record<string, string>> = {
+  'custom:matrix': 'saturate(0) sepia(1) hue-rotate(80deg) saturate(4) brightness(0.55)',
+};
+
 export function getStyleForProvider(provider: MapProvider, mapTheme: string): string | StyleSpecification {
   const prefersLight = isLightMapTheme(mapTheme);
 
@@ -329,6 +345,10 @@ export function getStyleForProvider(provider: MapProvider, mapTheme: string): st
       return CARTO_STYLE_MAP[mapTheme as CartoTheme] ?? CARTO_DARK_STYLE;
     case 'stadia':
       return getStadiaStyleUrl((mapTheme as StadiaMapsTheme) ?? 'alidade_smooth_dark');
+    case 'custom':
+      // Custom themes use the dark fallback as their tile source; visual effects
+      // (e.g. CSS filters) are applied by the renderer after the style loads.
+      return FALLBACK_DARK_STYLE;
     case 'auto':
     default: {
       const style = getPmtilesStyle(normalizePmtilesTheme(mapTheme));

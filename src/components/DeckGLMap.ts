@@ -7,7 +7,7 @@ import { MapboxOverlay } from '@deck.gl/mapbox';
 import type { Layer, LayersList, PickingInfo } from '@deck.gl/core';
 import { GeoJsonLayer, ScatterplotLayer, PathLayer, IconLayer, TextLayer, PolygonLayer } from '@deck.gl/layers';
 import maplibregl from 'maplibre-gl';
-import { registerPMTilesProtocol, FALLBACK_DARK_STYLE, FALLBACK_LIGHT_STYLE, getUnifiedTheme, setUnifiedTheme, resolveUnifiedTheme, UNIFIED_THEME_OPTIONS, THEME_LAYER_OVERRIDES, getStyleForProvider, isLightMapTheme } from '@/config/basemap';
+import { registerPMTilesProtocol, FALLBACK_DARK_STYLE, FALLBACK_LIGHT_STYLE, getUnifiedTheme, setUnifiedTheme, resolveUnifiedTheme, UNIFIED_THEME_OPTIONS, THEME_LAYER_OVERRIDES, getStyleForProvider, isLightMapTheme, CUSTOM_THEME_FILTERS } from '@/config/basemap';
 import Supercluster from 'supercluster';
 import type {
   MapLayers,
@@ -112,6 +112,26 @@ import { getTrayOpenPreference, setTrayOpenPreference } from '@/app/ui-preferenc
 export type TimeRange = '1h' | '6h' | '24h' | '48h' | '7d' | 'all';
 export type DeckMapView = 'global' | 'america' | 'mena' | 'eu' | 'asia' | 'latam' | 'africa' | 'oceania';
 type MapInteractionMode = 'flat' | '3d';
+
+// ─── Custom categories ────────────────────────────────────────────────────────
+interface CustomCategory {
+  id: string;
+  name: string;
+  layers: (keyof MapLayers)[];
+}
+
+const CC_STORAGE_KEY = 'wm-custom-categories';
+
+function loadCustomCategories(): CustomCategory[] {
+  try {
+    const raw = localStorage.getItem(CC_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as CustomCategory[]) : [];
+  } catch { return []; }
+}
+
+function saveCustomCategories(cats: CustomCategory[]): void {
+  try { localStorage.setItem(CC_STORAGE_KEY, JSON.stringify(cats)); } catch { /* ignore */ }
+}
 
 export interface CountryClickPayload {
   lat: number;
@@ -383,6 +403,7 @@ export class DeckGLMap {
   private renderPaused = false;
   private renderPending = false;
   private webglLost = false;
+  private customCategories: CustomCategory[] = loadCustomCategories();
   private usedFallbackStyle = false;
   private _globeProjection = false;
   private _globeNativeSources: string[] = [];
@@ -521,13 +542,6 @@ export class DeckGLMap {
     mapContainer.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%;';
     wrapper.appendChild(mapContainer);
 
-    const attribution = document.createElement('div');
-    attribution.className = 'map-attribution';
-    attribution.innerHTML = isHappyVariant
-      ? '© <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
-      : '© <a href="https://protomaps.com" target="_blank" rel="noopener">Protomaps</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
-    wrapper.appendChild(attribution);
-
     this.container.appendChild(wrapper);
   }
 
@@ -600,6 +614,7 @@ export class DeckGLMap {
       });
       this.maplibreMap.on('load', () => {
         localizeMapLabels(this.maplibreMap);
+        this.applyCanvasFilter();
         this.rebuildTechHQSupercluster();
         this.rebuildDatacenterSupercluster();
         this.initDeck();
@@ -3666,7 +3681,7 @@ export class DeckGLMap {
     for (const opt of UNIFIED_THEME_OPTIONS) {
       (groups[opt.group] ??= []).push(opt);
     }
-    let pickerHtml = '';
+    let pickerHtml = '<div class="mtp-header"><span class="mtp-header-title">Map Style</span></div>';
     for (const [group, opts] of Object.entries(groups)) {
       pickerHtml += `<div class="mtp-group-label">${group}</div>`;
       for (const opt of opts) {
@@ -3901,8 +3916,25 @@ export class DeckGLMap {
       }
       toggle.appendChild(labelSpan);
 
+      // Add "+" button after the conflicts row
+      if (key === 'conflicts') {
+        const addBtn = document.createElement('button');
+        addBtn.className = 'custom-category-add-btn';
+        addBtn.title = 'Add custom category';
+        addBtn.textContent = '+';
+        addBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.openCustomCategoryModal(layerConfig, list, status, layersPanel);
+        });
+        toggle.appendChild(addBtn);
+      }
+
       list.appendChild(toggle);
     });
+
+    // Render existing custom categories
+    this.renderCustomCategories(list, status, layersPanel, layerConfig);
 
     layersPanel.appendChild(list);
 
@@ -3941,6 +3973,197 @@ export class DeckGLMap {
       }, { passive: false });
       toggles.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false });
     }
+  }
+
+  /** Render custom category items into the toggle list */
+  private renderCustomCategories(
+    list: HTMLElement,
+    status: HTMLElement,
+    layersPanel: HTMLElement,
+    layerConfig: Array<{ key: string; label: string; icon: string; premium?: string }>,
+  ): void {
+    // Remove existing custom category elements
+    list.querySelectorAll('.custom-category-item, .custom-category-divider').forEach(el => el.remove());
+
+    if (this.customCategories.length === 0) return;
+
+    const divider = document.createElement('div');
+    divider.className = 'custom-category-divider';
+    divider.textContent = 'Custom';
+    list.appendChild(divider);
+
+    this.customCategories.forEach(cat => {
+      const item = document.createElement('div');
+      item.className = 'custom-category-item layer-toggle';
+      item.dataset.catId = cat.id;
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      const allEnabled = cat.layers.every(l => this.state.layers[l]);
+      const anyEnabled = cat.layers.some(l => this.state.layers[l]);
+      checkbox.checked = allEnabled;
+      checkbox.indeterminate = !allEnabled && anyEnabled;
+      item.appendChild(checkbox);
+
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'toggle-icon';
+      iconSpan.style.color = 'var(--text-dim)';
+      iconSpan.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`;
+      item.appendChild(iconSpan);
+
+      const labelSpan = document.createElement('span');
+      labelSpan.className = 'toggle-label';
+      labelSpan.textContent = cat.name;
+      item.appendChild(labelSpan);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'custom-category-delete-btn';
+      deleteBtn.title = 'Delete category';
+      deleteBtn.innerHTML = '&times;';
+      item.appendChild(deleteBtn);
+
+      // Toggle all constituent layers
+      checkbox.addEventListener('change', () => {
+        cat.layers.forEach(l => {
+          this.state.layers[l] = checkbox.checked;
+          if (l === 'flights') this.manageAircraftTimer(checkbox.checked);
+          this.onLayerChange?.(l, checkbox.checked, 'user');
+        });
+        this.render();
+        this.refreshLegend();
+        this.enforceLayerLimit();
+        status.textContent = `${layersPanel.querySelectorAll('.layer-toggle input:checked').length} active`;
+        // Sync individual toggles in the panel
+        cat.layers.forEach(l => {
+          const cb = layersPanel.querySelector<HTMLInputElement>(`.layer-toggle[data-layer="${l}"] input`);
+          if (cb) cb.checked = checkbox.checked;
+        });
+      });
+
+      // 3-second hover to reveal delete button
+      let hoverTimer: ReturnType<typeof setTimeout> | null = null;
+      item.addEventListener('mouseenter', () => {
+        hoverTimer = setTimeout(() => { item.classList.add('show-delete'); }, 3000);
+      });
+      item.addEventListener('mouseleave', () => {
+        if (hoverTimer) { clearTimeout(hoverTimer); hoverTimer = null; }
+        item.classList.remove('show-delete');
+      });
+
+      deleteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Disable all layers in the category before removing
+        cat.layers.forEach(l => {
+          this.state.layers[l] = false;
+          this.onLayerChange?.(l, false, 'user');
+          const cb = layersPanel.querySelector<HTMLInputElement>(`.layer-toggle[data-layer="${l}"] input`);
+          if (cb) cb.checked = false;
+        });
+        this.customCategories = this.customCategories.filter(c => c.id !== cat.id);
+        saveCustomCategories(this.customCategories);
+        this.renderCustomCategories(list, status, layersPanel, layerConfig);
+        this.render();
+        this.refreshLegend();
+        status.textContent = `${layersPanel.querySelectorAll('.layer-toggle input:checked').length} active`;
+      });
+
+      list.appendChild(item);
+    });
+  }
+
+  /** Open the custom category creation modal */
+  private openCustomCategoryModal(
+    layerConfig: Array<{ key: string; label: string; icon: string; premium?: string }>,
+    list: HTMLElement,
+    status: HTMLElement,
+    layersPanel: HTMLElement,
+  ): void {
+    // Remove any existing modal
+    document.querySelector('.custom-category-modal-overlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'custom-category-modal-overlay';
+
+    const modal = document.createElement('div');
+    modal.className = 'custom-category-modal';
+
+    const title = document.createElement('div');
+    title.className = 'custom-category-modal-title';
+    title.textContent = 'New Custom Category';
+    modal.appendChild(title);
+
+    const nameLabel = document.createElement('label');
+    nameLabel.className = 'custom-category-modal-label';
+    nameLabel.textContent = 'Category name';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'custom-category-modal-input';
+    nameInput.placeholder = 'e.g. My Watch List';
+    nameInput.maxLength = 40;
+    nameLabel.appendChild(nameInput);
+    modal.appendChild(nameLabel);
+
+    const sourcesLabel = document.createElement('div');
+    sourcesLabel.className = 'custom-category-modal-label';
+    sourcesLabel.textContent = 'Select sources';
+    modal.appendChild(sourcesLabel);
+
+    const sourcesList = document.createElement('div');
+    sourcesList.className = 'custom-category-modal-sources';
+    modal.appendChild(sourcesList);
+
+    // All available layers for this variant
+    const allLayers = getLayersForVariant((SITE_VARIANT || 'full') as MapVariant, 'flat');
+    allLayers.forEach(def => {
+      const row = document.createElement('label');
+      row.className = 'custom-category-source-row';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = def.key;
+      const iconEl = document.createElement('span');
+      iconEl.className = 'toggle-icon';
+      iconEl.style.color = resolveLayerAccentColor(def.key, getCurrentTheme());
+      iconEl.innerHTML = def.icon;
+      const lbl = document.createElement('span');
+      lbl.textContent = resolveLayerLabel(def, t);
+      row.append(cb, iconEl, lbl);
+      sourcesList.appendChild(row);
+    });
+
+    const actions = document.createElement('div');
+    actions.className = 'custom-category-modal-actions';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'custom-category-modal-btn cancel';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => overlay.remove());
+
+    const createBtn = document.createElement('button');
+    createBtn.className = 'custom-category-modal-btn create';
+    createBtn.textContent = 'Create';
+    createBtn.addEventListener('click', () => {
+      const name = nameInput.value.trim();
+      const selectedLayers = Array.from(sourcesList.querySelectorAll<HTMLInputElement>('input:checked'))
+        .map(cb => cb.value as keyof MapLayers);
+      if (!name) { nameInput.focus(); return; }
+      if (selectedLayers.length === 0) return;
+
+      const newCat: CustomCategory = { id: Date.now().toString(), name, layers: selectedLayers };
+      this.customCategories = [...this.customCategories, newCat];
+      saveCustomCategories(this.customCategories);
+      this.renderCustomCategories(list, status, layersPanel, layerConfig);
+      overlay.remove();
+    });
+
+    actions.append(cancelBtn, createBtn);
+    modal.appendChild(actions);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Close on overlay click
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    nameInput.focus();
   }
 
   /** Clear all active layers */
@@ -5409,6 +5632,12 @@ export class DeckGLMap {
     } catch { /* layer not ready */ }
   }
 
+  private applyCanvasFilter(): void {
+    if (!this.maplibreMap) return;
+    const canvas = this.maplibreMap.getCanvas();
+    canvas.style.filter = CUSTOM_THEME_FILTERS[getUnifiedTheme()] ?? '';
+  }
+
   private applyThemeLayerOverrides(): void {
     if (!this.maplibreMap) return;
     const override = THEME_LAYER_OVERRIDES[getUnifiedTheme()];
@@ -5450,6 +5679,7 @@ export class DeckGLMap {
     this.maplibreMap.once('style.load', () => {
       localizeMapLabels(this.maplibreMap);
       this.applyThemeLayerOverrides();
+      this.applyCanvasFilter();
       this.loadCountryBoundaries();
       const paintTheme = isLightMapTheme(mapTheme) ? 'light' as const : 'dark' as const;
       this.updateCountryLayerPaint(paintTheme);

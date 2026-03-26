@@ -13630,9 +13630,10 @@ a.prediction-link:hover {
   position: absolute;
   right: 40px;
   top: 0;
-  width: 158px;
+  width: 164px;
   background: var(--bg);
   border: 1px solid var(--border);
+  border-radius: 4px;
   overflow: hidden;
   max-height: 0;
   opacity: 0;
@@ -13650,42 +13651,79 @@ a.prediction-link:hover {
   overflow-y: auto;
 }
 
+.mtp-header {
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.mtp-header-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
 .mtp-group-label {
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-dim, var(--text));
-  opacity: 0.55;
-  padding: 8px 10px 3px;
+  color: var(--text-dim);
+  padding: 6px 10px 3px;
+  border-top: 1px solid var(--border);
+  margin-top: 2px;
   pointer-events: none;
   user-select: none;
 }
 
-.mtp-group-label:first-child {
+.mtp-group-label:first-of-type {
+  border-top: none;
+  margin-top: 0;
   padding-top: 6px;
 }
 
 .mtp-item {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 7px;
   width: 100%;
   text-align: left;
   background: none;
   border: none;
   padding: 5px 10px;
-  font-size: 11px;
+  font-size: 10px;
+  font-weight: 500;
+  font-family: inherit;
   color: var(--text);
   cursor: pointer;
   transition: background 0.15s;
 }
 
+.mtp-item::before {
+  content: '';
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
 .mtp-item:hover {
-  background: var(--border);
+  background: var(--overlay-light);
 }
 
 .mtp-item--active {
   color: var(--green, #4caf50);
   font-weight: 600;
+}
+
+.mtp-item--active::before {
+  background: var(--green, #4caf50);
+  border-color: var(--green, #4caf50);
 }
 
 /* deck.gl Time Slider */
@@ -13991,6 +14029,210 @@ a.prediction-link:hover {
   border-color: rgba(68, 255, 136, 0.2);
 }
 
+/* ─── Custom category: + button on Conflicts row ─────────────────────────── */
+.custom-category-add-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.15s, color 0.15s;
+}
+.custom-category-add-btn:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+
+/* ─── Custom category divider ─────────────────────────────────────────────── */
+.custom-category-divider {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  padding: 6px 8px 2px;
+  opacity: 0.6;
+}
+
+/* ─── Custom category item ────────────────────────────────────────────────── */
+.custom-category-item {
+  position: relative;
+}
+.custom-category-delete-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--red, #f87171);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, border-color 0.15s;
+}
+.custom-category-item.show-delete .custom-category-delete-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+.custom-category-delete-btn:hover {
+  border-color: var(--red, #f87171);
+}
+
+/* ─── Custom category creation modal ─────────────────────────────────────── */
+.custom-category-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+.custom-category-modal {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  width: 320px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+.custom-category-modal-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text);
+}
+.custom-category-modal-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-dim);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.custom-category-modal-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 12px;
+  padding: 6px 8px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.custom-category-modal-input:focus {
+  border-color: var(--green);
+}
+.custom-category-modal-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  max-height: 40vh;
+  scrollbar-width: thin;
+}
+.custom-category-source-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--text);
+  transition: background 0.1s;
+}
+.custom-category-source-row:hover {
+  background: var(--border);
+}
+.custom-category-source-row input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  border: 2px solid var(--border);
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  margin: 0;
+  position: relative;
+  flex-shrink: 0;
+}
+.custom-category-source-row input[type="checkbox"]:checked {
+  background: var(--green);
+  border-color: var(--green);
+}
+.custom-category-source-row input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--bg);
+  font-size: 9px;
+  font-weight: bold;
+  line-height: 1;
+}
+.custom-category-modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.custom-category-modal-btn {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 6px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.custom-category-modal-btn.cancel {
+  background: none;
+  color: var(--text-dim);
+}
+.custom-category-modal-btn.cancel:hover {
+  background: var(--border);
+}
+.custom-category-modal-btn.create {
+  background: var(--green);
+  border-color: var(--green);
+  color: #000;
+}
+.custom-category-modal-btn.create:hover {
+  filter: brightness(1.15);
+}
+
 /* Layer performance warning dialog */
 .layer-warn-overlay {
   position: fixed;
@@ -14241,20 +14483,19 @@ a.prediction-link:hover {
   border-top-color: var(--bg);
 }
 
-.maplibregl-ctrl-attrib {
-  background: var(--bg) !important;
-  color: var(--text-dim) !important;
-  font-size: 9px !important;
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-logo,
+.maplibregl-logo,
+.map-attribution {
+  display: none !important;
 }
 
-.maplibregl-ctrl-attrib a {
-  color: var(--text-dim) !important;
-}
-
-/* Hide MapLibre navigation controls (we use custom ones) */
+/* Hide all MapLibre control corners (we use custom controls and no attribution UI) */
+.maplibregl-ctrl-top-left,
 .maplibregl-ctrl-top-right,
+.maplibregl-ctrl-bottom-left,
 .maplibregl-ctrl-bottom-right {
-  display: none;
+  display: none !important;
 }
 
 /* Map author credit badge (inside layers panel) */
