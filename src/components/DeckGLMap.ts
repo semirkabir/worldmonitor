@@ -384,6 +384,12 @@ export class DeckGLMap {
   private renderPending = false;
   private webglLost = false;
   private usedFallbackStyle = false;
+  private _globeProjection = false;
+  private _globeNativeSources: string[] = [];
+  private _globeNativeLayers: string[] = [];
+  private _globeNativeImages: string[] = [];
+  // [layerId, event, handler] tuples for cleanup
+  private _globeNativeListeners: Array<[string, string, (e: maplibregl.MapLayerMouseEvent) => void]> = [];
   private styleLoadTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private tileMonitorGeneration = 0;
 
@@ -4291,9 +4297,15 @@ export class DeckGLMap {
   private updateLayers(): void {
     if (this.renderPaused || this.webglLost || !this.maplibreMap) return;
     const startTime = performance.now();
-    try {
-      this.deckOverlay?.setProps({ layers: this.buildLayers() });
-    } catch { /* map may be mid-teardown (null.getProjection) */ }
+    if (this._globeProjection) {
+      // In globe mode, deck.gl can't project onto the sphere — use native MapLibre layers
+      try { this.deckOverlay?.setProps({ layers: [] }); } catch { /* */ }
+      this._addGlobeNativeLayers();
+    } else {
+      try {
+        this.deckOverlay?.setProps({ layers: this.buildLayers() });
+      } catch { /* map may be mid-teardown (null.getProjection) */ }
+    }
     this.maplibreMap.triggerRepaint();
     const elapsed = performance.now() - startTime;
     if (import.meta.env.DEV && elapsed > 16) {
@@ -5441,6 +5453,10 @@ export class DeckGLMap {
       this.loadCountryBoundaries();
       const paintTheme = isLightMapTheme(mapTheme) ? 'light' as const : 'dark' as const;
       this.updateCountryLayerPaint(paintTheme);
+      // setStyle resets projection to mercator — restore globe if active
+      if (this._globeProjection) {
+        this.maplibreMap?.setProjection({ type: 'globe' });
+      }
       this.render();
     });
     if (!isHappyVariant && provider !== 'openfreemap' && !this.usedFallbackStyle) {
@@ -5502,6 +5518,9 @@ export class DeckGLMap {
       this.loadCountryBoundaries();
       const paintTheme = isLightMapTheme(mapTheme) ? 'light' as const : 'dark' as const;
       this.updateCountryLayerPaint(paintTheme);
+      if (this._globeProjection) {
+        this.maplibreMap?.setProjection({ type: 'globe' });
+      }
       this.render();
     });
   }
@@ -5524,7 +5543,211 @@ export class DeckGLMap {
     } catch { /* layers may not be ready */ }
   }
 
+  /** Whether the map is currently in globe projection mode. */
+  public get isGlobeProjection(): boolean {
+    return this._globeProjection;
+  }
+
+  /** Toggle between globe and mercator projection. All themes and layers stay intact. */
+  public setGlobeProjection(enabled: boolean): void {
+    if (!this.maplibreMap || this._globeProjection === enabled) return;
+    this._globeProjection = enabled;
+
+    this.maplibreMap.setProjection({ type: enabled ? 'globe' : 'mercator' });
+
+    if (enabled) {
+      // Allow pitch and rotation for a natural globe feel
+      this.maplibreMap.setMaxPitch(85);
+      (this.maplibreMap as any).dragRotate?.enable();
+      (this.maplibreMap as any).touchPitch?.enable();
+    } else if (MAP_INTERACTION_MODE === 'flat') {
+      // Restore flat-mode constraints
+      this.maplibreMap.setMaxPitch(0);
+      this.maplibreMap.setPitch(0);
+      this.maplibreMap.setBearing(0);
+      (this.maplibreMap as any).dragRotate?.disable();
+      (this.maplibreMap as any).touchPitch?.disable();
+    }
+
+    this.maplibreMap.resize();
+
+    if (enabled) {
+      this._addGlobeNativeLayers();
+    } else {
+      this._removeGlobeNativeLayers();
+      this.render(); // Restore deck.gl layers
+    }
+  }
+
+  /** Mapping from layer key to the PopupType used by MapPopup. */
+  private static readonly GLOBE_LAYER_POPUP_TYPES: Partial<Record<keyof MapLayers, PopupType>> = {
+    bases: 'base', nuclear: 'nuclear', irradiators: 'irradiator', spaceports: 'spaceport',
+    waterways: 'waterway', economic: 'economic',
+    stockExchanges: 'stockExchange', financialCenters: 'financialCenter',
+    centralBanks: 'centralBank', commodityHubs: 'commodityHub',
+    datacenters: 'datacenter', hotspots: 'hotspot',
+    natural: 'earthquake', minerals: 'mineral',
+    startupHubs: 'startupHub', techHQs: 'techHQ',
+    accelerators: 'accelerator', cloudRegions: 'cloudRegion',
+  };
+
+  /** Add MapLibre native symbol layers for globe mode (deck.gl can't project onto globe). */
+  private _addGlobeNativeLayers(): void {
+    if (!this.maplibreMap || !this._globeProjection) return;
+    this._removeGlobeNativeLayers();
+
+    // Hide deck.gl layers while globe native layers are active
+    try { this.deckOverlay?.setProps({ layers: [] }); } catch { /* */ }
+
+    const { layers: mapLayers } = this.state;
+    const theme = getThemeMode();
+    const basesData = this.serverBases.length ? this.serverBases : MILITARY_BASES;
+
+    type GlobeLayerDef = { key: keyof MapLayers; items: Array<Record<string, unknown>>; active: boolean };
+
+    const defs: GlobeLayerDef[] = [
+      { key: 'bases', items: basesData as unknown as Array<Record<string, unknown>>, active: !!mapLayers.bases },
+      { key: 'nuclear', items: NUCLEAR_FACILITIES as unknown as Array<Record<string, unknown>>, active: !!mapLayers.nuclear },
+      { key: 'irradiators', items: GAMMA_IRRADIATORS as unknown as Array<Record<string, unknown>>, active: !!mapLayers.irradiators },
+      { key: 'spaceports', items: SPACEPORTS as unknown as Array<Record<string, unknown>>, active: !!mapLayers.spaceports },
+      { key: 'waterways', items: STRATEGIC_WATERWAYS as unknown as Array<Record<string, unknown>>, active: !!mapLayers.waterways },
+      { key: 'economic', items: ECONOMIC_CENTERS as unknown as Array<Record<string, unknown>>, active: !!mapLayers.economic },
+      { key: 'stockExchanges', items: STOCK_EXCHANGES as unknown as Array<Record<string, unknown>>, active: !!mapLayers.stockExchanges },
+      { key: 'financialCenters', items: FINANCIAL_CENTERS as unknown as Array<Record<string, unknown>>, active: !!mapLayers.financialCenters },
+      { key: 'centralBanks', items: CENTRAL_BANKS as unknown as Array<Record<string, unknown>>, active: !!mapLayers.centralBanks },
+      { key: 'commodityHubs', items: COMMODITY_HUBS as unknown as Array<Record<string, unknown>>, active: !!mapLayers.commodityHubs },
+      { key: 'datacenters', items: AI_DATA_CENTERS as unknown as Array<Record<string, unknown>>, active: !!mapLayers.datacenters },
+      { key: 'hotspots', items: (this.hotspots || []) as unknown as Array<Record<string, unknown>>, active: !!mapLayers.hotspots },
+      { key: 'natural', items: this.earthquakes as unknown as Array<Record<string, unknown>>, active: !!mapLayers.natural },
+      { key: 'minerals', items: CRITICAL_MINERALS as unknown as Array<Record<string, unknown>>, active: !!mapLayers.minerals },
+    ];
+
+    if (SITE_VARIANT === 'tech') {
+      defs.push(
+        { key: 'startupHubs', items: STARTUP_HUBS as unknown as Array<Record<string, unknown>>, active: !!mapLayers.startupHubs },
+        { key: 'techHQs', items: TECH_HQS as unknown as Array<Record<string, unknown>>, active: !!mapLayers.techHQs },
+        { key: 'accelerators', items: ACCELERATORS as unknown as Array<Record<string, unknown>>, active: !!mapLayers.accelerators },
+        { key: 'cloudRegions', items: CLOUD_REGIONS as unknown as Array<Record<string, unknown>>, active: !!mapLayers.cloudRegions },
+      );
+    }
+
+    defs.push(
+      { key: 'miningSites', items: MINING_SITES as unknown as Array<Record<string, unknown>>, active: !!mapLayers.miningSites },
+      { key: 'processingPlants', items: PROCESSING_PLANTS as unknown as Array<Record<string, unknown>>, active: !!mapLayers.processingPlants },
+      { key: 'commodityPorts', items: COMMODITY_GEO_PORTS as unknown as Array<Record<string, unknown>>, active: !!mapLayers.commodityPorts },
+    );
+
+    for (const def of defs) {
+      if (!def.active || def.items.length === 0) continue;
+
+      const imgId = `_globe-img-${def.key}-${theme}`;
+      const srcId = `_globe-src-${def.key}`;
+      const lyrId = `_globe-lyr-${def.key}`;
+      const popupType = DeckGLMap.GLOBE_LAYER_POPUP_TYPES[def.key];
+
+      const geojson: GeoJSON.FeatureCollection = {
+        type: 'FeatureCollection',
+        features: def.items.map((item, idx) => {
+          const lon = typeof item.lon === 'number' ? item.lon : (item.location as any)?.longitude ?? 0;
+          const lat = typeof item.lat === 'number' ? item.lat : (item.location as any)?.latitude ?? 0;
+          return {
+            type: 'Feature' as const,
+            geometry: { type: 'Point' as const, coordinates: [lon, lat] },
+            // Store index so we can look up the original item on hover
+            properties: { _idx: idx },
+          };
+        }),
+      };
+
+      this.maplibreMap.addSource(srcId, { type: 'geojson', data: geojson });
+      this._globeNativeSources.push(srcId);
+
+      const addSymbolLayer = () => {
+        if (!this.maplibreMap?.getSource(srcId)) return;
+        this.maplibreMap.addLayer({
+          id: lyrId,
+          type: 'symbol',
+          source: srcId,
+          layout: {
+            'icon-image': imgId,
+            'icon-size': 0.45,
+            'icon-allow-overlap': true,
+            'icon-ignore-placement': true,
+          },
+        });
+        this._globeNativeLayers.push(lyrId);
+
+        // Wire hover/click to show the same popup as 2D mode
+        if (popupType) {
+          const items = def.items;
+          const onMouseMove = (e: maplibregl.MapLayerMouseEvent) => {
+            if (!this.maplibreMap) return;
+            this.maplibreMap.getCanvas().style.cursor = 'pointer';
+            const feat = e.features?.[0];
+            if (!feat) return;
+            const idx = feat.properties?._idx as number;
+            const data = items[idx];
+            if (!data) return;
+            // e.point is relative to the map canvas which equals the container
+            this.popup.show({ type: popupType, data: data as any, x: e.point.x, y: e.point.y });
+            if (popupType === 'hotspot') {
+              this.popup.loadHotspotGdeltContext(data as any);
+              this.onHotspotClick?.(data as any);
+            }
+          };
+          const onMouseLeave = () => {
+            if (this.maplibreMap) this.maplibreMap.getCanvas().style.cursor = '';
+            this.popup.hide();
+          };
+          this.maplibreMap.on('mousemove', lyrId, onMouseMove);
+          this.maplibreMap.on('mouseleave', lyrId, onMouseLeave);
+          this._globeNativeListeners.push([lyrId, 'mousemove', onMouseMove]);
+          this._globeNativeListeners.push([lyrId, 'mouseleave', onMouseLeave]);
+        }
+      };
+
+      if (this.maplibreMap.hasImage(imgId)) {
+        addSymbolLayer();
+      } else {
+        const svgUrl = getSharedLayerIconAtlas(def.key, theme);
+        const img = new Image(32, 32);
+        img.onload = () => {
+          if (!this.maplibreMap) return;
+          if (!this.maplibreMap.hasImage(imgId)) {
+            this.maplibreMap.addImage(imgId, img);
+            this._globeNativeImages.push(imgId);
+          }
+          addSymbolLayer();
+        };
+        img.onerror = () => addSymbolLayer();
+        img.src = svgUrl;
+      }
+    }
+  }
+
+  /** Remove all MapLibre native layers/sources/images/listeners added for globe mode. */
+  private _removeGlobeNativeLayers(): void {
+    if (!this.maplibreMap) return;
+    for (const [lyrId, event, handler] of this._globeNativeListeners) {
+      try { this.maplibreMap.off(event as any, lyrId, handler as any); } catch { /* */ }
+    }
+    for (const id of this._globeNativeLayers) {
+      try { this.maplibreMap.removeLayer(id); } catch { /* */ }
+    }
+    for (const id of this._globeNativeSources) {
+      try { this.maplibreMap.removeSource(id); } catch { /* */ }
+    }
+    for (const id of this._globeNativeImages) {
+      try { this.maplibreMap.removeImage(id); } catch { /* */ }
+    }
+    this._globeNativeLayers = [];
+    this._globeNativeSources = [];
+    this._globeNativeImages = [];
+    this._globeNativeListeners = [];
+  }
+
   public destroy(): void {
+    this._removeGlobeNativeLayers();
     window.removeEventListener('theme-changed', this.handleThemeChange);
     window.removeEventListener('map-theme-changed', this.handleMapThemeChange);
     this.debouncedRebuildLayers.cancel();
