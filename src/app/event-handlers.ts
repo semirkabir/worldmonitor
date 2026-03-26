@@ -802,12 +802,7 @@ export class EventHandlerManager implements AppModule {
   }
 
   setupExportPanel(): void {
-    this.ctx.exportPanel = new ExportPanel(() => ({
-      news: this.ctx.latestClusters.length > 0 ? this.ctx.latestClusters : this.ctx.allNews,
-      markets: this.ctx.latestMarkets,
-      predictions: this.ctx.latestPredictions,
-      timestamp: Date.now(),
-    }));
+    this.ctx.exportPanel = new ExportPanel();
 
     const headerRight = this.ctx.container.querySelector('.header-right');
     if (headerRight) {

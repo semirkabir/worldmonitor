@@ -683,7 +683,7 @@ canvas,
   padding: 0;
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 6px;
   color: var(--text-dim);
   cursor: pointer;
   transition: color 0.2s, border-color 0.2s;
@@ -790,11 +790,14 @@ canvas,
   padding: 4px 8px;
   background: transparent;
   border: 1px solid var(--border);
+  border-radius: 6px;
   color: var(--text);
   font-family: inherit;
   font-size: 14px;
   cursor: pointer;
   line-height: 1;
+  height: 28px;
+  box-sizing: border-box;
 }
 
 .fullscreen-btn:hover {
@@ -842,6 +845,7 @@ canvas,
   padding: 4px 10px;
   background: transparent;
   border: 1px solid var(--border);
+  border-radius: 6px;
   color: var(--text);
   font-family: inherit;
   font-size: 11px;
@@ -849,6 +853,8 @@ canvas,
   display: flex;
   align-items: center;
   gap: 6px;
+  height: 28px;
+  box-sizing: border-box;
 }
 
 .search-btn:hover {
@@ -860,11 +866,14 @@ canvas,
   padding: 4px 10px;
   background: transparent;
   border: 1px solid var(--border);
+  border-radius: 6px;
   color: var(--text);
   font-family: inherit;
   font-size: 11px;
   cursor: pointer;
   transition: all 0.2s;
+  height: 28px;
+  box-sizing: border-box;
 }
 
 .copy-link-btn:hover {
@@ -881,6 +890,12 @@ canvas,
 .save-reset-dropdown {
   position: relative;
   display: inline-block;
+  height: 28px;
+}
+
+.save-reset-dropdown > .copy-link-btn {
+  height: 28px;
+  box-sizing: border-box;
 }
 
 .save-reset-menu {
@@ -7103,7 +7118,9 @@ a.prediction-link:hover {
   padding: 4px 8px;
   font-size: 11px;
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: 6px;
+  height: 28px;
+  box-sizing: border-box;
 }
 
 .export-btn:hover {
@@ -15188,22 +15205,22 @@ a.prediction-link:hover {
   height: 28px;
   padding: 0;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 6px;
   background: var(--surface);
   color: var(--text-dim);
   cursor: pointer;
-  transition: color 0.2s, border-color 0.2s, transform 0.3s;
+  transition: color 0.2s, border-color 0.2s, background-color 0.2s;
 }
 
 .unified-settings-btn:hover {
   color: var(--accent);
-  border-color: var(--text-faint);
-  transform: rotate(45deg);
+  border-color: var(--accent);
+  background-color: var(--surface-hover);
 }
 
 .unified-settings-btn svg {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
 .unified-settings-modal {

@@ -1335,14 +1335,16 @@
 [data-variant="happy"] .tv-mode-btn {
   background: none;
   border: 1px solid var(--border);
+  border-radius: 6px;
   color: var(--text-secondary);
   padding: 4px 8px;
-  border-radius: 6px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: color 0.2s, border-color 0.2s, background 0.2s;
+  height: 28px;
+  box-sizing: border-box;
 }
 [data-variant="happy"] .tv-mode-btn:hover {
   border-color: var(--yellow);

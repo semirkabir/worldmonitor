@@ -1,8 +1,5 @@
 import type { NewsItem, ClusteredEvent, MarketData } from '@/types';
 import type { PredictionMarket } from '@/services/prediction';
-import { t } from '@/services/i18n';
-
-type ExportFormat = 'json' | 'csv';
 
 interface ExportData {
   news?: NewsItem[] | ClusteredEvent[];
@@ -143,19 +140,14 @@ function downloadFile(content: string, filename: string, mimeType: string): void
 
 export class ExportPanel {
   private element: HTMLElement;
-  private isOpen = false;
-  private getData: () => ExportData;
 
-  constructor(getDataFn: () => ExportData) {
-    this.getData = getDataFn;
+  constructor() {
     this.element = document.createElement('div');
     this.element.className = 'export-panel-container';
     this.element.innerHTML = `
-      <button class="export-btn" title="${t('common.exportData')}">⬇</button>
-      <div class="export-menu hidden">
-        <button class="export-option" data-format="csv">${t('common.exportCsv')}</button>
-        <button class="export-option" data-format="json">${t('common.exportJson')}</button>
-      </div>
+      <button class="export-btn" title="Take Screenshot">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </button>
     `;
 
     this.setupEventListeners();
@@ -163,40 +155,71 @@ export class ExportPanel {
 
   private setupEventListeners(): void {
     const btn = this.element.querySelector('.export-btn')!;
-    const menu = this.element.querySelector('.export-menu')!;
 
     btn.addEventListener('click', () => {
-      this.isOpen = !this.isOpen;
-      menu.classList.toggle('hidden', !this.isOpen);
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!this.element.contains(e.target as Node)) {
-        this.isOpen = false;
-        menu.classList.add('hidden');
-      }
-    });
-
-    this.element.querySelectorAll('.export-option').forEach(option => {
-      option.addEventListener('click', () => {
-        const format = (option as HTMLElement).dataset.format as ExportFormat;
-        this.export(format);
-        this.isOpen = false;
-        menu.classList.add('hidden');
-      });
+      this.takeScreenshot();
     });
   }
 
-  private export(format: ExportFormat): void {
-    const data = this.getData();
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `worldmonitor-${timestamp}`;
-
-    if (format === 'json') {
-      exportToJSON(data, filename);
-    } else {
-      exportToCSV(data, filename);
+  private async takeScreenshot(): Promise<void> {
+    try {
+      const mapEl = document.querySelector('#map-container') as HTMLElement;
+      const panelsEl = document.querySelector('#panelsGrid') as HTMLElement;
+      const headerEl = document.querySelector('.shell-header') as HTMLElement;
+      
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      const ctx = canvas.getContext('2d')!;
+      ctx.scale(dpr, dpr);
+      
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, width, height);
+      
+      if (headerEl) {
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, 0, width, headerEl.offsetHeight);
+      }
+      
+      if (mapEl) {
+        const img = await this.html2canvasWrapper(mapEl);
+        if (img) {
+          const rect = mapEl.getBoundingClientRect();
+          ctx.drawImage(img, rect.left, rect.top, rect.width, rect.height);
+        }
+      }
+      
+      if (panelsEl) {
+        const img = await this.html2canvasWrapper(panelsEl);
+        if (img) {
+          const rect = panelsEl.getBoundingClientRect();
+          ctx.drawImage(img, rect.left, rect.top, rect.width, rect.height);
+        }
+      }
+      
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const link = document.createElement('a');
+      link.download = `worldmonitor-${timestamp}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      
+    } catch (error) {
+      console.warn('Screenshot failed:', error);
     }
+  }
+
+  private html2canvasWrapper(el: HTMLElement): Promise<HTMLCanvasElement | null> {
+    return new Promise((resolve) => {
+      if (typeof (window as unknown as { html2canvas?: (el: HTMLElement) => Promise<HTMLCanvasElement> }).html2canvas === 'function') {
+        (window as unknown as { html2canvas: (el: HTMLElement) => Promise<HTMLCanvasElement> }).html2canvas(el).then(resolve).catch(() => resolve(null));
+      } else {
+        resolve(null);
+      }
+    });
   }
 
   public getElement(): HTMLElement {
