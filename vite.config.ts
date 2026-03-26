@@ -108,6 +108,13 @@ function htmlVariantPlugin(): Plugin {
           .replace(/\/favico\/og-image/g, `/favico/${activeVariant}/og-image`);
       }
 
+      // Dev: strip CSP meta tag — Vite injects inline HMR scripts whose
+      // hashes change on every cache rebuild, causing CSP violations.
+      // Production CSP is enforced via server headers (vercel.json).
+      if (process.env.NODE_ENV !== 'production') {
+        result = result.replace(/<meta http-equiv="Content-Security-Policy"[^>]*\/?>/, '');
+      }
+
       return result;
     },
   };
