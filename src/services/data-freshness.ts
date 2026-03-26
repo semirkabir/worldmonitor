@@ -5,6 +5,17 @@
  */
 
 import { getCSSColor } from '@/utils';
+import { isLoggedIn } from './user-auth';
+
+let isInitialLoad = true;
+
+export function markInitialLoadComplete(): void {
+  isInitialLoad = false;
+}
+
+export function isInitialDataLoad(): boolean {
+  return isInitialLoad;
+}
 
 export type DataSourceId =
   | 'acled'      // Protests/conflicts
@@ -310,6 +321,19 @@ class DataFreshnessTracker {
   }
 
   /**
+   * Get time since last update for a specific panel
+   */
+  getTimeSinceForPanel(panelId: string): string {
+    for (const [id, meta] of Object.entries(SOURCE_METADATA)) {
+      if (meta.panelId !== panelId) continue;
+      const sourceState = this.sources.get(id as DataSourceId);
+      if (!sourceState?.lastUpdate) continue;
+      return this.getTimeSince(id as DataSourceId);
+    }
+    return '';
+  }
+
+  /**
    * Subscribe to changes
    */
   subscribe(listener: () => void): () => void {
@@ -344,9 +368,15 @@ class DataFreshnessTracker {
    */
   getTimeSince(sourceId: DataSourceId): string {
     const source = this.sources.get(sourceId);
-    if (!source?.lastUpdate) return 'never';
+    if (!source?.lastUpdate) {
+      return '';
+    }
 
     const ms = Date.now() - source.lastUpdate.getTime();
+    if (!isLoggedIn() && isInitialLoad && ms < 1000) {
+      // During initial load for anonymous users, show a more accurate message
+      return 'not refreshed';
+    }
     if (ms < 60000) return 'just now';
     if (ms < 3600000) return `${Math.floor(ms / 60000)}m ago`;
     if (ms < 86400000) return `${Math.floor(ms / 3600000)}h ago`;

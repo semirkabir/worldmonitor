@@ -4,6 +4,10 @@ import { SITE_VARIANT } from '@/config/variant';
 import { t } from '@/services/i18n';
 import { escapeHtml } from '@/utils/sanitize';
 import type { PanelConfig } from '@/types';
+import { FEATURES } from '@/services/feature-flags';
+import { subscribeToAuth } from '@/services/user-auth';
+import { loginWithGoogle, logoutUser } from '@/services/firebase-auth';
+import { User } from 'firebase/auth';
 import { renderPreferences } from '@/services/preferences-content';
 
 const GEAR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`;
@@ -21,7 +25,7 @@ export interface UnifiedSettingsConfig {
   isDesktopApp: boolean;
 }
 
-type TabId = 'settings' | 'panels' | 'sources';
+type TabId = 'settings' | 'panels' | 'sources' | 'profile';
 
 export class UnifiedSettings {
   private overlay: HTMLElement;
@@ -33,6 +37,9 @@ export class UnifiedSettings {
   private panelFilter = '';
   private escapeHandler: (e: KeyboardEvent) => void;
   private prefsCleanup: (() => void) | null = null;
+  private authUnsubscribe: (() => void) | null = null;
+  private currentUser: User | null = null;
+  private authLoading = true;
 
   constructor(config: UnifiedSettingsConfig) {
     this.config = config;
@@ -145,6 +152,17 @@ export class UnifiedSettings {
 
     this.render();
     document.body.appendChild(this.overlay);
+
+    console.log('[Settings] Subscribing to auth state');
+    this.authUnsubscribe = subscribeToAuth((state) => {
+      console.log('[Settings] Auth state received:', { user: state.user?.email, loading: state.loading, configured: state.isConfigured });
+      this.currentUser = state.user as User | null;
+      this.authLoading = state.loading;
+      if (this.activeTab === 'profile') {
+        console.log('[Settings] Rendering profile tab');
+        this.render();
+      }
+    });
   }
 
   public open(tab?: TabId): void {
@@ -153,6 +171,11 @@ export class UnifiedSettings {
     this.overlay.classList.add('active');
     localStorage.setItem('wm-settings-open', '1');
     document.addEventListener('keydown', this.escapeHandler);
+    
+    // Ensure profile tab renders if it's the profile tab
+    if (this.activeTab === 'profile') {
+      this.renderProfileTab();
+    }
   }
 
   public close(): void {
@@ -178,6 +201,8 @@ export class UnifiedSettings {
   public destroy(): void {
     this.prefsCleanup?.();
     this.prefsCleanup = null;
+    this.authUnsubscribe?.();
+    this.authUnsubscribe = null;
     document.removeEventListener('keydown', this.escapeHandler);
     this.overlay.remove();
   }
@@ -201,6 +226,7 @@ export class UnifiedSettings {
           <button class="${tabClass('settings')}" data-tab="settings" role="tab" aria-selected="${this.activeTab === 'settings'}" id="us-tab-settings" aria-controls="us-tab-panel-settings">${t('header.tabSettings')}</button>
           <button class="${tabClass('panels')}" data-tab="panels" role="tab" aria-selected="${this.activeTab === 'panels'}" id="us-tab-panels" aria-controls="us-tab-panel-panels">${t('header.tabPanels')}</button>
           <button class="${tabClass('sources')}" data-tab="sources" role="tab" aria-selected="${this.activeTab === 'sources'}" id="us-tab-sources" aria-controls="us-tab-panel-sources">${t('header.tabSources')}</button>
+          <button class="${tabClass('profile')}" data-tab="profile" role="tab" aria-selected="${this.activeTab === 'profile'}" id="us-tab-profile" aria-controls="us-tab-panel-profile">Profile</button>
         </div>
         <div class="unified-settings-tab-panel${this.activeTab === 'settings' ? ' active' : ''}" data-panel-id="settings" id="us-tab-panel-settings" role="tabpanel" aria-labelledby="us-tab-settings">
           ${prefs.html}
@@ -237,6 +263,9 @@ export class UnifiedSettings {
             <button class="sources-select-none">${t('common.selectNone')}</button>
           </div>
         </div>
+        <div class="unified-settings-tab-panel${this.activeTab === 'profile' ? ' active' : ''}" data-panel-id="profile" id="us-tab-panel-profile" role="tabpanel" aria-labelledby="us-tab-profile">
+          <div class="profile-tab" id="usProfileTab"></div>
+        </div>
       </div>
     `;
 
@@ -250,6 +279,9 @@ export class UnifiedSettings {
     this.renderRegionPills();
     this.renderSourcesGrid();
     this.updateSourcesCounter();
+    if (this.activeTab === 'profile') {
+      this.renderProfileTab();
+    }
   }
 
   private switchTab(tab: TabId): void {
@@ -264,6 +296,10 @@ export class UnifiedSettings {
     this.overlay.querySelectorAll('.unified-settings-tab-panel').forEach(el => {
       el.classList.toggle('active', (el as HTMLElement).dataset.panelId === tab);
     });
+
+    if (tab === 'profile') {
+      this.renderProfileTab();
+    }
   }
 
   private getAvailablePanelCategories(): Array<{ key: string; label: string }> {
@@ -433,5 +469,191 @@ export class UnifiedSettings {
     const enabledTotal = allSources.length - disabled.size;
 
     counter.textContent = t('header.sourcesEnabled', { enabled: String(enabledTotal), total: String(allSources.length) });
+  }
+
+  private async handleLogin(): Promise<void> {
+    const user = await loginWithGoogle();
+    if (user) {
+      this.renderProfileTab();
+    }
+  }
+
+  private async handleLogout(): Promise<void> {
+    await logoutUser();
+    this.renderProfileTab();
+  }
+
+  private renderProfileTab(): void {
+    const container = this.overlay.querySelector('#usProfileTab');
+    console.log('[Settings] Profile container:', container);
+    if (!container) {
+      console.log('[Settings] Container not found, checking DOM...');
+      console.log('[Settings] All elements with usProfileTab:', this.overlay.querySelectorAll('[id*="Profile"]'));
+      return;
+    }
+
+    const user = this.currentUser;
+
+    // If still loading after timeout, show guest view
+    if (this.authLoading) {
+      container.innerHTML = `
+        <div class="profile-guest">
+          <div class="profile-icon">👤</div>
+          <h3>Sign in to access more features</h3>
+          <p>Login to unlock AI summaries, historical playback, and more.</p>
+          <button class="profile-login-btn" id="profileLoginBtn">Sign in with Google</button>
+        </div>
+        <div class="profile-features">
+          <h4>Free Features</h4>
+          <ul>
+            ${FEATURES.filter(f => f.tier === 'free').map(f => `<li>✓ ${f.name}</li>`).join('')}
+          </ul>
+          <h4>Login Required</h4>
+          <ul>
+            ${FEATURES.filter(f => f.tier === 'logged_in').map(f => `<li>🔒 ${f.name}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+      container.querySelector('#profileLoginBtn')?.addEventListener('click', () => this.handleLogin());
+      return;
+    }
+
+    if (!user) {
+      container.innerHTML = `
+        <div class="profile-guest">
+          <div class="profile-icon">👤</div>
+          <h3>Sign in to access more features</h3>
+          <p>Login to unlock AI summaries, historical playback, and more.</p>
+          <button class="profile-login-btn" id="profileLoginBtn">Sign in with Google</button>
+        </div>
+        <div class="profile-features">
+          <h4>Free Features</h4>
+          <ul>
+            ${FEATURES.filter(f => f.tier === 'free').map(f => `<li>✓ ${f.name}</li>`).join('')}
+          </ul>
+          <h4>Login Required</h4>
+          <ul>
+            ${FEATURES.filter(f => f.tier === 'logged_in').map(f => `<li>🔒 ${f.name}</li>`).join('')}
+          </ul>
+        </div>
+      `;
+      container.querySelector('#profileLoginBtn')?.addEventListener('click', () => this.handleLogin());
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="profile-logged-in">
+        <img src="${user.photoURL || ''}" alt="${user.displayName}" class="profile-avatar" />
+        <div class="profile-info">
+          <h3>${user.displayName || 'User'}</h3>
+          <p>${user.email || ''}</p>
+        </div>
+        <button class="profile-logout-btn" id="profileLogoutBtn">Sign Out</button>
+      </div>
+      
+      <div class="profile-section">
+        <h4>Your Features</h4>
+        <ul class="profile-feature-list">
+          ${FEATURES.filter(f => f.tier !== 'premium').map(f => `<li>✓ ${f.name}</li>`).join('')}
+        </ul>
+      </div>
+      
+      <div class="profile-section">
+        <h4>Account Preferences</h4>
+        <div class="profile-preference">
+          <label class="profile-toggle-label">
+            <input type="checkbox" id="prefEmailAlerts" checked />
+            <span>Email Alerts</span>
+          </label>
+          <p class="profile-preference-desc">Receive breaking news via email</p>
+        </div>
+        <div class="profile-preference">
+          <label class="profile-toggle-label">
+            <input type="checkbox" id="prefDarkMode" checked />
+            <span>Dark Mode</span>
+          </label>
+          <p class="profile-preference-desc">Use dark theme (follows system)</p>
+        </div>
+      </div>
+      
+      <div class="profile-section">
+        <h4>Linked Accounts</h4>
+        <p class="profile-section-desc">Connect your other accounts for easier login</p>
+        <div class="profile-linked-accounts">
+          <div class="profile-linked-account">
+            <span class="profile-linked-icon">🔗</span>
+            <div class="profile-linked-info">
+              <span class="profile-linked-name">Google</span>
+              <span class="profile-linked-status connected">Connected</span>
+            </div>
+            <span class="profile-linked-check">✓</span>
+          </div>
+        </div>
+        <button class="profile-add-account-btn" id="profileLinkAccountBtn">+ Link Another Account</button>
+      </div>
+      
+      <div class="profile-section">
+        <h4>Two-Factor Authentication</h4>
+        <p class="profile-section-desc">Add extra security to your account</p>
+        <div class="profile-2fa">
+          <div class="profile-2fa-status">
+            <span class="profile-2fa-icon">🔐</span>
+            <div class="profile-2fa-info">
+              <span class="profile-2fa-label">Authenticator App</span>
+              <span class="profile-2fa-desc">Use an app like Google Authenticator</span>
+            </div>
+          </div>
+          <button class="profile-2fa-btn" id="profileEnable2FABtn">Enable 2FA</button>
+        </div>
+        <div class="profile-2fa">
+          <div class="profile-2fa-status">
+            <span class="profile-2fa-icon">📱</span>
+            <div class="profile-2fa-info">
+              <span class="profile-2fa-label">SMS Verification</span>
+              <span class="profile-2fa-desc">Receive codes via text message</span>
+            </div>
+          </div>
+          <button class="profile-2fa-btn" id="profileEnableSMSBtn">Enable</button>
+        </div>
+      </div>
+      
+      <div class="profile-section">
+        <h4>Data Management</h4>
+        <div class="profile-actions">
+          <button class="profile-action-btn" id="profileExportBtn">Export My Data</button>
+          <button class="profile-action-btn danger" id="profileDeleteBtn">Delete Account</button>
+        </div>
+      </div>
+      
+      <div class="profile-section">
+        <h4>Account Info</h4>
+        <div class="profile-info-row">
+          <span class="profile-info-label">User ID:</span>
+          <span class="profile-info-value">${user.uid.slice(0, 12)}...</span>
+        </div>
+        <div class="profile-info-row">
+          <span class="profile-info-label">Joined:</span>
+          <span class="profile-info-value">${user.metadata?.creationTime || 'Recently'}</span>
+        </div>
+        <div class="profile-info-row">
+          <span class="profile-info-label">Last Login:</span>
+          <span class="profile-info-value">${user.metadata?.lastSignInTime || 'Recently'}</span>
+        </div>
+      </div>
+    `;
+    container.querySelector('#profileLogoutBtn')?.addEventListener('click', () => this.handleLogout());
+    container.querySelector('#profileExportBtn')?.addEventListener('click', () => this.handleExportData());
+    container.querySelector('#profileDeleteBtn')?.addEventListener('click', () => this.handleDeleteAccount());
+  }
+
+  private async handleExportData(): Promise<void> {
+    alert('Export feature coming soon! This will download your preferences and settings.');
+  }
+
+  private async handleDeleteAccount(): Promise<void> {
+    const confirmed = confirm('Are you sure you want to delete your account? This action cannot be undone.');
+    if (confirmed) {
+      alert('Account deletion coming soon! Contact support for now.');
+    }
   }
 }

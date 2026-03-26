@@ -30,7 +30,9 @@ import {
   saveSnapshot,
   initAisStream,
   disconnectAisStream,
+  subscribeToAuth,
 } from '@/services';
+import { isLoggedIn } from '@/services/user-auth';
 import {
   trackPanelView,
   trackVariantSwitch,
@@ -48,6 +50,7 @@ import { t } from '@/services/i18n';
 import { TvModeController } from '@/services/tv-mode';
 import { buildShareUrl, getHeaderThemeIconHtml } from './event-handler-view';
 import { confirmShellAction, showShellNotification } from './shell-notifications';
+import { checkFeatureAccess } from '@/services/auth-modal';
 import {
   getPanelDensityPreference,
   isDesktopOnboardingDismissed,
@@ -159,6 +162,17 @@ export class EventHandlerManager implements AppModule {
     this.setupTvMode();
     this.setupBloombergShortcuts();
     this.setupStatusDropdown();
+
+    // Update header status indicator when auth state changes
+    subscribeToAuth(() => {
+      const statusDot = document.getElementById('statusDot');
+      const statusText = document.getElementById('statusText');
+      if (statusDot && statusText) {
+        const loggedIn = isLoggedIn();
+        statusDot.classList.toggle('delayed', !loggedIn);
+        statusText.textContent = loggedIn ? 'LIVE' : '10 mins';
+      }
+    });
   }
 
   private setupTvMode(): void {
@@ -299,6 +313,7 @@ export class EventHandlerManager implements AppModule {
     document.getElementById('shellGuidanceSearch')?.addEventListener('click', openSearch);
 
     document.getElementById('saveLayoutBtn')?.addEventListener('click', async () => {
+      if (!checkFeatureAccess('save-layout')) return;
       const shareUrl = this.getShareUrl();
       if (!shareUrl) return;
       try {
@@ -653,6 +668,8 @@ export class EventHandlerManager implements AppModule {
     for (const key of keys) {
       snapshot[key] = localStorage.getItem(key);
     }
+    // Also save panel enabled/disabled state
+    snapshot[STORAGE_KEYS.panels] = localStorage.getItem(STORAGE_KEYS.panels);
     try {
       localStorage.setItem('worldmonitor-saved-panel-layout', JSON.stringify(snapshot));
     } catch { /* ignore */ }
@@ -863,6 +880,16 @@ export class EventHandlerManager implements AppModule {
     nc.setLocationClickHandler((lat, lon) => {
       this.ctx.map?.setCenter(lat, lon, 6);
     });
+    nc.setFindingClickHandler((signal) => {
+      if (this.ctx.countryBriefPage?.isVisible()) return;
+      if (localStorage.getItem('wm-settings-open') === '1') return;
+      this.ctx.signalModal?.showSignal(signal);
+    });
+    nc.setAlertClickHandler((alert) => {
+      if (this.ctx.countryBriefPage?.isVisible()) return;
+      if (localStorage.getItem('wm-settings-open') === '1') return;
+      this.ctx.signalModal?.showAlert(alert);
+    });
     const settingsMount = document.getElementById('unifiedSettingsMount');
     if (settingsMount) {
       settingsMount.parentElement?.insertBefore(nc['el'], settingsMount);
@@ -1007,7 +1034,7 @@ export class EventHandlerManager implements AppModule {
   }
 
   shouldShowIntelligenceNotifications(): boolean {
-    return !this.ctx.isMobile && !!this.ctx.findingsBadge?.isPopupEnabled();
+    return !this.ctx.isMobile;
   }
 
   setupMapResize(): void {

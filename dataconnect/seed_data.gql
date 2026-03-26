@@ -1,0 +1,107 @@
+mutation CreateDemoData @transaction @auth(level: PUBLIC, insecureReason: "This operation is for seeding demo data and is safe to expose to the public.") {
+  user_insertMany(data: [
+    {
+      id: "b45b00c0-7f2a-4a2b-8b5e-0c0c80c0c0c0",
+      displayName: "Alice Smith",
+      createdAt: "2023-01-01T10:00:00Z",
+      email: "alice@example.com",
+      photoUrl: "https://example.com/alice.jpg"
+    },
+    {
+      id: "c67d00e0-8g3b-5b3c-9c6f-1d1d91d1d1d1",
+      displayName: "Bob Johnson",
+      createdAt: "2023-01-02T11:00:00Z",
+      email: "bob@example.com",
+      photoUrl: "https://example.com/bob.jpg"
+    }
+  ])
+  movie_insertMany(data: [
+    {
+      id: "e90f00g0-9h4c-6c4d-0d7a-2e2e02e2e2e2",
+      title: "Inception",
+      year: 2010,
+      createdAt: "2023-01-03T12:00:00Z",
+      summary: "A thief who steals corporate secrets through use of dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O.",
+      genres: ["Action", "Sci-Fi", "Thriller"],
+      runtime: 148
+    },
+    {
+      id: "f12g11h1-0i5d-7d5e-1e8b-3f3f13f3f3f3",
+      title: "The Matrix",
+      year: 1999,
+      createdAt: "2023-01-04T13:00:00Z",
+      summary: "A computer hacker learns from mysterious rebels about the true nature of his reality and his role in the war against its controllers.",
+      genres: ["Action", "Sci-Fi"],
+      runtime: 136
+    }
+  ])
+  watch_insertMany(data: [
+    {
+      id: "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+      userId: "b45b00c0-7f2a-4a2b-8b5e-0c0c80c0c0c0",
+      movieId: "e90f00g0-9h4c-6c4d-0d7a-2e2e02e2e2e2",
+      createdAt: "2023-01-05T14:00:00Z",
+      watchDate: "2023-01-05",
+      locationName: "Home",
+      latitude: 34.0522,
+      longitude: -118.2437
+    },
+    {
+      id: "b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e",
+      userId: "c67d00e0-8g3b-5b3c-9c6f-1d1d91d1d1d1",
+      movieId: "f12g11h1-0i5d-7d5e-1e8b-3f3f13f3f3f3",
+      createdAt: "2023-01-06T15:00:00Z",
+      watchDate: "2023-01-06",
+      locationName: "Cinema",
+      latitude: 34.0000,
+      longitude: -118.0000
+    }
+  ])
+  review_insertMany(data: [
+    {
+      id: "c3d4e5f6-a7b8-c9d0-e1f2-3a4b5c6d7e8f",
+      userId: "b45b00c0-7f2a-4a2b-8b5e-0c0c80c0c0c0",
+      movieId: "e90f00g0-9h4c-6c4d-0d7a-2e2e02e2e2e2",
+      watchId: "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+      rating: 5,
+      createdAt: "2023-01-05T16:00:00Z",
+      updatedAt: "2023-01-05T16:00:00Z",
+      review: "Mind-blowing movie!"
+    },
+    {
+      id: "d4e5f6a7-b8c9-d0e1-f2a3-b4c5d6e7f8a9",
+      userId: "c67d00e0-8g3b-5b3c-9c6f-1d1d91d1d1d1",
+      movieId: "f12g11h1-0i5d-7d5e-1e8b-3f3f13f3f3f3",
+      watchId: "b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e",
+      rating: 4,
+      createdAt: "2023-01-06T17:00:00Z",
+      updatedAt: "2023-01-06T17:00:00Z",
+      review: "A classic sci-fi film."
+    }
+  ])
+  list_insertMany(data: [
+    {
+      id: "e5f6a7b8-c9d0-e1f2-a3b4-c5d6e7f8a9b0",
+      userId: "b45b00c0-7f2a-4a2b-8b5e-0c0c80c0c0c0",
+      name: "My Favorite Sci-Fi",
+      public: true,
+      createdAt: "2023-01-07T18:00:00Z",
+      updatedAt: "2023-01-07T18:00:00Z",
+      description: "A list of my all-time favorite science fiction movies."
+    }
+  ])
+  listMovie_insertMany(data: [
+    {
+      listId: "e5f6a7b8-c9d0-e1f2-a3b4-c5d6e7f8a9b0",
+      movieId: "e90f00g0-9h4c-6c4d-0d7a-2e2e02e2e2e2",
+      position: 1,
+      note: "Must watch!"
+    },
+    {
+      listId: "e5f6a7b8-c9d0-e1f2-a3b4-c5d6e7f8a9b0",
+      movieId: "f12g11h1-0i5d-7d5e-1e8b-3f3f13f3f3f3",
+      position: 2,
+      note: "Revolutionary!"
+    }
+  ])
+}

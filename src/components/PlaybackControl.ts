@@ -1,5 +1,6 @@
 import { getSnapshotTimestamps, getSnapshotAt, type DashboardSnapshot } from '@/services/storage';
 import { t } from '@/services/i18n';
+import { checkFeatureAccess } from '@/services/auth-modal';
 
 export class PlaybackControl {
   private element: HTMLElement;
@@ -13,7 +14,7 @@ export class PlaybackControl {
     this.element.className = 'playback-control';
     this.element.innerHTML = `
       <button class="playback-toggle" title="${t('components.playback.toggleMode')}" aria-label="${t('components.playback.toggleMode')}">
-        <span class="playback-icon">⏪</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="playback-icon"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
       </button>
       <div class="playback-panel hidden">
         <div class="playback-header">
@@ -44,6 +45,7 @@ export class PlaybackControl {
     const slider = this.element.querySelector('.playback-slider') as HTMLInputElement;
 
     toggle.addEventListener('click', async () => {
+      if (!checkFeatureAccess('historical-playback')) return;
       panel.classList.toggle('hidden');
       if (!panel.classList.contains('hidden')) {
         await this.loadTimestamps();

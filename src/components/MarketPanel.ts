@@ -10,6 +10,7 @@ import {
   setMarketWatchlistEntries,
   type MarketWatchlistEntry,
 } from '@/services/market-watchlist';
+import { checkFeatureAccess } from '@/services/auth-modal';
 import { MARKET_SYMBOLS, SECTORS, COMMODITIES } from '@/config/markets';
 import { COMMODITY_MARKET_SYMBOLS, COMMODITY_SECTORS, COMMODITY_PRICES } from '@/config/commodity-markets';
 
@@ -50,6 +51,7 @@ export class MarketPanel extends Panel {
   }
 
   private openWatchlistModal(): void {
+    if (!checkFeatureAccess('watchlist')) return;
     if (this.overlay) return;
 
     const catalog = MarketPanel.buildTickerCatalog();

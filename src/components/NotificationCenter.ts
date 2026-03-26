@@ -6,7 +6,9 @@
 
 import { signalAggregator, type SignalType } from '@/services/signal-aggregator';
 import type { BreakingAlert } from '@/services/breaking-news-alerts';
-import { requestNotificationPermission } from '@/services/breaking-news-alerts';
+import { requestNotificationPermission, getAlertSettings } from '@/services/breaking-news-alerts';
+import { getRecentSignals, type CorrelationSignal } from '@/services/correlation';
+import { getRecentAlerts, type UnifiedAlert } from '@/services/cross-module-integration';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -14,7 +16,7 @@ import { requestNotificationPermission } from '@/services/breaking-news-alerts';
 
 interface NotificationItem {
   id: string;
-  kind: 'signal' | 'breaking' | 'intel';
+  kind: 'signal' | 'breaking' | 'intel' | 'finding';
   title: string;
   detail?: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
@@ -23,8 +25,10 @@ interface NotificationItem {
   lat?: number;
   lon?: number;
   link?: string;
-  timestamp: number;           // epoch ms
+  timestamp: number;
   read: boolean;
+  originalSignal?: CorrelationSignal;
+  originalAlert?: UnifiedAlert;
 }
 
 const STORAGE_KEY = 'wm-notif-center-v1';
@@ -72,12 +76,21 @@ export class NotificationCenter {
   private badgeEl: HTMLElement;
   private dropdownEl: HTMLElement;
   private listEl: HTMLElement;
+  private bannerEl: HTMLElement;
   private items: NotificationItem[] = [];
   private seenSignalIds = new Set<string>();
+  private seenFindingIds = new Set<string>();
   private open = false;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private onLocClick: ((lat: number, lon: number) => void) | null = null;
+  private onFindingClick: ((signal: CorrelationSignal) => void) | null = null;
+  private onAlertClick: ((alert: UnifiedAlert) => void) | null = null;
   private permissionRequested = false;
+  private audio: HTMLAudioElement | null = null;
+  private lastSoundMs = 0;
+  private activeBanners: NotificationItem[] = [];
+  private readonly SOUND_COOLDOWN_MS = 5 * 60 * 1000;
+  private readonly BANNER_DISMISS_MS = 60_000;
 
   /* ---- lifecycle ---- */
 
@@ -88,8 +101,8 @@ export class NotificationCenter {
     // Bell button
     const btn = document.createElement('button');
     btn.className = 'notif-bell-btn';
-    btn.title = 'Notifications';
-    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>';
+    btn.title = 'Activity';
+    btn.innerHTML = '💻';
     btn.addEventListener('click', () => this.toggle());
     this.el.appendChild(btn);
 
@@ -104,13 +117,9 @@ export class NotificationCenter {
     this.dropdownEl.className = 'notif-dropdown';
     this.dropdownEl.style.display = 'none';
 
-    // Dropdown header (safe static content)
+    // Dropdown header - just the mark all button
     const hdr = document.createElement('div');
     hdr.className = 'notif-dropdown-header';
-    const hdrTitle = document.createElement('span');
-    hdrTitle.className = 'notif-dropdown-title';
-    hdrTitle.textContent = 'Activity Feed';
-    hdr.appendChild(hdrTitle);
     const markAllBtn = document.createElement('button');
     markAllBtn.className = 'notif-mark-all';
     markAllBtn.title = 'Mark all read';
@@ -127,6 +136,12 @@ export class NotificationCenter {
     this.listEl.className = 'notif-list';
     this.dropdownEl.appendChild(this.listEl);
 
+    // Banner area for breaking alerts
+    this.bannerEl = document.createElement('div');
+    this.bannerEl.className = 'notif-banners';
+    this.bannerEl.style.display = 'none';
+    this.dropdownEl.appendChild(this.bannerEl);
+
     // Empty state
     const empty = document.createElement('div');
     empty.className = 'notif-empty';
@@ -134,6 +149,9 @@ export class NotificationCenter {
     this.listEl.appendChild(empty);
 
     this.el.appendChild(this.dropdownEl);
+
+    // Initialize audio for breaking alerts
+    this.initAudio();
 
     // Load persisted state
     this.loadState();
@@ -145,9 +163,15 @@ export class NotificationCenter {
     document.addEventListener('click', this.onDocClick);
 
     // Start polling signal aggregator
-    this.pollTimer = setInterval(() => this.pollSignals(), POLL_INTERVAL_MS);
+    this.pollTimer = setInterval(() => {
+      this.pollSignals();
+      this.pollFindings();
+    }, POLL_INTERVAL_MS);
     // Initial poll after a short delay to let data load
-    setTimeout(() => this.pollSignals(), 5_000);
+    setTimeout(() => {
+      this.pollSignals();
+      this.pollFindings();
+    }, 5_000);
   }
 
   mount(parent: HTMLElement): void {
@@ -165,6 +189,115 @@ export class NotificationCenter {
 
   setLocationClickHandler(handler: (lat: number, lon: number) => void): void {
     this.onLocClick = handler;
+  }
+
+  setFindingClickHandler(handler: (signal: CorrelationSignal) => void): void {
+    this.onFindingClick = handler;
+  }
+
+  setAlertClickHandler(handler: (alert: UnifiedAlert) => void): void {
+    this.onAlertClick = handler;
+  }
+
+  /* ---- audio ---- */
+
+  private initAudio(): void {
+    this.audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQYjfKapmWswEjCJvuPQfSoXZZ+3qqBJESSP0unGaxMJVYiytrFeLhR6p8znrFUXRW+bs7V3Qx1hn8Xjp1cYPnegprhkMCFmoLi1k0sZTYGlqqlUIA==');
+    this.audio.volume = 0.3;
+  }
+
+  private playSound(): void {
+    const settings = getAlertSettings();
+    if (!settings.soundEnabled || !this.audio) return;
+    if (Date.now() - this.lastSoundMs < this.SOUND_COOLDOWN_MS) return;
+    this.audio.currentTime = 0;
+    this.audio.play()?.catch(() => {});
+    this.lastSoundMs = Date.now();
+  }
+
+  /* ---- banners ---- */
+
+  private showBannerAlert(item: NotificationItem): void {
+    if (this.activeBanners.some(b => b.id === item.id)) return;
+    if (this.activeBanners.length >= 3) {
+      const oldest = this.activeBanners.shift();
+      if (oldest) this.removeBannerElement(oldest.id);
+    }
+
+    this.activeBanners.push(item);
+    this.renderBanners();
+    this.updateBadge();
+
+    setTimeout(() => this.dismissBanner(item.id), this.BANNER_DISMISS_MS);
+  }
+
+  private dismissBanner(id: string): void {
+    const idx = this.activeBanners.findIndex(b => b.id === id);
+    if (idx !== -1) {
+      this.activeBanners.splice(idx, 1);
+      this.removeBannerElement(id);
+      this.renderBanners();
+    }
+  }
+
+  private removeBannerElement(id: string): void {
+    const existing = this.bannerEl.querySelector(`[data-banner-id="${id}"]`);
+    if (existing) existing.remove();
+  }
+
+  private renderBanners(): void {
+    this.bannerEl.replaceChildren();
+    if (this.activeBanners.length === 0) {
+      this.bannerEl.style.display = 'none';
+      return;
+    }
+    this.bannerEl.style.display = '';
+
+    for (const item of this.activeBanners) {
+      const banner = document.createElement('div');
+      banner.className = `notif-banner ${item.severity === 'critical' ? 'critical' : 'high'}`;
+      banner.dataset.bannerId = item.id;
+
+      const icon = document.createElement('span');
+      icon.className = 'notif-banner-icon';
+      icon.textContent = '🚨';
+
+      const content = document.createElement('div');
+      content.className = 'notif-banner-content';
+
+      const title = document.createElement('div');
+      title.className = 'notif-banner-title';
+      title.textContent = item.title;
+
+      const source = document.createElement('div');
+      source.className = 'notif-banner-source';
+      source.textContent = item.detail || '';
+
+      content.appendChild(title);
+      content.appendChild(source);
+
+      const dismiss = document.createElement('button');
+      dismiss.className = 'notif-banner-dismiss';
+      dismiss.textContent = '×';
+      dismiss.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.dismissBanner(item.id);
+      });
+
+      banner.appendChild(icon);
+      banner.appendChild(content);
+      banner.appendChild(dismiss);
+
+      banner.addEventListener('click', () => {
+        this.markRead(item.id);
+        if (item.link) {
+          window.open(item.link, '_blank', 'noopener');
+        }
+        this.dismissBanner(item.id);
+      });
+
+      this.bannerEl.appendChild(banner);
+    }
   }
 
   /* ---- toggle ---- */
@@ -195,7 +328,7 @@ export class NotificationCenter {
 
   private onBreaking = (e: CustomEvent<BreakingAlert>): void => {
     const alert = e.detail;
-    this.addItem({
+    const item: NotificationItem = {
       id: `brk-${alert.id}`,
       kind: 'breaking',
       title: alert.headline,
@@ -204,7 +337,12 @@ export class NotificationCenter {
       link: alert.link,
       timestamp: alert.timestamp.getTime(),
       read: false,
-    });
+    };
+    this.addItem(item);
+    this.playSound();
+    if (alert.threatLevel === 'critical' || alert.threatLevel === 'high') {
+      this.showBannerAlert(item);
+    }
   };
 
   private onIntelUpdate = (): void => {
@@ -257,6 +395,47 @@ export class NotificationCenter {
           read: false,
         });
       }
+    }
+  }
+
+  /* ---- intelligence findings polling ---- */
+
+  private pollFindings(): void {
+    const signals = getRecentSignals();
+    const alerts = getRecentAlerts(6);
+
+    for (const sig of signals) {
+      const sigId = `finding-signal-${sig.id}`;
+      if (this.seenFindingIds.has(sigId)) continue;
+      this.seenFindingIds.add(sigId);
+
+      this.addItem({
+        id: sigId,
+        kind: 'finding',
+        title: sig.title,
+        detail: sig.description?.slice(0, 100) || sig.type,
+        severity: sig.confidence >= 0.7 ? 'high' : sig.confidence >= 0.5 ? 'medium' : 'low',
+        timestamp: sig.timestamp.getTime(),
+        read: false,
+        originalSignal: sig,
+      });
+    }
+
+    for (const alert of alerts) {
+      const alertId = `finding-alert-${alert.id}`;
+      if (this.seenFindingIds.has(alertId)) continue;
+      this.seenFindingIds.add(alertId);
+
+      this.addItem({
+        id: alertId,
+        kind: 'finding',
+        title: alert.title,
+        detail: alert.summary?.slice(0, 100) || alert.type,
+        severity: alert.priority,
+        timestamp: alert.timestamp.getTime(),
+        read: false,
+        originalAlert: alert,
+      });
     }
   }
 
@@ -320,6 +499,7 @@ export class NotificationCenter {
 
       const icon = item.kind === 'breaking' ? '🚨'
         : item.kind === 'intel' ? '🧠'
+        : item.kind === 'finding' ? '🎯'
         : item.signalType ? (SIGNAL_ICONS[item.signalType] ?? '📌')
         : '📌';
 
@@ -354,7 +534,15 @@ export class NotificationCenter {
         row.classList.remove('unread');
         row.classList.add('read');
 
-        if (item.lat != null && item.lon != null && this.onLocClick) {
+        if (item.kind === 'finding') {
+          if (item.originalSignal && this.onFindingClick) {
+            this.onFindingClick(item.originalSignal);
+            this.close();
+          } else if (item.originalAlert && this.onAlertClick) {
+            this.onAlertClick(item.originalAlert);
+            this.close();
+          }
+        } else if (item.lat != null && item.lon != null && this.onLocClick) {
           this.onLocClick(item.lat, item.lon);
           this.close();
         } else if (item.link) {

@@ -57,6 +57,8 @@ import { t } from '@/services/i18n';
 import { getCurrentTheme } from '@/utils';
 import { trackCriticalBannerAction } from '@/services/analytics';
 import { getSecretState } from '@/services/runtime-config';
+import { checkFeatureAccess } from '@/services/auth-modal';
+import { isLoggedIn } from '@/services/user-auth';
 
 export interface PanelLayoutCallbacks {
   openCountryStory: (code: string, name: string) => void;
@@ -183,13 +185,13 @@ export class PanelLayoutManager implements AppModule {
               <span class="variant-label">${t('header.conflicts')}</span>
             </a>`;
       })()}</div>
-          <span class="logo-mobile">World Monitor</span><span class="version">v${__APP_VERSION__}</span>${BETA_MODE ? '<span class="beta-badge">BETA</span>' : ''}
+          <span class="logo-mobile">World Monitor</span>${BETA_MODE ? '<span class="beta-badge">BETA</span>' : ''}
           <button class="mobile-settings-btn" id="mobileSettingsBtn" title="${t('header.settings')}">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
           <div class="status-indicator">
-            <span class="status-dot"></span>
-            <span>${t('header.live')}</span>
+            <span class="status-dot ${isLoggedIn() ? '' : 'delayed'}" id="statusDot"></span>
+            <span id="statusText">${isLoggedIn() ? t('header.live') : '10 mins'}</span>
           </div>
           <div class="region-selector">
             <select id="regionSelect" class="region-select">
@@ -210,7 +212,6 @@ export class PanelLayoutManager implements AppModule {
         <div class="header-right">
           <button class="search-btn" id="searchBtn"><kbd>⌥</kbd> ${t('header.search')}</button>
           ${this.ctx.isDesktopApp ? '' : `<div class="save-reset-dropdown" id="saveResetDropdown"><button class="copy-link-btn" id="saveResetLayoutBtn">${t('header.saveResetLayout')}</button><div class="save-reset-menu"><button id="saveLayoutBtn">${t('header.saveLayout')}</button><button id="resetLayoutBtn">${t('header.resetLayout')}</button></div></div>`}
-          ${this.ctx.isDesktopApp ? '' : `<button class="copy-link-btn" id="shareLayoutBtn">Share</button>`}
 
           <button class="theme-toggle-btn" id="headerThemeToggle" title="${t('header.toggleTheme')}">
             ${getCurrentTheme() === 'dark'
@@ -277,7 +278,6 @@ export class PanelLayoutManager implements AppModule {
           <span class="mobile-menu-item-label">${getCurrentTheme() === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
         </button>
         <div class="mobile-menu-divider"></div>
-        <div class="mobile-menu-version">v${__APP_VERSION__}</div>
       </nav>
       <div class="mobile-help-overlay" id="mobileHelpOverlay">
         <div class="mobile-help-sheet" id="mobileHelpSheet">
@@ -841,7 +841,9 @@ export class PanelLayoutManager implements AppModule {
       this.ctx.panels['stablecoins'] = new StablecoinPanel();
       this.ctx.panels['economic-calendar'] = new EconomicCalendarPanel();
       this.ctx.panels['sanctions-tracker'] = new SanctionsTrackerPanel();
-      this.ctx.panels['alert-rules'] = new AlertRulesPanel();
+      if (isLoggedIn()) {
+        this.ctx.panels['alert-rules'] = new AlertRulesPanel();
+      }
       this.ctx.panels['geopolitical-risk'] = new GeopoliticalRiskPanel();
       this.ctx.panels['correlation-matrix'] = new CorrelationMatrixPanel();
       this.ctx.panels['trade-flows'] = new TradeFlowPanel();
@@ -1274,6 +1276,28 @@ export class PanelLayoutManager implements AppModule {
     saveToStorage(STORAGE_KEYS.panels, this.ctx.panelSettings);
     this.ctx.panels[key]?.hide();
     this.refreshAddWidgetBtn();
+    this.saveCurrentLayout();
+  }
+
+  private saveCurrentLayout(): void {
+    const keys = [
+      this.ctx.PANEL_ORDER_KEY,
+      this.ctx.PANEL_ORDER_KEY + '-bottom-set',
+      'worldmonitor-layout-mode',
+      this.ctx.PANEL_SPANS_KEY,
+      'worldmonitor-panel-col-spans',
+      'map-height',
+      'worldmonitor-sidebar-split',
+      'worldmonitor-panels-collapsed',
+      'worldmonitor-bottom-grid-collapsed',
+    ];
+    const snapshot: Record<string, string | null> = {};
+    for (const key of keys) {
+      snapshot[key] = localStorage.getItem(key);
+    }
+    snapshot[STORAGE_KEYS.panels] = localStorage.getItem(STORAGE_KEYS.panels);
+    localStorage.setItem('worldmonitor-saved-panel-layout', JSON.stringify(snapshot));
+    localStorage.setItem('worldmonitor-saved-map-layout', window.location.search);
   }
 
   private mountAddWidgetBtn(panelsGrid: HTMLElement): void {
@@ -1286,7 +1310,10 @@ export class PanelLayoutManager implements AppModule {
     this.addWidgetBtn.className = 'add-widget-btn';
     this.addWidgetBtn.appendChild(plus);
     this.addWidgetBtn.appendChild(label);
-    this.addWidgetBtn.addEventListener('click', () => this.showAddWidgetOverlay());
+    this.addWidgetBtn.addEventListener('click', () => {
+      if (!checkFeatureAccess('add-widget')) return;
+      this.showAddWidgetOverlay();
+    });
     panelsGrid.appendChild(this.addWidgetBtn);
     this.refreshAddWidgetBtn();
   }
@@ -1339,6 +1366,7 @@ export class PanelLayoutManager implements AppModule {
           item.remove();
           this.refreshAddWidgetBtn();
           if (!list.querySelector('.add-widget-item')) overlay.remove();
+          this.saveCurrentLayout();
         }
       });
       list.appendChild(item);

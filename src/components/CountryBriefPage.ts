@@ -12,6 +12,7 @@ import { haversineKm } from '@/utils/geo';
 import { PORTS } from '@/config/ports';
 import type { Port } from '@/config/ports';
 import { exportCountryBriefJSON, exportCountryBriefCSV } from '@/utils/export';
+import { checkFeatureAccess } from '@/services/auth-modal';
 import type { CountryBriefExport } from '@/utils/export';
 import { ME_STRIKE_BOUNDS } from '@/services/country-geometry';
 import { formatBriefRichText } from './country-brief-format';
@@ -115,6 +116,7 @@ export class CountryBriefPage implements CountryBriefPanel {
 
       // Export button (toggle menu)
       if (target.closest('.cb-export-btn')) {
+        if (!checkFeatureAccess('export')) return;
         e.stopPropagation();
         const exportMenu = this.overlay.querySelector('.cb-export-menu');
         exportMenu?.classList.toggle('hidden');

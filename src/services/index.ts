@@ -40,3 +40,4 @@ export * from './cached-theater-posture';
 export * from './trade';
 export * from './supply-chain';
 export * from './breaking-news-alerts';
+export * from './user-auth';

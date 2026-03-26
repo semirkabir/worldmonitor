@@ -6,6 +6,7 @@ import { trackPanelResized } from '@/services/analytics';
 import { getAiFlowSettings } from '@/services/ai-flow-settings';
 import { getSecretState } from '@/services/runtime-config';
 import { dataFreshness, type FreshnessStatus } from '@/services/data-freshness';
+import { isLoggedIn } from '@/services/user-auth';
 import { buildPanelEmptyState, buildPanelErrorState, buildPanelLoadingState, type PanelEmptyKind } from './panel-state';
 
 // ─── SVG helpers (no innerHTML) ───────────────────────────────────────────────
@@ -719,13 +720,34 @@ export class Panel {
 
   protected setDataBadge(state: 'live' | 'cached' | 'unavailable', detail?: string): void {
     if (!this.statusBadgeEl) return;
+    
     const labels = {
       live: t('common.live'),
       cached: t('common.cached'),
       unavailable: t('common.unavailable'),
     } as const;
-    this.statusBadgeEl.textContent = detail ? `${labels[state]} · ${detail}` : labels[state];
-    this.statusBadgeEl.className = `panel-data-badge ${state}`;
+    
+    // For anonymous users, show actual last updated time (shared cached data)
+    if (!isLoggedIn()) {
+      if (state === 'live' || state === 'cached') {
+        const timeSince = dataFreshness.getTimeSinceForPanel(this.panelId);
+        
+        if (timeSince && timeSince !== '') {
+          this.statusBadgeEl.textContent = `updated ${timeSince}`;
+        } else {
+          // Show next refresh ETA (anonymous users have 10 min throttle)
+          this.statusBadgeEl.textContent = 'next update in 10m';
+        }
+        this.statusBadgeEl.className = `panel-data-badge cached`;
+        this.statusBadgeEl.style.display = 'inline-flex';
+        return;
+      }
+    }
+    
+    // For logged-in users, show LIVE even if data was cached (we have faster refresh)
+    const displayState = isLoggedIn() && state === 'cached' ? 'live' : state;
+    this.statusBadgeEl.textContent = detail ? `${labels[displayState]} · ${detail}` : labels[displayState];
+    this.statusBadgeEl.className = `panel-data-badge ${displayState}`;
     this.statusBadgeEl.style.display = 'inline-flex';
   }
 

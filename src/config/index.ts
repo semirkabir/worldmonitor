@@ -10,6 +10,7 @@ export { SITE_VARIANT } from './variant';
 export {
   IDLE_PAUSE_MS,
   REFRESH_INTERVALS,
+  REFRESH_INTERVALS_ANON,
   MONITOR_COLORS,
   STORAGE_KEYS,
 } from './variants/base';

@@ -5,6 +5,7 @@ import { t } from '@/services/i18n';
 import { getSignalContext } from '@/utils/analysis-constants';
 import { escapeHtml } from '@/utils/sanitize';
 import { trackFindingClicked } from '@/services/analytics';
+import { isLoggedIn } from '@/services/user-auth';
 
 const LOW_COUNT_THRESHOLD = 3;
 const MAX_VISIBLE_FINDINGS = 10;
@@ -66,6 +67,10 @@ export class IntelligenceFindingsBadge {
 
     this.badge.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (!isLoggedIn()) {
+        import('@/services/auth-modal').then(({ showAuthModal }) => showAuthModal());
+        return;
+      }
       this.toggleDropdown();
     });
 

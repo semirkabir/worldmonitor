@@ -286,7 +286,7 @@ export class DataLoaderManager implements AppModule {
   }
 
   private shouldShowIntelligenceNotifications(): boolean {
-    return !this.ctx.isMobile && !!this.ctx.findingsBadge?.isPopupEnabled();
+    return !this.ctx.isMobile;
   }
 
   async loadAllData(): Promise<void> {

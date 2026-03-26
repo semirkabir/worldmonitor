@@ -174,3 +174,25 @@ export function describeFreshness(updatedAt: number): string {
   if (hrs < 24) return `${hrs}h ago`;
   return `${Math.floor(hrs / 24)}d ago`;
 }
+
+export function describeDataFreshness(updatedAt: number | null): string {
+  if (!updatedAt) return 'no data';
+  
+  // Import dynamically to avoid circular dependency
+  const { isInitialDataLoad } = lazyGetIsInitialDataLoad();
+  if (isInitialDataLoad()) {
+    return 'not refreshed';
+  }
+  
+  return describeFreshness(updatedAt);
+}
+
+function lazyGetIsInitialDataLoad(): { isInitialDataLoad: () => boolean } {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { isInitialDataLoad } = require('./data-freshness');
+    return { isInitialDataLoad: () => isInitialDataLoad?.() ?? false };
+  } catch {
+    return { isInitialDataLoad: () => false };
+  }
+}
