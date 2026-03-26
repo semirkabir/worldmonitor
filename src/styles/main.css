@@ -1129,12 +1129,13 @@ canvas,
 .bottom-grid-resize-handle {
   flex-shrink: 0;
   height: 10px;
-  cursor: pointer;
+  cursor: ns-resize;
   background: linear-gradient(to bottom, transparent, var(--border));
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
+  z-index: 2;
 }
 
 .bottom-grid-resize-handle::after {
@@ -14566,24 +14567,6 @@ a.prediction-link:hover {
   text-decoration: underline;
 }
 
-/* deck.gl mode indicator */
-.map-container.deckgl-mode::after {
-  content: 'WebGL';
-  position: absolute;
-  bottom: 10px;
-  right: 170px;
-  z-index: 99;
-  background: rgba(0, 200, 100, 0.15);
-  color: var(--green);
-  padding: 2px 6px;
-  border-radius: 2px;
-  font-size: 8px;
-  font-weight: bold;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  opacity: 0.7;
-}
-
 /* Responsive adjustments for deck.gl on smaller desktops */
 @media (max-width: 1200px) {
   .deckgl-layer-toggles {
@@ -15919,6 +15902,58 @@ a.prediction-link:hover {
 
 .us-data-mgmt-toast.error {
   color: #f87171;
+}
+
+/* Save Changes footer */
+.us-save-footer {
+  position: sticky;
+  bottom: 0;
+  padding: 10px 16px 14px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.2);
+  display: none;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  z-index: 1;
+}
+
+.us-save-footer.visible {
+  display: flex;
+}
+
+.us-save-btn {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 7px 20px;
+  min-width: 130px;
+  border-radius: 5px;
+  cursor: pointer;
+  background: var(--semantic-info);
+  border: 1px solid var(--semantic-info);
+  color: #fff;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s, opacity 0.15s;
+}
+
+.us-save-btn:hover {
+  background: color-mix(in srgb, var(--semantic-info) 80%, white);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--semantic-info) 50%, transparent);
+}
+
+.us-save-btn:active {
+  transform: scale(0.97);
+}
+
+.us-unsaved-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+  flex: 1;
+  opacity: 0.7;
 }
 
 .us-toast-reload {
@@ -18663,8 +18698,8 @@ body.has-breaking-alert .panels-grid {
   align-items: center;
   justify-content: center;
   width: 18px;
-  height: 28px;
-  border-radius: 9px;
+  height: 18px;
+  border-radius: 4px;
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-muted);
@@ -18679,7 +18714,8 @@ body.has-breaking-alert .panels-grid {
   border-color: var(--accent);
 }
 
-/* When panels are visible, anchor to left edge of panels grid */
+/* When panels are visible, anchor to left edge of panels grid (side layout)
+   or top center of panels grid (bottom layout) */
 .panels-grid {
   position: relative;
 }
@@ -18688,8 +18724,14 @@ body.has-breaking-alert .panels-grid {
   top: 50%;
   transform: translate(-50%, -50%);
 }
+.main-content:not(.layout-side) .panels-collapse-btn.on-panels {
+  left: 50%;
+  top: 0;
+  transform: translate(-50%, -50%);
+}
 
-/* When panels are hidden, anchor to right edge of map */
+/* When panels are hidden, anchor to right edge of map (side layout)
+   or bottom center of map (bottom layout) */
 .map-section {
   position: relative;
 }
@@ -18698,19 +18740,27 @@ body.has-breaking-alert .panels-grid {
   top: 50%;
   transform: translate(50%, -50%);
 }
+.main-content:not(.layout-side) .panels-collapse-btn.on-map {
+  right: auto;
+  left: 50%;
+  top: auto;
+  bottom: 0;
+  transform: translate(-50%, 50%);
+}
 
 /* Secondary collapse button for the map bottom grid */
 .bottom-grid-collapse-btn {
   position: absolute;
   left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  top: auto;
+  bottom: 0;
+  transform: translate(-50%, 50%);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
+  width: 18px;
   height: 18px;
-  border-radius: 9px;
+  border-radius: 4px;
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-muted);

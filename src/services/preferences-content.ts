@@ -306,11 +306,21 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
     html += `<div class="ai-flow-popup-footer"><span class="ai-flow-status-dot" id="usStatusDot"></span><span class="ai-flow-status-text" id="usStatusText"></span></div>`;
   }
 
+  // Save Changes footer
+  html += `<div class="us-save-footer"><span class="us-unsaved-hint" id="usUnsavedHint"></span><button type="button" class="us-save-btn" id="usSaveChangesBtn">Save Changes</button></div>`;
+
   return {
     html,
     attach(container: HTMLElement): () => void {
       const ac = new AbortController();
       const { signal } = ac;
+
+      function markDirty(): void {
+        const footer = container.querySelector<HTMLElement>('.us-save-footer');
+        const hint = container.querySelector<HTMLElement>('#usUnsavedHint');
+        if (footer) footer.classList.add('visible');
+        if (hint) hint.textContent = 'Unsaved changes';
+      }
 
       container.addEventListener('change', (e) => {
         const target = e.target as HTMLInputElement;
@@ -329,57 +339,85 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
 
         if (target.id === 'us-header-timezone') {
           setHeaderTimezone(target.value);
+          markDirty();
           return;
         }
         if (target.id === 'us-header-clock-format') {
           setClockFormat(target.value as '12h' | '24h');
+          markDirty();
           return;
         }
         if (target.id === 'us-stream-quality') {
           setStreamQuality(target.value as StreamQuality);
+          markDirty();
           return;
         }
         if (target.id === 'us-globe-visual-preset') {
           setGlobeVisualPreset(target.value as GlobeVisualPreset);
+          markDirty();
           return;
         }
         if (target.id === 'us-theme') {
           setThemePreference(target.value as ThemePreference);
+          markDirty();
           return;
         }
         if (target.id === 'us-map-theme') {
           setUnifiedTheme(target.value);
           window.dispatchEvent(new CustomEvent('map-theme-changed'));
+          markDirty();
           return;
         }
         if (target.id === 'us-live-streams-always-on') {
           setLiveStreamsAlwaysOn(target.checked);
+          markDirty();
           return;
         }
         if (target.id === 'us-language') {
           trackLanguageChange(target.value);
           void changeLanguage(target.value);
+          markDirty();
           return;
         }
         if (target.id === 'us-cloud') {
           setAiFlowSetting('cloudLlm', target.checked);
           updateAiStatus(container);
+          markDirty();
         } else if (target.id === 'us-browser') {
           setAiFlowSetting('browserModel', target.checked);
           const warn = container.querySelector('.ai-flow-toggle-warn') as HTMLElement;
           if (warn) warn.style.display = target.checked ? 'block' : 'none';
           updateAiStatus(container);
+          markDirty();
         } else if (target.id === 'us-map-flash') {
           setAiFlowSetting('mapNewsFlash', target.checked);
+          markDirty();
         } else if (target.id === 'us-headline-memory') {
           setAiFlowSetting('headlineMemory', target.checked);
+          markDirty();
         } else if (target.id === 'us-badge-anim') {
           setAiFlowSetting('badgeAnimation', target.checked);
+          markDirty();
         }
       }, { signal });
 
       container.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
+        if (target.closest('#usSaveChangesBtn')) {
+          const btn = container.querySelector<HTMLButtonElement>('#usSaveChangesBtn');
+          const footer = container.querySelector<HTMLElement>('.us-save-footer');
+          const hint = container.querySelector<HTMLElement>('#usUnsavedHint');
+          if (btn) {
+            btn.textContent = 'Saved!';
+            btn.disabled = true;
+          }
+          if (hint) hint.textContent = '';
+          setTimeout(() => {
+            footer?.classList.remove('visible');
+            if (btn) { btn.textContent = 'Save Changes'; btn.disabled = false; }
+          }, 1500);
+          return;
+        }
         if (target.closest('#usExportBtn')) {
           try {
             exportSettings();

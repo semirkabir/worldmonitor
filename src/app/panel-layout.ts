@@ -1106,7 +1106,7 @@ export class PanelLayoutManager implements AppModule {
   private buildChevronSvg(dir: 'up' | 'down' | 'left' | 'right'): SVGElement {
     const NS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(NS, 'svg');
-    svg.setAttribute('width', '10'); svg.setAttribute('height', '10');
+    svg.setAttribute('width', '12'); svg.setAttribute('height', '12');
     svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none');
     svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '2.5');
     svg.setAttribute('stroke-linecap', 'round'); svg.setAttribute('stroke-linejoin', 'round');
