@@ -1136,6 +1136,7 @@ canvas,
   justify-content: center;
   position: relative;
   z-index: 2;
+  overflow: visible;
 }
 
 .bottom-grid-resize-handle::after {
@@ -18720,41 +18721,40 @@ body.has-breaking-alert .panels-grid {
 .panels-grid {
   position: relative;
 }
-/* Side layout (class or wide screen): button on left edge of panels grid */
+/* Side layout (class or wide screen): button inside left edge of panels grid */
 .panels-collapse-btn.on-panels {
-  left: 0;
+  left: 4px;
   top: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateY(-50%);
 }
-/* Narrow non-side: button on top edge instead */
+/* Narrow non-side: button inside top edge instead */
 @media (max-width: 1599px) {
   .main-content:not(.layout-side) .panels-collapse-btn.on-panels {
     right: auto;
     left: 50%;
-    top: 0;
-    transform: translate(-50%, -50%);
+    top: 4px;
+    transform: translateX(-50%);
   }
 }
 
-/* When panels are hidden, anchor to RIGHT edge of map (side layout)
-   so it expands the panel from the right, or bottom center (bottom layout) */
+/* When panels are hidden, button inside right edge of map */
 .map-section {
   position: relative;
 }
 .panels-collapse-btn.on-map {
-  right: 0;
+  right: 4px;
   left: auto;
   top: 50%;
-  transform: translate(50%, -50%);
+  transform: translateY(-50%);
 }
-/* Narrow non-side: button on bottom edge instead */
+/* Narrow non-side: button inside bottom edge instead */
 @media (max-width: 1599px) {
   .main-content:not(.layout-side) .panels-collapse-btn.on-map {
     right: auto;
     left: 50%;
     top: auto;
-    bottom: 0;
-    transform: translate(-50%, 50%);
+    bottom: 4px;
+    transform: translateX(-50%);
   }
 }
 
@@ -18762,9 +18762,9 @@ body.has-breaking-alert .panels-grid {
 .bottom-grid-collapse-btn {
   position: absolute;
   left: 50%;
-  top: auto;
-  bottom: 0;
-  transform: translate(-50%, 50%);
+  top: 4px;
+  bottom: auto;
+  transform: translateX(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -18775,7 +18775,7 @@ body.has-breaking-alert .panels-grid {
   border: 1px solid var(--border);
   color: var(--text-muted);
   cursor: pointer;
-  z-index: 20;
+  z-index: 30;
   padding: 0;
   transition: background 0.15s, color 0.15s;
 }
@@ -18788,8 +18788,9 @@ body.has-breaking-alert .panels-grid {
 .bottom-grid-collapse-btn.on-map {
   left: 50%;
   top: auto;
-  bottom: 0;
-  transform: translate(-50%, 50%);
+  bottom: 2px;
+  transform: translateX(-50%);
+  z-index: 101;
 }
 .main-content.layout-side .bottom-grid-collapse-btn {
   width: 18px;

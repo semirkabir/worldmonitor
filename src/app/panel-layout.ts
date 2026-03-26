@@ -1138,7 +1138,7 @@ export class PanelLayoutManager implements AppModule {
     const bottomBtn = document.createElement('button');
     bottomBtn.className = 'bottom-grid-collapse-btn';
     bottomBtn.title = 'Collapse bottom panels';
-    (bottomGridHandle ?? resizeHandle).appendChild(bottomBtn);
+    (bottomGrid ?? bottomGridHandle ?? resizeHandle).appendChild(bottomBtn);
 
     try {
       this.panelsHidden = localStorage.getItem(this.panelsCollapsedStorageKey) === 'true';
@@ -1146,6 +1146,11 @@ export class PanelLayoutManager implements AppModule {
     } catch {
       this.panelsHidden = false;
       this.bottomGridHidden = false;
+    }
+    // Move bottom button to mapSection before hiding, so it doesn't vanish with the grid
+    if (this.bottomGridHidden && mapSection) {
+      mapSection.appendChild(bottomBtn);
+      bottomBtn.classList.add('floating', 'on-map');
     }
     mainContent.classList.toggle('panels-hidden', this.panelsHidden);
     if (mapSection) {
@@ -1170,10 +1175,12 @@ export class PanelLayoutManager implements AppModule {
       while (btn.firstChild) btn.removeChild(btn.firstChild);
       const isSide = window.innerWidth >= 1600 || mainContent.classList.contains('layout-side');
       if (this.panelsHidden) {
-        btn.appendChild(this.buildChevronSvg(isSide ? 'right' : 'up'));
+        // Panels are hidden (collapsed right) → arrow points left to show "expand back"
+        btn.appendChild(this.buildChevronSvg(isSide ? 'left' : 'down'));
         btn.title = 'Expand panels';
       } else {
-        btn.appendChild(this.buildChevronSvg(isSide ? 'left' : 'down'));
+        // Panels are visible → arrow points right to show "collapse this way"
+        btn.appendChild(this.buildChevronSvg(isSide ? 'right' : 'up'));
         btn.title = 'Collapse panels';
       }
       placePanelsBtn();
@@ -1181,6 +1188,7 @@ export class PanelLayoutManager implements AppModule {
 
     const updateBottomIcon = () => {
       while (bottomBtn.firstChild) bottomBtn.removeChild(bottomBtn.firstChild);
+      // Arrow points toward collapse direction (down), or toward expand direction (up)
       bottomBtn.appendChild(this.buildChevronSvg(this.bottomGridHidden ? 'up' : 'down'));
       bottomBtn.title = this.bottomGridHidden ? 'Expand bottom panels' : 'Collapse bottom panels';
     };
@@ -1191,16 +1199,16 @@ export class PanelLayoutManager implements AppModule {
         if (mapSection && bottomBtn.parentElement !== mapSection) mapSection.appendChild(bottomBtn);
         bottomBtn.classList.add('floating', 'on-map');
       } else {
-        const targetParent = (bottomGridHandle ?? resizeHandle) as HTMLElement | null;
+        const targetParent = (bottomGrid ?? bottomGridHandle ?? resizeHandle) as HTMLElement | null;
         if (targetParent && bottomBtn.parentElement !== targetParent) targetParent.appendChild(bottomBtn);
         bottomBtn.classList.remove('floating', 'on-map');
       }
     };
 
     const syncBottomButtonVisibility = () => {
-      // Always show the collapse button when the bottom grid area is visible
+      // Show button when bottom grid is visible OR when it's collapsed (so user can expand it)
       const bottomGridVisible = !!bottomGrid && bottomGrid.offsetParent !== null;
-      bottomBtn.style.display = bottomGridVisible ? '' : 'none';
+      bottomBtn.style.display = (bottomGridVisible || this.bottomGridHidden) ? '' : 'none';
       updateBottomIcon();
       placeBottomBtn();
     };
@@ -1224,6 +1232,8 @@ export class PanelLayoutManager implements AppModule {
     bottomBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.bottomGridHidden = !this.bottomGridHidden;
+      // Move button before toggling hidden class (otherwise parent display:none hides it)
+      placeBottomBtn();
       if (mapSection) {
         mapSection.classList.toggle('bottom-grid-hidden', this.bottomGridHidden);
       }
@@ -1249,7 +1259,6 @@ export class PanelLayoutManager implements AppModule {
         }
       }
       updateBottomIcon();
-      placeBottomBtn();
       setTimeout(() => window.dispatchEvent(new Event('resize')), 0);
     });
 

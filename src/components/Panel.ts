@@ -6,7 +6,7 @@ import { trackPanelResized } from '@/services/analytics';
 import { getAiFlowSettings } from '@/services/ai-flow-settings';
 import { getSecretState } from '@/services/runtime-config';
 import { dataFreshness, type FreshnessStatus } from '@/services/data-freshness';
-import { isLoggedIn } from '@/services/user-auth';
+import { isLoggedIn, getCurrentAuthState, subscribeToAuth } from '@/services/user-auth';
 import { buildPanelEmptyState, buildPanelErrorState, buildPanelLoadingState, type PanelEmptyKind } from './panel-state';
 
 // ─── SVG helpers (no innerHTML) ───────────────────────────────────────────────
@@ -202,6 +202,8 @@ export class Panel {
   protected header: HTMLElement;
   protected countEl: HTMLElement | null = null;
   protected statusBadgeEl: HTMLElement | null = null;
+  private lastBadgeState: 'live' | 'cached' | 'unavailable' | null = null;
+  private lastBadgeDetail?: string;
   protected newBadgeEl: HTMLElement | null = null;
   protected panelId: string;
   private abortController: AbortController = new AbortController();
@@ -331,6 +333,13 @@ export class Panel {
     this.statusBadgeEl.className = 'panel-data-badge';
     this.statusBadgeEl.style.display = 'none';
     this.header.appendChild(this.statusBadgeEl);
+
+    // Re-apply badge when auth state resolves (avoids stale "next update" for logged-in users)
+    subscribeToAuth((state) => {
+      if (!state.loading && this.lastBadgeState) {
+        this.setDataBadge(this.lastBadgeState, this.lastBadgeDetail);
+      }
+    });
 
     if (options.showCount) {
       this.countEl = document.createElement('span');
@@ -720,6 +729,8 @@ export class Panel {
 
   protected setDataBadge(state: 'live' | 'cached' | 'unavailable', detail?: string): void {
     if (!this.statusBadgeEl) return;
+    this.lastBadgeState = state;
+    this.lastBadgeDetail = detail;
     
     const labels = {
       live: t('common.live'),
@@ -728,7 +739,8 @@ export class Panel {
     } as const;
     
     // For anonymous users, show actual last updated time (shared cached data)
-    if (!isLoggedIn()) {
+    // Skip this path while auth is still loading to avoid flashing "next update" for logged-in users
+    if (!isLoggedIn() && !getCurrentAuthState().loading) {
       if (state === 'live' || state === 'cached') {
         const timeSince = dataFreshness.getTimeSinceForPanel(this.panelId);
         

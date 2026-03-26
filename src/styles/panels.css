@@ -2083,6 +2083,7 @@
   background: color-mix(in srgb, var(--surface) 40%, var(--bg));
   border-top: 1px solid var(--border);
   flex: 1;
+  position: relative;
   min-height: 120px;
   overflow-y: auto;
   flex-shrink: 0;
