@@ -14531,24 +14531,6 @@ a.prediction-link:hover {
   text-decoration: underline;
 }
 
-/* deck.gl mode indicator */
-.map-container.deckgl-mode::after {
-  content: 'WebGL';
-  position: absolute;
-  bottom: 10px;
-  right: 170px;
-  z-index: 99;
-  background: rgba(0, 200, 100, 0.15);
-  color: var(--green);
-  padding: 2px 6px;
-  border-radius: 2px;
-  font-size: 8px;
-  font-weight: bold;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  opacity: 0.7;
-}
-
 /* Responsive adjustments for deck.gl on smaller desktops */
 @media (max-width: 1200px) {
   .deckgl-layer-toggles {

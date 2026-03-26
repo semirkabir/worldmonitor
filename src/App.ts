@@ -357,6 +357,7 @@ export class App {
       exportPanel: null,
       unifiedSettings: null,
       pizzintIndicator: null,
+      notificationCenter: null,
       countryBriefPage: null,
       entityDetailPanel: null,
       predictionBriefPage: null,

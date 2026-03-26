@@ -105,6 +105,7 @@ export interface AppContext {
   exportPanel: ExportPanel | null;
   unifiedSettings: UnifiedSettings | null;
   pizzintIndicator: PizzIntIndicator | null;
+  notificationCenter: import('@/components/NotificationCenter').NotificationCenter | null;
   countryBriefPage: CountryBriefPanel | null;
   entityDetailPanel: import('@/components/EntityDetailPanel').EntityDetailPanel | null;
   predictionBriefPage: PredictionBriefPage | null;
