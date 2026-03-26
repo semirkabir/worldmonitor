@@ -1441,8 +1441,8 @@ export class DeckGLMap {
       layers.push(this.createCommodityPortsLayer());
     }
 
-    // APT Groups layer (geopolitical variant only - always shown, no toggle)
-    if (SITE_VARIANT !== 'tech' && SITE_VARIANT !== 'happy') {
+    // APT Groups layer (tied to aptGroups layer toggle)
+    if (mapLayers.aptGroups) {
       layers.push(this.createAPTGroupsLayer());
     }
 
@@ -1523,8 +1523,8 @@ export class DeckGLMap {
       layers.push(this.createRenewableInstallationsLayer());
     }
 
-    // News geo-locations (always shown if data exists)
-    if (this.newsLocations.length > 0) {
+    // News geo-locations (tied to conflicts layer)
+    if (mapLayers.conflicts && this.newsLocations.length > 0) {
       layers.push(...this.createNewsLocationsLayer());
     }
 

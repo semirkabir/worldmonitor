@@ -1132,6 +1132,7 @@ export class PanelLayoutManager implements AppModule {
     const btn = document.createElement('button');
     btn.className = 'panels-collapse-btn';
     btn.title = 'Collapse panels';
+    // Positioning handled by .on-panels / .on-map CSS classes
     (panelsGrid ?? mapSection ?? mainContent).appendChild(btn);
 
     const bottomBtn = document.createElement('button');
@@ -1169,10 +1170,10 @@ export class PanelLayoutManager implements AppModule {
       while (btn.firstChild) btn.removeChild(btn.firstChild);
       const isSide = window.innerWidth >= 1600 || mainContent.classList.contains('layout-side');
       if (this.panelsHidden) {
-        btn.appendChild(this.buildChevronSvg(isSide ? 'left' : 'up'));
+        btn.appendChild(this.buildChevronSvg(isSide ? 'right' : 'up'));
         btn.title = 'Expand panels';
       } else {
-        btn.appendChild(this.buildChevronSvg(isSide ? 'right' : 'down'));
+        btn.appendChild(this.buildChevronSvg(isSide ? 'left' : 'down'));
         btn.title = 'Collapse panels';
       }
       placePanelsBtn();
@@ -1188,23 +1189,18 @@ export class PanelLayoutManager implements AppModule {
       if (!bottomBtn.isConnected) return;
       if (this.bottomGridHidden) {
         if (mapSection && bottomBtn.parentElement !== mapSection) mapSection.appendChild(bottomBtn);
-        bottomBtn.classList.add('floating');
+        bottomBtn.classList.add('floating', 'on-map');
       } else {
         const targetParent = (bottomGridHandle ?? resizeHandle) as HTMLElement | null;
         if (targetParent && bottomBtn.parentElement !== targetParent) targetParent.appendChild(bottomBtn);
-        bottomBtn.classList.remove('floating');
+        bottomBtn.classList.remove('floating', 'on-map');
       }
     };
 
     const syncBottomButtonVisibility = () => {
-      const hasBottomPanels = !!bottomGrid && bottomGrid.childElementCount > 0;
-      bottomBtn.style.display = hasBottomPanels ? '' : 'none';
-      if (!hasBottomPanels) {
-        this.bottomGridHidden = false;
-        mapSection?.classList.remove('bottom-grid-hidden');
-        mainContent.classList.remove('bottom-grid-hidden');
-        try { localStorage.removeItem(this.bottomGridCollapsedStorageKey); } catch { /* noop */ }
-      }
+      // Always show the collapse button when the bottom grid area is visible
+      const bottomGridVisible = !!bottomGrid && bottomGrid.offsetParent !== null;
+      bottomBtn.style.display = bottomGridVisible ? '' : 'none';
       updateBottomIcon();
       placeBottomBtn();
     };

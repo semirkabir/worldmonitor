@@ -120,6 +120,7 @@ export const LAYER_REGISTRY: Record<keyof MapLayers, LayerDefinition> = {
   miningSites:              def('miningSites',              ICONS.pickaxe,   'miningSites',            'Mining Sites'),
   processingPlants:         def('processingPlants',         ICONS.factory,   'processingPlants',       'Processing Plants'),
   commodityPorts:           def('commodityPorts',           ICONS.anchor,    'commodityPorts',         'Commodity Ports'),
+  aptGroups:                def('aptGroups',                ICONS.shield,    'aptGroups',              'APT Groups'),
 };
 
 export function resolveLayerAccentColor(key: keyof MapLayers, theme: 'light' | 'dark' = 'dark'): string {
@@ -152,6 +153,7 @@ export function resolveLayerAccentColor(key: keyof MapLayers, theme: 'light' | '
     case 'miningSites': return light ? '#92400e' : '#fdba74';
     case 'processingPlants': return light ? '#525252' : '#d4d4d8';
     case 'commodityPorts': return light ? '#0f766e' : '#5eead4';
+    case 'aptGroups': return light ? '#991b1b' : '#f87171';
     case 'conflicts':
     case 'ucdpEvents':
     case 'iranAttacks': return light ? '#b91c1c' : '#f87171';
@@ -174,7 +176,7 @@ const VARIANT_LAYER_ORDER: Record<MapVariant, Array<keyof MapLayers>> = {
     'cables', 'pipelines', 'datacenters', 'military',
     'ais', 'tradeRoutes', 'flights', 'protests',
     'ucdpEvents', 'displacement', 'climate', 'weather',
-    'outages', 'cyberThreats', 'natural', 'fires',
+    'outages', 'cyberThreats', 'aptGroups', 'natural', 'fires',
     'waterways', 'economic', 'minerals', 'gpsJamming',
     'ciiChoropleth', 'dayNight',
   ],
@@ -202,7 +204,7 @@ const VARIANT_LAYER_ORDER: Record<MapVariant, Array<keyof MapLayers>> = {
     'military', 'ais', 'flights', 'protests',
     'ucdpEvents', 'displacement', 'ciiChoropleth',
     'cables', 'pipelines',
-    'cyberThreats', 'outages', 'minerals',
+    'cyberThreats', 'aptGroups', 'outages', 'minerals',
   ],
 };
 

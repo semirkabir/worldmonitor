@@ -31,6 +31,7 @@ const BASE_LAYERS: MapLayers = {
   speciesRecovery: false, renewableInstallations: false,
   tradeRoutes: false, ciiChoropleth: false, dayNight: false,
   miningSites: false, processingPlants: false, commodityPorts: false,
+  aptGroups: false,
 };
 
 // ============================================
@@ -108,6 +109,7 @@ const FULL_MAP_LAYERS: MapLayers = {
   flights:     true,
   military:    true,
   natural:     true,
+  aptGroups:   true,
 };
 
 const FULL_MOBILE_MAP_LAYERS: MapLayers = {
@@ -353,6 +355,7 @@ const CONFLICTS_MAP_LAYERS: MapLayers = {
   ucdpEvents:    true,
   displacement:  true,
   ciiChoropleth: true,
+  aptGroups:     true,
 };
 
 const CONFLICTS_MOBILE_MAP_LAYERS: MapLayers = {

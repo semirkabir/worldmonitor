@@ -1424,8 +1424,10 @@ export class GlobeMap {
     if (this.layers.startupHubs) markers.push(...this.startupHubMarkers);
     if (this.layers.accelerators) markers.push(...this.acceleratorMarkers);
     if (this.layers.techHQs) markers.push(...this.techHQMarkers);
-    markers.push(...this.newsLocationMarkers);
-    markers.push(...this.flashMarkers);
+    if (this.layers.conflicts) {
+      markers.push(...this.newsLocationMarkers);
+      markers.push(...this.flashMarkers);
+    }
 
     try {
       this.globe.htmlElementsData(markers);

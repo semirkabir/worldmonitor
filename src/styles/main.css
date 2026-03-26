@@ -18637,6 +18637,7 @@ body.has-breaking-alert .panels-grid {
   grid-auto-rows: minmax(200px, 380px);
   align-content: start;
   overflow-y: auto;
+  position: relative;
 }
 
 /* ── Panels hidden (map fullscreen) ── works in both bottom & side layouts */
@@ -18714,38 +18715,47 @@ body.has-breaking-alert .panels-grid {
   border-color: var(--accent);
 }
 
-/* When panels are visible, anchor to left edge of panels grid (side layout)
-   or top center of panels grid (bottom layout) */
+/* When panels are visible, anchor to LEFT edge of panels grid (side layout)
+   so it collapses the panel to the left, or top center (bottom layout) */
 .panels-grid {
   position: relative;
 }
+/* Side layout (class or wide screen): button on left edge of panels grid */
 .panels-collapse-btn.on-panels {
   left: 0;
   top: 50%;
   transform: translate(-50%, -50%);
 }
-.main-content:not(.layout-side) .panels-collapse-btn.on-panels {
-  left: 50%;
-  top: 0;
-  transform: translate(-50%, -50%);
+/* Narrow non-side: button on top edge instead */
+@media (max-width: 1599px) {
+  .main-content:not(.layout-side) .panels-collapse-btn.on-panels {
+    right: auto;
+    left: 50%;
+    top: 0;
+    transform: translate(-50%, -50%);
+  }
 }
 
-/* When panels are hidden, anchor to right edge of map (side layout)
-   or bottom center of map (bottom layout) */
+/* When panels are hidden, anchor to RIGHT edge of map (side layout)
+   so it expands the panel from the right, or bottom center (bottom layout) */
 .map-section {
   position: relative;
 }
 .panels-collapse-btn.on-map {
   right: 0;
+  left: auto;
   top: 50%;
   transform: translate(50%, -50%);
 }
-.main-content:not(.layout-side) .panels-collapse-btn.on-map {
-  right: auto;
-  left: 50%;
-  top: auto;
-  bottom: 0;
-  transform: translate(-50%, 50%);
+/* Narrow non-side: button on bottom edge instead */
+@media (max-width: 1599px) {
+  .main-content:not(.layout-side) .panels-collapse-btn.on-map {
+    right: auto;
+    left: 50%;
+    top: auto;
+    bottom: 0;
+    transform: translate(-50%, 50%);
+  }
 }
 
 /* Secondary collapse button for the map bottom grid */
@@ -18774,7 +18784,8 @@ body.has-breaking-alert .panels-grid {
   color: var(--bg);
   border-color: var(--accent);
 }
-.bottom-grid-collapse-btn.floating {
+.bottom-grid-collapse-btn.floating,
+.bottom-grid-collapse-btn.on-map {
   left: 50%;
   top: auto;
   bottom: 0;

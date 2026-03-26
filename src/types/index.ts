@@ -562,6 +562,8 @@ export interface MapLayers {
   miningSites: boolean;
   processingPlants: boolean;
   commodityPorts: boolean;
+  // APT Groups layer
+  aptGroups: boolean;
 }
 
 export interface AIDataCenter {
