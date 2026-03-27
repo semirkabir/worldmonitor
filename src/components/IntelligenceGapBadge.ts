@@ -476,76 +476,105 @@ export class IntelligenceFindingsBadge {
   }
 
   private showAllFindings(): void {
-    // Create modal overlay
-    const overlay = document.createElement('div');
-    overlay.className = 'findings-modal-overlay';
+    // Remove any existing panel
+    document.getElementById('findings-detail-panel')?.remove();
 
-    const findingsHtml = this.findings.map(finding => {
+    // Build panel using DOM methods to avoid full-screen overlay
+    const panel = document.createElement('aside');
+    panel.id = 'findings-detail-panel';
+    panel.className = 'findings-detail-panel';
+
+    const shell = document.createElement('div');
+    shell.className = 'findings-detail-shell';
+
+    const header = document.createElement('div');
+    header.className = 'findings-detail-header';
+
+    const titleEl = document.createElement('span');
+    titleEl.className = 'findings-detail-title';
+    titleEl.textContent = `🎯 ${t('components.intelligenceFindings.all', { count: String(this.findings.length) })}`;
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'findings-detail-close';
+    closeBtn.setAttribute('aria-label', 'Close');
+    closeBtn.textContent = '×';
+
+    header.append(titleEl, closeBtn);
+
+    const content = document.createElement('div');
+    content.className = 'findings-detail-content';
+
+    // Build finding items
+    this.findings.forEach(finding => {
       const timeAgo = this.formatTimeAgo(finding.timestamp);
       const icon = this.getTypeIcon(finding.type);
       const insight = this.getInsight(finding);
 
-      return `
-        <div class="findings-modal-item ${finding.priority}" data-finding-id="${escapeHtml(finding.id)}">
-          <div class="findings-modal-item-header">
-            <span class="findings-modal-item-type">${icon} ${escapeHtml(finding.title)}</span>
-            <span class="findings-modal-item-priority ${finding.priority}">${t(`components.intelligenceFindings.priority.${finding.priority}`)}</span>
-          </div>
-          <div class="findings-modal-item-desc">${escapeHtml(finding.description)}</div>
-          <div class="findings-modal-item-meta">
-            <span class="findings-modal-item-insight">${escapeHtml(insight)}</span>
-            <span class="findings-modal-item-time">${timeAgo}</span>
-          </div>
-        </div>
-      `;
-    }).join('');
+      const item = document.createElement('div');
+      item.className = `findings-modal-item ${finding.priority}`;
+      item.dataset.findingId = finding.id;
 
-    overlay.innerHTML = `
-      <div class="findings-modal">
-        <div class="findings-modal-header">
-          <span class="findings-modal-title">🎯 ${t('components.intelligenceFindings.all', { count: String(this.findings.length) })}</span>
-          <button class="findings-modal-close" aria-label="Close">×</button>
-        </div>
-        <div class="findings-modal-content">
-          ${findingsHtml}
-        </div>
-      </div>
-    `;
+      const itemHeader = document.createElement('div');
+      itemHeader.className = 'findings-modal-item-header';
 
-    const closeOverlay = () => {
-      overlay.remove();
-      document.removeEventListener('keydown', onEsc);
-    };
-    const onEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeOverlay();
-    };
-    overlay.querySelector('.findings-modal-close')?.addEventListener('click', closeOverlay);
-    overlay.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).classList.contains('findings-modal-overlay')) {
-        closeOverlay();
-      }
-    });
-    document.addEventListener('keydown', onEsc);
+      const typeEl = document.createElement('span');
+      typeEl.className = 'findings-modal-item-type';
+      typeEl.textContent = `${icon} ${finding.title}`;
 
-    // Handle clicking individual items
-    overlay.querySelectorAll('.findings-modal-item').forEach(item => {
+      const priorityEl = document.createElement('span');
+      priorityEl.className = `findings-modal-item-priority ${finding.priority}`;
+      priorityEl.textContent = t(`components.intelligenceFindings.priority.${finding.priority}`);
+
+      itemHeader.append(typeEl, priorityEl);
+
+      const desc = document.createElement('div');
+      desc.className = 'findings-modal-item-desc';
+      desc.textContent = finding.description;
+
+      const meta = document.createElement('div');
+      meta.className = 'findings-modal-item-meta';
+
+      const insightEl = document.createElement('span');
+      insightEl.className = 'findings-modal-item-insight';
+      insightEl.textContent = insight;
+
+      const timeEl = document.createElement('span');
+      timeEl.className = 'findings-modal-item-time';
+      timeEl.textContent = timeAgo;
+
+      meta.append(insightEl, timeEl);
+      item.append(itemHeader, desc, meta);
+
       item.addEventListener('click', () => {
-        const id = item.getAttribute('data-finding-id');
-        const finding = this.findings.find(f => f.id === id);
-        if (!finding) return;
-
         trackFindingClicked(finding.id, finding.source, finding.type, finding.priority);
         if (finding.source === 'signal' && this.onSignalClick) {
           this.onSignalClick(finding.original as CorrelationSignal);
-          closeOverlay();
+          closePanel();
         } else if (finding.source === 'alert' && this.onAlertClick) {
           this.onAlertClick(finding.original as UnifiedAlert);
-          closeOverlay();
+          closePanel();
         }
       });
+
+      content.appendChild(item);
     });
 
-    document.body.appendChild(overlay);
+    shell.append(header, content);
+    panel.appendChild(shell);
+
+    const closePanel = () => {
+      panel.classList.remove('active');
+      setTimeout(() => panel.remove(), 300);
+      document.removeEventListener('keydown', onEsc);
+    };
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closePanel();
+    };
+    closeBtn.addEventListener('click', closePanel);
+    document.addEventListener('keydown', onEsc);
+
+    document.body.appendChild(panel);
+    requestAnimationFrame(() => panel.classList.add('active'));
   }
 
   public destroy(): void {

@@ -33,9 +33,19 @@ export function initAuthModal(): void {
   };
 
   authModal.querySelector('.auth-modal-close')?.addEventListener('click', closeHandler);
-  
+
   authModal.addEventListener('click', (e) => {
     if (e.target === authModal) closeHandler();
+  });
+
+  authModal.querySelector('#authModalSignIn')?.addEventListener('click', async () => {
+    await loginWithGoogle();
+    closeAuthModal();
+  });
+
+  authModal.querySelector('#authModalSignUp')?.addEventListener('click', async () => {
+    await loginWithGoogle();
+    closeAuthModal();
   });
 }
 
@@ -47,20 +57,10 @@ function closeAuthModal(): void {
 
 export function showAuthModal(): void {
   initAuthModal();
-  
+
   if (!authModal) return;
 
   authModal.classList.add('active');
-
-  authModal.querySelector('#authModalSignIn')?.addEventListener('click', async () => {
-    await loginWithGoogle();
-    closeAuthModal();
-  });
-
-  authModal.querySelector('#authModalSignUp')?.addEventListener('click', async () => {
-    await loginWithGoogle();
-    closeAuthModal();
-  });
 }
 
 export function requireAuth(): boolean {

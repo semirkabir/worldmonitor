@@ -83,10 +83,19 @@ export async function fetchMultipleStocks(
     return client.listMarketQuotes({ symbols: allSymbolStrings });
   }, emptyStockFallback);
 
+  const returnedSymbols = new Set(resp.quotes.map((q) => q.symbol));
   const results = resp.quotes.map((q) => {
     const meta = symbolMetaMap.get(q.symbol);
     return toMarketData(q, meta);
   });
+
+  // Append placeholder rows for any requested symbols the server didn't return,
+  // so user-added watchlist entries always appear (with '—' for price/change).
+  for (const sym of symbols) {
+    if (!returnedSymbols.has(sym.symbol)) {
+      results.push({ symbol: sym.symbol, name: sym.name, display: sym.display || sym.symbol, price: null, change: null });
+    }
+  }
 
   // Fire onBatch with whatever we got
   if (results.length > 0) {

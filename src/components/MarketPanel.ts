@@ -19,15 +19,15 @@ export class MarketPanel extends Panel {
   private overlay: HTMLElement | null = null;
 
   constructor() {
-    super({ id: 'markets', title: t('panels.markets') });
+    super({ id: 'markets', title: 'Watchlist' });
     this.createSettingsButton();
   }
 
   private createSettingsButton(): void {
     this.settingsBtn = document.createElement('button');
     this.settingsBtn.className = 'live-news-settings-btn';
-    this.settingsBtn.title = 'Customize market watchlist';
-    this.settingsBtn.textContent = 'Watchlist';
+    this.settingsBtn.title = 'Edit watchlist';
+    this.settingsBtn.textContent = 'Edit';
     this.settingsBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.openWatchlistModal();
@@ -76,10 +76,9 @@ export class MarketPanel extends Panel {
         </div>
         <div class="wl-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;min-height:28px"></div>
         <div style="display:flex;gap:8px;align-items:center;margin-top:14px">
-          <button type="button" class="panels-reset-layout" id="wmMarketResetBtn">Reset</button>
+          <button type="button" class="panels-reset-layout" id="wmMarketResetBtn">Reset to defaults</button>
           <div style="flex:1"></div>
-          <button type="button" class="panels-reset-layout" id="wmMarketCancelBtn">Cancel</button>
-          <button type="button" class="panels-reset-layout" id="wmMarketSaveBtn" style="border-color:var(--text-dim);color:var(--text)">Save</button>
+          <button type="button" class="panels-reset-layout" id="wmMarketDoneBtn" style="border-color:var(--text-dim);color:var(--text)">Done</button>
         </div>
       </div>
     `;
@@ -117,6 +116,7 @@ export class MarketPanel extends Panel {
         chip.innerHTML = `<span style="font-weight:600">${escapeHtml(entry.display || entry.symbol)}</span>${entry.name ? `<span style="color:var(--text-dim)">${escapeHtml(entry.name)}</span>` : ''}<button aria-label="Remove" style="background:none;border:none;color:var(--text-faint);cursor:pointer;padding:0;margin-left:2px;font-size:14px;line-height:1">×</button>`;
         chip.querySelector('button')?.addEventListener('click', () => {
           entries = entries.filter(e => e.symbol !== entry.symbol);
+          persist();
           renderChips();
         });
         chipsEl.appendChild(chip);
@@ -126,9 +126,15 @@ export class MarketPanel extends Panel {
     // Prevent blur on input when clicking inside dropdown
     dropdown.addEventListener('mousedown', (e) => e.preventDefault());
 
+    const persist = () => {
+      if (entries.length === 0) resetMarketWatchlist();
+      else setMarketWatchlistEntries(entries);
+    };
+
     const addEntry = (match: { symbol: string; name: string; display?: string }) => {
       if (entries.some(e => e.symbol === match.symbol)) return;
       entries.push({ symbol: match.symbol, name: match.name, ...(match.display ? { display: match.display } : {}) });
+      persist();
       searchInput.value = '';
       dropdown.style.display = 'none';
       renderChips();
@@ -169,15 +175,11 @@ export class MarketPanel extends Panel {
       }
     });
 
-    modal.querySelector<HTMLButtonElement>('#wmMarketCancelBtn')?.addEventListener('click', () => this.closeWatchlistModal());
+    modal.querySelector<HTMLButtonElement>('#wmMarketDoneBtn')?.addEventListener('click', () => this.closeWatchlistModal());
     modal.querySelector<HTMLButtonElement>('#wmMarketResetBtn')?.addEventListener('click', () => {
+      entries = [];
       resetMarketWatchlist();
-      this.closeWatchlistModal();
-    });
-    modal.querySelector<HTMLButtonElement>('#wmMarketSaveBtn')?.addEventListener('click', () => {
-      if (entries.length === 0) resetMarketWatchlist();
-      else setMarketWatchlistEntries(entries);
-      this.closeWatchlistModal();
+      renderChips();
     });
 
     renderChips();
@@ -207,8 +209,8 @@ export class MarketPanel extends Panel {
         </div>
         <div class="market-data">
           ${miniSparkline(stock.sparkline, stock.change)}
-          <span class="market-price">${formatPrice(stock.price!)}</span>
-          <span class="market-change ${getChangeClass(stock.change!)}">${formatChange(stock.change!)}</span>
+          <span class="market-price">${stock.price != null ? formatPrice(stock.price) : '—'}</span>
+          <span class="market-change ${stock.change != null ? getChangeClass(stock.change) : ''}">${stock.change != null ? formatChange(stock.change) : '—'}</span>
         </div>
       </div>
     `

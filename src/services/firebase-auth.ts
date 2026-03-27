@@ -65,7 +65,7 @@ export async function loginWithGoogle(): Promise<User | null> {
     console.log('[Firebase] Popup failed, trying redirect:', error?.code);
     
     // If popup fails due to COOP, try redirect
-    if (error?.code === 'auth/popup-closed-by-user' || error?.code === 'auth/internal-error') {
+    if (error?.code === 'auth/popup-closed-by-user' || error?.code === 'auth/internal-error' || error?.code === 'auth/popup-blocked') {
       try {
         await signInWithRedirect(auth, provider);
         return null; // Will redirect

@@ -1038,6 +1038,7 @@ export class EventHandlerManager implements AppModule {
     const mapContainer = document.getElementById('mapContainer') as HTMLElement | null;
     const rightHandle = document.getElementById('mapResizeHandle') as HTMLElement | null;
     const bottomHandle = document.getElementById('bottomGridResizeHandle') as HTMLElement | null;
+    const cornerHandle = document.getElementById('cornerResizeHandle') as HTMLElement | null;
     if (!mainContent || !mapSection || !mapContainer || (!rightHandle && !bottomHandle)) return;
 
     const MAP_HEIGHT_KEY = 'map-height';
@@ -1112,7 +1113,7 @@ export class EventHandlerManager implements AppModule {
     }
     hydrateSidebarSplit();
 
-    type ResizeMode = 'none' | 'bottom' | 'right';
+    type ResizeMode = 'none' | 'bottom' | 'right' | 'both';
     let resizeMode: ResizeMode = 'none';
     let startY = 0;
     let startX = 0;
@@ -1128,12 +1129,13 @@ export class EventHandlerManager implements AppModule {
       mapSection.classList.remove('resizing');
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
-      if (endedMode === 'bottom') {
+      if (endedMode === 'bottom' || endedMode === 'both') {
         const target = getBottomResizeTarget();
         if (target.style.height) {
           localStorage.setItem(MAP_HEIGHT_KEY, target.style.height);
         }
-      } else if (endedMode === 'right') {
+      }
+      if (endedMode === 'right' || endedMode === 'both') {
         const current = Number.parseFloat(
           mainContent.style.getPropertyValue('--map-sidebar-split')
         );
@@ -1186,6 +1188,24 @@ export class EventHandlerManager implements AppModule {
       });
     }
 
+    if (cornerHandle) {
+      cornerHandle.addEventListener('mousedown', (e) => {
+        if (!isSideLikeLayout()) return;
+        resizeMode = 'both';
+        startX = e.clientX;
+        startY = e.clientY;
+        startMapWidth = mapSection.getBoundingClientRect().width;
+        const target = getBottomResizeTarget();
+        startHeight = target.offsetHeight;
+        this.ctx.map?.setIsResizing(true);
+        mapSection.classList.add('resizing');
+        document.body.style.cursor = 'nwse-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+        e.stopPropagation();
+      });
+    }
+
     if (rightHandle) {
       rightHandle.addEventListener('mousedown', (e) => {
         if (!isSideLikeLayout()) return;
@@ -1228,6 +1248,26 @@ export class EventHandlerManager implements AppModule {
         const deltaX = e.clientX - startX;
         const desiredPercent = ((startMapWidth + deltaX) / totalWidth) * 100;
         applySidebarSplit(desiredPercent, false);
+        this.ctx.map?.resize();
+        return;
+      }
+
+      if (resizeMode === 'both') {
+        if (!isSideLikeLayout()) return;
+        // Resize height
+        const isWide = window.innerWidth >= 1600;
+        const target = isWide ? mapContainer : mapSection;
+        const deltaY = e.clientY - startY;
+        const newHeight = clamp(startHeight + deltaY, getMinHeight(), getMaxHeight());
+        if (isWide) target.style.flex = 'none';
+        target.style.height = `${newHeight}px`;
+        // Resize width
+        const totalWidth = mainContent.getBoundingClientRect().width;
+        if (totalWidth > 0) {
+          const deltaX = e.clientX - startX;
+          const desiredPercent = ((startMapWidth + deltaX) / totalWidth) * 100;
+          applySidebarSplit(desiredPercent, false);
+        }
         this.ctx.map?.resize();
       }
     };

@@ -11,40 +11,40 @@ export const IDLE_PAUSE_MS = 5 * 60 * 1000;
 
 // Refresh intervals for logged-in users
 export const REFRESH_INTERVALS = {
-  feeds: 20 * 60 * 1000,
-  markets: 12 * 60 * 1000,
-  crypto: 12 * 60 * 1000,
-  predictions: 15 * 60 * 1000,
-  ais: 15 * 60 * 1000,
-  pizzint: 10 * 60 * 1000,
-  natural: 60 * 60 * 1000,
-  weather: 10 * 60 * 1000,
-  fred: 30 * 60 * 1000,
-  oil: 30 * 60 * 1000,
-  spending: 60 * 60 * 1000,
-  bis: 60 * 60 * 1000,
-  firms: 30 * 60 * 1000,
-  flights: 2 * 60 * 60 * 1000,
-  cables: 30 * 60 * 1000,
-  cableHealth: 2 * 60 * 60 * 1000,
-  cyberThreats: 15 * 60 * 1000,
-  gdelt: 15 * 60 * 1000,
-  acled: 15 * 60 * 1000,
-  opensky: 15 * 60 * 1000,
-  economic: 30 * 60 * 1000,
-  webcams: 30 * 60 * 1000,
+  feeds: 5 * 60 * 1000,         // 5 min — RSS sources refresh every 5-10 min
+  markets: 1 * 60 * 1000,       // 1 min — near real-time prices
+  crypto: 1 * 60 * 1000,        // 1 min — crypto is highly volatile
+  predictions: 5 * 60 * 1000,
+  ais: 5 * 60 * 1000,           // 5 min — vessel positions
+  pizzint: 5 * 60 * 1000,
+  natural: 10 * 60 * 1000,      // 10 min — earthquake/natural event feeds
+  weather: 5 * 60 * 1000,
+  fred: 15 * 60 * 1000,
+  oil: 10 * 60 * 1000,
+  spending: 30 * 60 * 1000,
+  bis: 30 * 60 * 1000,
+  firms: 10 * 60 * 1000,        // 10 min — satellite fire detection
+  flights: 10 * 60 * 1000,
+  cables: 10 * 60 * 1000,
+  cableHealth: 30 * 60 * 1000,
+  cyberThreats: 5 * 60 * 1000,
+  gdelt: 5 * 60 * 1000,
+  acled: 10 * 60 * 1000,
+  opensky: 5 * 60 * 1000,
+  economic: 15 * 60 * 1000,
+  webcams: 10 * 60 * 1000,
 };
 
-// Refresh intervals for anonymous users (throttled more aggressively)
+// Refresh intervals for anonymous users — throttled to incentivise sign-in
 export const REFRESH_INTERVALS_ANON = {
-  feeds: 10 * 60 * 1000,
-  markets: 10 * 60 * 1000,
-  crypto: 10 * 60 * 1000,
-  predictions: 10 * 60 * 1000,
-  ais: 10 * 60 * 1000,
-  pizzint: 30 * 60 * 1000,
+  feeds: 30 * 60 * 1000,
+  markets: 15 * 60 * 1000,
+  crypto: 15 * 60 * 1000,
+  predictions: 30 * 60 * 1000,
+  ais: 30 * 60 * 1000,
+  pizzint: 60 * 60 * 1000,
   natural: 60 * 60 * 1000,
-  weather: 30 * 60 * 1000,
+  weather: 60 * 60 * 1000,
   fred: 60 * 60 * 1000,
   oil: 60 * 60 * 1000,
   spending: 60 * 60 * 1000,
@@ -53,10 +53,10 @@ export const REFRESH_INTERVALS_ANON = {
   flights: 60 * 60 * 1000,
   cables: 60 * 60 * 1000,
   cableHealth: 60 * 60 * 1000,
-  cyberThreats: 30 * 60 * 1000,
-  gdelt: 30 * 60 * 1000,
-  acled: 30 * 60 * 1000,
-  opensky: 30 * 60 * 1000,
+  cyberThreats: 60 * 60 * 1000,
+  gdelt: 60 * 60 * 1000,
+  acled: 60 * 60 * 1000,
+  opensky: 60 * 60 * 1000,
   economic: 60 * 60 * 1000,
   webcams: 60 * 60 * 1000,
 };

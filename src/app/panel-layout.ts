@@ -343,7 +343,9 @@ export class PanelLayoutManager implements AppModule {
           </div>
           <div class="map-container" id="mapContainer"></div>
           ${SITE_VARIANT === 'happy' ? '<button class="tv-exit-btn" id="tvExitBtn">Exit TV Mode</button>' : ''}
-          <div class="bottom-grid-resize-handle" id="bottomGridResizeHandle"></div>
+          <div class="bottom-grid-resize-handle" id="bottomGridResizeHandle">
+            <div class="corner-resize-handle" id="cornerResizeHandle" title="Drag to resize both panels"></div>
+          </div>
           <div class="map-bottom-grid" id="mapBottomGrid"></div>
           <div class="map-resize-handle" id="mapResizeHandle"></div>
         </div>
