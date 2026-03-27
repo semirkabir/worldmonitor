@@ -2543,8 +2543,7 @@ body.panel-resize-active iframe {
   margin: 0 !important;
 }
 
-.live-news-fullscreen .panel-content,
-.live-news-fullscreen .map-container {
+.live-news-fullscreen .panel-content {
   height: calc(100vh - 80px) !important;
 }
 
@@ -2563,7 +2562,6 @@ body.live-news-fullscreen-active .deckgl-layer-toggles,
 body.live-news-fullscreen-active .map-legend,
 body.live-news-fullscreen-active .map-controls,
 body.live-news-fullscreen-active .map-timestamp,
-body.live-news-fullscreen-active .map-bottom-grid,
 body.live-news-fullscreen-active .map-resize-handle {
   visibility: hidden !important;
   pointer-events: none !important;
@@ -18770,16 +18768,16 @@ body:has(.tauri-titlebar) .breaking-news-container {
   position: absolute;
   left: 50%;
   top: 0;
-  bottom: auto;
   transform: translate(-50%, -100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 14px;
+  width: 16px;
+  height: 40px;
   border-radius: 4px 4px 0 0;
   background: var(--surface);
   border: 1px solid var(--border);
+  border-bottom: none;
   color: var(--text-muted);
   cursor: pointer;
   z-index: 30;
@@ -18797,6 +18795,8 @@ body:has(.tauri-titlebar) .breaking-news-container {
   top: auto;
   bottom: 0;
   transform: translateX(-50%);
+  width: 16px;
+  height: 40px;
   border-radius: 4px 4px 0 0;
   z-index: 101;
 }

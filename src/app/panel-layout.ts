@@ -1138,7 +1138,7 @@ export class PanelLayoutManager implements AppModule {
     const bottomBtn = document.createElement('button');
     bottomBtn.className = 'bottom-grid-collapse-btn';
     bottomBtn.title = 'Collapse bottom panels';
-    (bottomGrid ?? bottomGridHandle ?? resizeHandle).appendChild(bottomBtn);
+    (bottomGridHandle ?? resizeHandle).appendChild(bottomBtn);
 
     try {
       this.panelsHidden = localStorage.getItem(this.panelsCollapsedStorageKey) === 'true';
@@ -1200,7 +1200,7 @@ export class PanelLayoutManager implements AppModule {
         if (mapSection && bottomBtn.parentElement !== mapSection) mapSection.appendChild(bottomBtn);
         bottomBtn.classList.add('floating', 'on-map');
       } else {
-        const targetParent = (bottomGrid ?? bottomGridHandle ?? resizeHandle) as HTMLElement | null;
+        const targetParent = (bottomGridHandle ?? resizeHandle) as HTMLElement | null;
         if (targetParent && bottomBtn.parentElement !== targetParent) targetParent.appendChild(bottomBtn);
         bottomBtn.classList.remove('floating', 'on-map');
       }
