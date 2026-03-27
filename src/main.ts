@@ -4,6 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import * as Sentry from '@sentry/browser';
 import { inject } from '@vercel/analytics';
 import { App } from './App';
+import { initCustomSelects } from '@/utils/custom-select';
 
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN?.trim();
 
@@ -281,6 +282,9 @@ loadDesktopSecrets().catch(() => {});
 
 // Apply stored theme preference before app initialization (safety net for inline script)
 applyStoredTheme();
+
+// Initialize custom selects early so dropdowns are ready before heavy app init
+initCustomSelects();
 
 // Set data-variant on <html> so CSS theme overrides activate
 if (SITE_VARIANT && SITE_VARIANT !== 'full') {

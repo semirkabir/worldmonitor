@@ -94,6 +94,8 @@ export interface EventHandlerCallbacks {
   syncDataFreshnessWithLayers: () => void;
   ensureCorrectZones: () => void;
   refreshOpenCountryBrief?: () => void;
+  openCountryBriefByCode?: (code: string, country: string) => void;
+  openCountryBrief?: (lat: number, lon: number) => void;
 }
 
 export class EventHandlerManager implements AppModule {
@@ -881,9 +883,19 @@ export class EventHandlerManager implements AppModule {
       this.ctx.signalModal?.showSignal(signal);
     });
     nc.setAlertClickHandler((alert) => {
-      if (this.ctx.countryBriefPage?.isVisible()) return;
       if (localStorage.getItem('wm-settings-open') === '1') return;
-      this.ctx.signalModal?.showAlert(alert);
+      if (alert.components.ciiChange) {
+        const { country, countryName } = alert.components.ciiChange;
+        this.callbacks.openCountryBriefByCode?.(country, countryName);
+      } else if (alert.location) {
+        this.callbacks.openCountryBrief?.(alert.location.lat, alert.location.lon);
+      } else if (alert.components.convergence) {
+        this.callbacks.openCountryBrief?.(alert.components.convergence.lat, alert.components.convergence.lon);
+      } else if (alert.countries.length > 0 && alert.countries[0]) {
+        this.callbacks.openCountryBriefByCode?.(alert.countries[0], alert.countries[0]);
+      } else {
+        this.ctx.signalModal?.showAlert(alert);
+      }
     });
     const settingsMount = document.getElementById('unifiedSettingsMount');
     if (settingsMount) {

@@ -14,6 +14,66 @@ const REFRESH_INTERVAL_MS = 180000;
 const ALERT_HOURS = 6;
 const STORAGE_KEY = 'worldmonitor-intel-findings';
 const POPUP_STORAGE_KEY = 'wm-alert-popup-enabled';
+const SOUND_KEY = 'wm-intel-notif-sound';
+
+// Intelligence icon: human head with gear (from Flaticon)
+const INTELLIGENCE_ICON = `<img src="/intelligence-icon.png" width="16" height="16" alt="Intelligence" style="vertical-align:middle;filter:invert(1)" />`;
+
+export type NotificationSound = 'beep' | 'bell' | 'chime' | 'ding' | 'none';
+
+export const NOTIFICATION_SOUND_OPTIONS: { value: NotificationSound; label: string }[] = [
+  { value: 'beep',  label: '🔈 Short beep' },
+  { value: 'bell',  label: '🔔 Bell' },
+  { value: 'chime', label: '🎵 Chime' },
+  { value: 'ding',  label: '✨ Ding' },
+  { value: 'none',  label: '🔇 Silent' },
+];
+
+function playNotificationSound(sound: NotificationSound): void {
+  if (sound === 'none') return;
+  try {
+    const ctx = new AudioContext();
+    const master = ctx.createGain();
+    master.gain.setValueAtTime(0.28, ctx.currentTime);
+    master.connect(ctx.destination);
+
+    const schedule = (freq: number, startOffset: number, duration: number, type: OscillatorType = 'sine') => {
+      const osc = ctx.createOscillator();
+      const env = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + startOffset);
+      env.gain.setValueAtTime(0, ctx.currentTime + startOffset);
+      env.gain.linearRampToValueAtTime(1, ctx.currentTime + startOffset + 0.01);
+      env.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startOffset + duration);
+      osc.connect(env);
+      env.connect(master);
+      osc.start(ctx.currentTime + startOffset);
+      osc.stop(ctx.currentTime + startOffset + duration);
+    };
+
+    switch (sound) {
+      case 'beep':
+        schedule(880, 0, 0.22, 'square');
+        break;
+      case 'bell':
+        schedule(440, 0, 1.2);
+        schedule(880, 0, 0.9);
+        schedule(1320, 0, 0.6);
+        break;
+      case 'chime':
+        schedule(523.25, 0,    0.35);
+        schedule(659.25, 0.18, 0.35);
+        schedule(783.99, 0.36, 0.45);
+        break;
+      case 'ding':
+        schedule(1046.5, 0, 0.5);
+        schedule(1318.5, 0.02, 0.35);
+        break;
+    }
+
+    setTimeout(() => ctx.close().catch(() => {}), 2500);
+  } catch { /* AudioContext unavailable */ }
+}
 
 type FindingSource = 'signal' | 'alert';
 
@@ -47,20 +107,20 @@ export class IntelligenceFindingsBadge {
       this.update();
     });
   };
-  private audio: HTMLAudioElement | null = null;
-  private audioEnabled = true;
   private enabled: boolean;
   private popupEnabled: boolean;
+  private notificationSound: NotificationSound;
   private contextMenu: HTMLElement | null = null;
 
   constructor() {
     this.enabled = IntelligenceFindingsBadge.getStoredEnabledState();
     this.popupEnabled = localStorage.getItem(POPUP_STORAGE_KEY) === '1';
+    this.notificationSound = (localStorage.getItem(SOUND_KEY) as NotificationSound) || 'beep';
 
     this.badge = document.createElement('button');
     this.badge.className = 'intel-findings-badge';
     this.badge.title = t('components.intelligenceFindings.badgeTitle');
-    this.badge.innerHTML = '<span class="findings-icon">🎯</span><span class="findings-count">0</span>';
+    this.badge.innerHTML = `<span class="findings-icon">${INTELLIGENCE_ICON}</span><span class="findings-count">0</span>`;
 
     this.dropdown = document.createElement('div');
     this.dropdown.className = 'intel-findings-dropdown';
@@ -129,24 +189,23 @@ export class IntelligenceFindingsBadge {
       this.closeDropdown();
     });
 
+    // Sound selector change handler
+    this.dropdown.addEventListener('change', (e) => {
+      const target = e.target as HTMLElement;
+      if ((target as HTMLSelectElement).id === 'intel-sound-select') {
+        const sound = (target as HTMLSelectElement).value as NotificationSound;
+        this.notificationSound = sound;
+        if (sound !== 'none') localStorage.setItem(SOUND_KEY, sound);
+        else localStorage.removeItem(SOUND_KEY);
+        playNotificationSound(sound);
+      }
+    });
+
     if (this.enabled) {
       document.addEventListener('click', this.boundCloseDropdown);
       this.mount();
-      this.initAudio();
       this.update();
       this.startRefresh();
-    }
-  }
-
-  private initAudio(): void {
-    this.audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2teleQYjfKapmWswEjCJvuPQfSoXZZ+3qqBJESSP0unGaxMJVYiytrFeLhR6p8znrFUXRW+bs7V3Qx1hn8Xjp1cYPnegprhkMCFmoLi1k0sZTYGlqqlUIA==');
-    this.audio.volume = 0.3;
-  }
-
-  private playSound(): void {
-    if (this.audioEnabled && this.audio) {
-      this.audio.currentTime = 0;
-      this.audio.play()?.catch(() => {});
     }
   }
 
@@ -178,7 +237,6 @@ export class IntelligenceFindingsBadge {
       localStorage.removeItem(STORAGE_KEY);
       document.addEventListener('click', this.boundCloseDropdown);
       this.mount();
-      this.initAudio();
       this.update();
       this.startRefresh();
     } else {
@@ -246,11 +304,14 @@ export class IntelligenceFindingsBadge {
       countEl.textContent = String(count);
     }
 
-    // Pulse animation and sound when new findings arrive
+    // Pulse animation + notification when new findings arrive
     if (count > this.lastFindingCount && this.lastFindingCount > 0) {
       this.badge.classList.add('pulse');
       setTimeout(() => this.badge.classList.remove('pulse'), 1000);
-      if (this.popupEnabled) this.playSound();
+      if (this.popupEnabled && this.findings[0]) {
+        playNotificationSound(this.notificationSound);
+        this.showNotificationPopup(this.findings[0]);
+      }
     }
     this.lastFindingCount = count;
 
@@ -324,14 +385,77 @@ export class IntelligenceFindingsBadge {
     return map[priority] ?? 0;
   }
 
+  private showNotificationPopup(finding: UnifiedFinding): void {
+    document.querySelector('.intel-notif-popup')?.remove();
+
+    const priorityColor: Record<string, string> = {
+      critical: '#ef4444', high: '#f97316', medium: '#eab308', low: '#6b7280',
+    };
+    const color = priorityColor[finding.priority] ?? '#6b7280';
+
+    const popup = document.createElement('div');
+    popup.className = 'intel-notif-popup';
+    popup.innerHTML = `
+      <div class="intel-notif-header">
+        <span class="intel-notif-eyebrow">${INTELLIGENCE_ICON} Intelligence Finding</span>
+        <button class="intel-notif-close" aria-label="Dismiss">×</button>
+      </div>
+      <div class="intel-notif-body">
+        <span class="intel-notif-priority" style="background:${color}22;color:${color}">${finding.priority.toUpperCase()}</span>
+        <div class="intel-notif-title">${escapeHtml(finding.title)}</div>
+        <div class="intel-notif-desc">${escapeHtml(finding.description.slice(0, 100))}${finding.description.length > 100 ? '…' : ''}</div>
+        <button class="intel-notif-expand">View details →</button>
+      </div>
+    `;
+
+    const dismiss = () => {
+      popup.classList.add('leaving');
+      setTimeout(() => popup.remove(), 240);
+    };
+
+    const openPanel = () => {
+      dismiss();
+      if (finding.source === 'signal' && this.onSignalClick) {
+        this.onSignalClick(finding.original as CorrelationSignal);
+      } else if (finding.source === 'alert' && this.onAlertClick) {
+        this.onAlertClick(finding.original as UnifiedAlert);
+      }
+    };
+
+    popup.querySelector('.intel-notif-close')!.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dismiss();
+    });
+    popup.querySelector('.intel-notif-expand')!.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openPanel();
+    });
+
+    document.body.appendChild(popup);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        popup.classList.add('visible');
+      });
+    });
+  }
+
   private renderPopupToggle(): string {
     const label = t('components.intelligenceFindings.popupAlerts');
     const checked = this.popupEnabled;
     const breakingSettings = getAlertSettings();
     const breakingLabel = t('components.intelligenceFindings.breakingAlerts');
+    const soundOptions = NOTIFICATION_SOUND_OPTIONS.map(o =>
+      `<option value="${o.value}"${o.value === this.notificationSound ? ' selected' : ''}>${escapeHtml(o.label)}</option>`
+    ).join('');
     return `<div class="popup-toggle-row" data-toggle="popup">
         <span class="popup-toggle-label">🔔 ${escapeHtml(label)}</span>
         <span class="popup-toggle-switch${checked ? ' on' : ''}"><span class="popup-toggle-knob"></span></span>
+      </div>
+      <div class="popup-toggle-row popup-sound-row${checked ? '' : ' disabled'}">
+        <span class="popup-toggle-label">🎵 Alert sound</span>
+        <select class="popup-sound-select" id="intel-sound-select"${checked ? '' : ' disabled'}>
+          ${soundOptions}
+        </select>
       </div>
       <div class="popup-toggle-row" data-toggle="breaking-alerts">
         <span class="popup-toggle-label">🚨 ${escapeHtml(breakingLabel)}</span>
@@ -492,7 +616,7 @@ export class IntelligenceFindingsBadge {
 
     const titleEl = document.createElement('span');
     titleEl.className = 'findings-detail-title';
-    titleEl.textContent = `🎯 ${t('components.intelligenceFindings.all', { count: String(this.findings.length) })}`;
+    titleEl.innerHTML = `${INTELLIGENCE_ICON} ${t('components.intelligenceFindings.all', { count: String(this.findings.length) })}`;
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'findings-detail-close';

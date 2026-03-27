@@ -8,7 +8,6 @@ import {
   INTEL_SOURCES,
   SECTORS,
   COMMODITIES,
-  MARKET_SYMBOLS,
   SITE_VARIANT,
   LAYER_TO_SOURCE,
 } from '@/config';
@@ -962,17 +961,12 @@ export class DataLoaderManager implements AppModule {
     try {
       const customEntries = getMarketWatchlistEntries();
       const effectiveSymbols = (() => {
-        if (customEntries.length === 0) return MARKET_SYMBOLS;
-        const base = MARKET_SYMBOLS.slice();
-        const seen = new Set(base.map((s) => s.symbol));
-        for (const entry of customEntries) {
-          const sym = entry.symbol;
-          if (!sym || seen.has(sym)) continue;
-          seen.add(sym);
-          base.push({ symbol: sym, name: entry.name || sym, display: entry.display || sym });
-          if (base.length >= 50) break;
-        }
-        return base;
+        // Show ONLY user's custom watchlist entries (empty if none added)
+        return customEntries.slice(0, 50).map(e => ({
+          symbol: e.symbol,
+          name: e.name || e.symbol,
+          display: e.display || e.symbol
+        }));
       })();
 
 

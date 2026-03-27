@@ -13,14 +13,32 @@ import {
 import { checkFeatureAccess } from '@/services/auth-modal';
 import { MARKET_SYMBOLS, SECTORS, COMMODITIES } from '@/config/markets';
 import { COMMODITY_MARKET_SYMBOLS, COMMODITY_SECTORS, COMMODITY_PRICES } from '@/config/commodity-markets';
+import { marketWebSocket } from '@/services/market/realtime';
 
 export class MarketPanel extends Panel {
   private settingsBtn: HTMLButtonElement | null = null;
   private overlay: HTMLElement | null = null;
+  private priceElements: Map<string, HTMLSpanElement> = new Map();
+  private changeElements: Map<string, HTMLSpanElement> = new Map();
+  private unsubscribeMap: Map<string, () => void> = new Map();
 
   constructor() {
     super({ id: 'markets', title: 'Watchlist' });
     this.createSettingsButton();
+    this.connectWebSocket();
+  }
+
+  private connectWebSocket(): void {
+    // Connect to real-time WebSocket and subscribe to watchlist symbols
+    marketWebSocket.connect();
+    marketWebSocket.subscribeToWatchlist();
+  }
+
+  public destroy(): void {
+    // Clean up WebSocket subscriptions
+    this.unsubscribeMap.forEach((unsub) => unsub());
+    this.unsubscribeMap.clear();
+    super.destroy?.();
   }
 
   private createSettingsButton(): void {
@@ -107,18 +125,42 @@ export class MarketPanel extends Panel {
     const renderChips = () => {
       chipsEl.innerHTML = '';
       if (entries.length === 0) {
-        chipsEl.innerHTML = `<span style="color:var(--text-faint);font-size:11px">No custom tickers — defaults will be shown</span>`;
+        chipsEl.innerHTML = `<div style="color:var(--text-faint);font-size:12px;padding:8px 0;text-align:center">
+          Your watchlist is empty. Search and add tickers above.
+        </div>`;
         return;
       }
       for (const entry of entries) {
         const chip = document.createElement('div');
-        chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.07);border:1px solid var(--border);border-radius:4px;padding:3px 8px;font-size:11px;color:var(--text)';
-        chip.innerHTML = `<span style="font-weight:600">${escapeHtml(entry.display || entry.symbol)}</span>${entry.name ? `<span style="color:var(--text-dim)">${escapeHtml(entry.name)}</span>` : ''}<button aria-label="Remove" style="background:none;border:none;color:var(--text-faint);cursor:pointer;padding:0;margin-left:2px;font-size:14px;line-height:1">×</button>`;
-        chip.querySelector('button')?.addEventListener('click', () => {
-          entries = entries.filter(e => e.symbol !== entry.symbol);
-          persist();
-          renderChips();
-        });
+        chip.style.cssText = 'display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.08);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;color:var(--text);transition:all 0.15s;cursor:default';
+        chip.innerHTML = `
+          <span style="font-weight:600">${escapeHtml(entry.display || entry.symbol)}</span>
+          ${entry.name ? `<span style="color:var(--text-dim);font-size:11px">${escapeHtml(entry.name)}</span>` : ''}
+          <button class="wl-remove-btn" aria-label="Remove ${escapeHtml(entry.symbol)}" title="Remove from watchlist" style="background:rgba(255,255,255,0.1);border:none;border-radius:3px;color:var(--text-faint);cursor:pointer;padding:2px 6px;margin-left:4px;font-size:13px;line-height:1;transition:all 0.15s;display:flex;align-items:center;justify-content:center;min-width:20px;height:20px">×</button>
+        `;
+        
+        const removeBtn = chip.querySelector('.wl-remove-btn');
+        if (removeBtn) {
+          removeBtn.addEventListener('mouseenter', () => {
+            removeBtn.style.background = 'rgba(248,113,113,0.3)';
+            removeBtn.style.color = '#f87171';
+          });
+          removeBtn.addEventListener('mouseleave', () => {
+            removeBtn.style.background = 'rgba(255,255,255,0.1)';
+            removeBtn.style.color = 'var(--text-faint)';
+          });
+          removeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            chip.style.opacity = '0';
+            chip.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+              entries = entries.filter(e => e.symbol !== entry.symbol);
+              persist();
+              renderChips();
+            }, 150);
+          });
+        }
+        
         chipsEl.appendChild(chip);
       }
     };
@@ -199,25 +241,74 @@ export class MarketPanel extends Panel {
       return;
     }
 
-    const html = data
-      .map(
-        (stock) => `
-      <div class="market-item">
+    // Clean up old subscriptions
+    this.unsubscribeMap.forEach((unsub) => unsub());
+    this.unsubscribeMap.clear();
+    this.priceElements.clear();
+    this.changeElements.clear();
+
+    const container = document.createElement('div');
+    container.className = 'market-list';
+
+    data.forEach((stock) => {
+      const item = document.createElement('div');
+      item.className = 'market-item';
+      item.dataset.symbol = stock.symbol;
+
+      const priceSpan = document.createElement('span');
+      priceSpan.className = 'market-price';
+      priceSpan.textContent = stock.price != null ? formatPrice(stock.price) : '—';
+
+      const changeSpan = document.createElement('span');
+      changeSpan.className = `market-change ${stock.change != null ? getChangeClass(stock.change) : ''}`;
+      changeSpan.textContent = stock.change != null ? formatChange(stock.change) : '—';
+
+      // Store references for real-time updates
+      this.priceElements.set(stock.symbol, priceSpan);
+      this.changeElements.set(stock.symbol, changeSpan);
+
+      // Subscribe to WebSocket updates
+      const unsub = marketWebSocket.onPriceUpdate(stock.symbol, (update) => {
+        if (update.price != null) {
+          // Add flicker effect
+          priceSpan.classList.add('price-flicker');
+          priceSpan.textContent = formatPrice(update.price);
+          
+          // Calculate percentage change if we have previous data
+          if (stock.price != null && update.price !== stock.price) {
+            const pctChange = ((update.price - stock.price) / stock.price) * 100;
+            changeSpan.className = `market-change ${getChangeClass(pctChange)} price-flicker`;
+            changeSpan.textContent = formatChange(pctChange);
+          }
+
+          // Remove flicker after animation
+          setTimeout(() => {
+            priceSpan.classList.remove('price-flicker');
+            changeSpan.classList.remove('price-flicker');
+          }, 300);
+        }
+      });
+      this.unsubscribeMap.set(stock.symbol, unsub);
+
+      item.innerHTML = `
         <div class="market-info">
           <span class="market-name">${escapeHtml(stock.name)}</span>
           <span class="market-symbol">${escapeHtml(stock.display)}</span>
         </div>
         <div class="market-data">
           ${miniSparkline(stock.sparkline, stock.change)}
-          <span class="market-price">${stock.price != null ? formatPrice(stock.price) : '—'}</span>
-          <span class="market-change ${stock.change != null ? getChangeClass(stock.change) : ''}">${stock.change != null ? formatChange(stock.change) : '—'}</span>
         </div>
-      </div>
-    `
-      )
-      .join('');
+      `;
 
-    this.setContent(html);
+      // Append price and change elements
+      const marketData = item.querySelector('.market-data')!;
+      marketData.appendChild(priceSpan);
+      marketData.appendChild(changeSpan);
+
+      container.appendChild(item);
+    });
+
+    this.setContent(container.innerHTML);
   }
 }
 

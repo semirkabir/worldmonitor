@@ -18,11 +18,13 @@ export function showShellNotification(
   message: string,
   tone: ShellNotificationTone = 'info',
   timeoutMs = 2600,
+  placement: 'bottom' | 'top' = 'bottom',
 ): void {
   document.querySelector(`.${SHELL_TOAST_CLASS}`)?.remove();
 
+  const placementClass = placement === 'top' ? `${SHELL_TOAST_CLASS}--top` : '';
   const toast = h('div', {
-    className: `${SHELL_TOAST_CLASS} ${SHELL_TOAST_CLASS}--${tone}`,
+    className: `${SHELL_TOAST_CLASS} ${SHELL_TOAST_CLASS}--${tone}${placementClass ? ` ${placementClass}` : ''}`,
     role: 'status',
     'aria-live': tone === 'error' ? 'assertive' : 'polite',
   });

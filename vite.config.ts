@@ -753,6 +753,7 @@ function youtubeLivePlugin(): Plugin {
 }
 
 export default defineConfig({
+  envPrefix: ['VITE_', 'FINNHUB_'],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },

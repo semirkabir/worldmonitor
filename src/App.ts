@@ -18,6 +18,7 @@ import { startLearning } from '@/services/country-instability';
 import { loadFromStorage, parseMapUrlState, saveToStorage, isMobileDevice } from '@/utils';
 import type { ParsedMapUrlState } from '@/utils';
 import { SignalModal, IntelligenceGapBadge, PredictionBriefPage } from '@/components';
+import { IntelligenceFindingPanel } from '@/components/IntelligenceFindingPanel';
 import { initBreakingNewsAlerts, destroyBreakingNewsAlerts } from '@/services/breaking-news-alerts';
 import type { ServiceStatusPanel } from '@/components/ServiceStatusPanel';
 import type { StablecoinPanel } from '@/components/StablecoinPanel';
@@ -359,6 +360,7 @@ export class App {
       seenGeoAlerts: new Set(),
       monitors,
       signalModal: null,
+      findingPanel: null,
       statusPanel: null,
       searchModal: null,
       findingsBadge: null,
@@ -426,6 +428,8 @@ export class App {
       syncDataFreshnessWithLayers: () => this.dataLoader.syncDataFreshnessWithLayers(),
       ensureCorrectZones: () => this.panelLayout.ensureCorrectZones(),
       refreshOpenCountryBrief: () => this.countryIntel.refreshOpenBrief(),
+      openCountryBriefByCode: (code, country) => { void this.countryIntel.openCountryBriefByCode(code, country); },
+      openCountryBrief: (lat, lon) => { void this.countryIntel.openCountryBrief(lat, lon); },
     });
 
     // Wire cross-module callback: DataLoader → SearchManager
@@ -526,18 +530,26 @@ export class App {
     this.state.signalModal.setLocationClickHandler((lat, lon) => {
       this.state.map?.setCenter(lat, lon, 4);
     });
+    this.state.findingPanel = new IntelligenceFindingPanel();
+    this.state.findingPanel.setLocationClickHandler((lat, lon) => {
+      this.state.map?.setCenter(lat, lon, 4);
+    });
+    this.state.findingPanel.setDataProviders({
+      getNews:    () => this.state.allNews,
+      getMarkets: () => this.state.latestMarkets,
+    });
     this.state.predictionBriefPage = new PredictionBriefPage();
     if (!this.state.isMobile) {
       this.state.findingsBadge = new IntelligenceGapBadge();
       this.state.findingsBadge.setOnSignalClick((signal) => {
         if (this.state.countryBriefPage?.isVisible()) return;
         if (localStorage.getItem('wm-settings-open') === '1') return;
-        this.state.signalModal?.showSignal(signal);
+        this.state.findingPanel?.showSignal(signal);
       });
       this.state.findingsBadge.setOnAlertClick((alert) => {
         if (this.state.countryBriefPage?.isVisible()) return;
         if (localStorage.getItem('wm-settings-open') === '1') return;
-        this.state.signalModal?.showAlert(alert);
+        this.state.findingPanel?.showAlert(alert);
       });
       initBreakingNewsAlerts();
     }
