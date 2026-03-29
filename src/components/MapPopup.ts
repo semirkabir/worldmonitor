@@ -1,10 +1,16 @@
-import type { ConflictZone, Hotspot, NewsItem, MilitaryBase, StrategicWaterway, APTGroup, NuclearFacility, EconomicCenter, GammaIrradiator, Pipeline, UnderseaCable, CableAdvisory, RepairShip, InternetOutage, AIDataCenter, AisDisruptionEvent, SocialUnrestEvent, MilitaryFlight, MilitaryVessel, MilitaryFlightCluster, MilitaryVesselCluster, NaturalEvent, Port, Spaceport, CriticalMineralProject, CyberThreat } from '@/types';
+import type { ConflictZone, Hotspot, NewsItem, MilitaryBase, StrategicWaterway, APTGroup, NuclearFacility, EconomicCenter, GammaIrradiator, Pipeline, UnderseaCable, CableAdvisory, RepairShip, InternetOutage, AIDataCenter, AisDisruptionEvent, SocialUnrestEvent, MilitaryFlight, MilitaryVessel, MilitaryFlightCluster, MilitaryVesselCluster, NaturalEvent, Port, Spaceport, CriticalMineralProject, CyberThreat, GulfInvestment, UcdpGeoEvent } from '@/types';
+import type { PositiveGeoEvent } from '@/services/positive-events-geo';
+import type { KindnessPoint } from '@/services/kindness-data';
+import type { SpeciesRecovery } from '@/services/conservation-data';
+import type { RenewableInstallation } from '@/services/renewable-installations';
 import type { AirportDelayAlert, PositionSample } from '@/services/aviation';
 import type { AisPositionData } from '@/services/maritime';
 import type { Earthquake } from '@/services/earthquakes';
 import type { WeatherAlert } from '@/services/weather';
 import { UNDERSEA_CABLES } from '@/config';
 import type { StartupHub, Accelerator, TechHQ, CloudRegion } from '@/config/tech-geo';
+import type { TradeRouteSegment } from '@/config/trade-routes';
+import type { CommodityPort } from '@/config/commodity-geo';
 import type { TechHubActivity } from '@/services/tech-activity';
 import type { GeoHubActivity } from '@/services/geo-activity';
 import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
@@ -15,7 +21,7 @@ import { getNaturalEventIcon } from '@/services/eonet';
 import { getHotspotEscalation, getEscalationChange24h } from '@/services/hotspot-escalation';
 import { getCableHealthRecord } from '@/services/cable-health';
 
-export type PopupType = 'conflict' | 'hotspot' | 'earthquake' | 'weather' | 'base' | 'waterway' | 'apt' | 'cyberThreat' | 'nuclear' | 'economic' | 'irradiator' | 'pipeline' | 'cable' | 'cable-advisory' | 'repair-ship' | 'outage' | 'datacenter' | 'datacenterCluster' | 'ais' | 'aisVessel' | 'protest' | 'protestCluster' | 'flight' | 'aircraft' | 'militaryFlight' | 'militaryVessel' | 'militaryFlightCluster' | 'militaryVesselCluster' | 'natEvent' | 'port' | 'spaceport' | 'mineral' | 'startupHub' | 'cloudRegion' | 'techHQ' | 'accelerator' | 'techEvent' | 'techHQCluster' | 'techEventCluster' | 'techActivity' | 'geoActivity' | 'stockExchange' | 'financialCenter' | 'centralBank' | 'commodityHub' | 'iranEvent' | 'gpsJamming';
+export type PopupType = 'conflict' | 'hotspot' | 'earthquake' | 'weather' | 'base' | 'waterway' | 'apt' | 'cyberThreat' | 'nuclear' | 'economic' | 'irradiator' | 'pipeline' | 'cable' | 'cable-advisory' | 'repair-ship' | 'outage' | 'datacenter' | 'datacenterCluster' | 'ais' | 'aisVessel' | 'protest' | 'protestCluster' | 'flight' | 'aircraft' | 'militaryFlight' | 'militaryVessel' | 'militaryFlightCluster' | 'militaryVesselCluster' | 'natEvent' | 'port' | 'spaceport' | 'mineral' | 'startupHub' | 'cloudRegion' | 'techHQ' | 'accelerator' | 'techEvent' | 'techHQCluster' | 'techEventCluster' | 'techActivity' | 'geoActivity' | 'stockExchange' | 'financialCenter' | 'centralBank' | 'commodityHub' | 'iranEvent' | 'gpsJamming' | 'gulfInvestment' | 'tradeRoute' | 'commodityPort' | 'fire' | 'positiveEvent' | 'kindnessEvent' | 'ucdpEvent' | 'speciesRecovery' | 'renewableInstallation';
 
 interface TechEventPopupData {
   id: string;
@@ -145,7 +151,7 @@ interface DatacenterClusterData {
 
 interface PopupData {
   type: PopupType;
-  data: ConflictZone | Hotspot | Earthquake | WeatherAlert | MilitaryBase | StrategicWaterway | APTGroup | CyberThreat | NuclearFacility | EconomicCenter | GammaIrradiator | Pipeline | UnderseaCable | CableAdvisory | RepairShip | InternetOutage | AIDataCenter | AisDisruptionEvent | SocialUnrestEvent | AirportDelayAlert | PositionSample | MilitaryFlight | MilitaryVessel | MilitaryFlightCluster | MilitaryVesselCluster | NaturalEvent | Port | Spaceport | CriticalMineralProject | StartupHub | CloudRegion | TechHQ | Accelerator | TechEventPopupData | TechHQClusterData | TechEventClusterData | ProtestClusterData | DatacenterClusterData | TechHubActivity | GeoHubActivity | StockExchangePopupData | FinancialCenterPopupData | CentralBankPopupData | CommodityHubPopupData | IranEventPopupData | GpsJammingPopupData;
+  data: ConflictZone | Hotspot | Earthquake | WeatherAlert | MilitaryBase | StrategicWaterway | APTGroup | CyberThreat | NuclearFacility | EconomicCenter | GammaIrradiator | Pipeline | UnderseaCable | CableAdvisory | RepairShip | InternetOutage | AIDataCenter | AisDisruptionEvent | SocialUnrestEvent | AirportDelayAlert | PositionSample | MilitaryFlight | MilitaryVessel | MilitaryFlightCluster | MilitaryVesselCluster | NaturalEvent | Port | Spaceport | CriticalMineralProject | StartupHub | CloudRegion | TechHQ | Accelerator | TechEventPopupData | TechHQClusterData | TechEventClusterData | ProtestClusterData | DatacenterClusterData | TechHubActivity | GeoHubActivity | StockExchangePopupData | FinancialCenterPopupData | CentralBankPopupData | CommodityHubPopupData | IranEventPopupData | GpsJammingPopupData | GulfInvestment | TradeRouteSegment | CommodityPort | { region?: string; brightness?: number; frp?: number; acq_date?: string } | PositiveGeoEvent | KindnessPoint | UcdpGeoEvent | SpeciesRecovery | RenewableInstallation;
   relatedNews?: NewsItem[];
   x: number;
   y: number;
@@ -501,6 +507,24 @@ export class MapPopup {
         return this.renderIranEventPopup(data.data as IranEventPopupData);
       case 'gpsJamming':
         return this.renderGpsJammingPopup(data.data as GpsJammingPopupData);
+      case 'gulfInvestment':
+        return this.renderGulfInvestmentPopup(data.data as GulfInvestment);
+      case 'tradeRoute':
+        return this.renderTradeRoutePopup(data.data as TradeRouteSegment);
+      case 'commodityPort':
+        return this.renderCommodityPortPopup(data.data as CommodityPort);
+      case 'fire':
+        return this.renderFirePopup(data.data as { region?: string; brightness?: number; frp?: number; acq_date?: string });
+      case 'positiveEvent':
+        return this.renderPositiveEventPopup(data.data as PositiveGeoEvent);
+      case 'kindnessEvent':
+        return this.renderKindnessEventPopup(data.data as KindnessPoint);
+      case 'ucdpEvent':
+        return this.renderUcdpEventPopup(data.data as UcdpGeoEvent);
+      case 'speciesRecovery':
+        return this.renderSpeciesRecoveryPopup(data.data as SpeciesRecovery);
+      case 'renewableInstallation':
+        return this.renderRenewableInstallationPopup(data.data as RenewableInstallation);
       default:
         return '';
     }
@@ -2728,6 +2752,78 @@ export class MapPopup {
     `;
   }
 
+  private renderCommodityPortPopup(port: CommodityPort): string {
+    return `
+      <div class="popup-header commodity-hub">
+        <span class="popup-icon">⚓</span>
+        <span class="popup-title">${escapeHtml(port.name.toUpperCase())}</span>
+        ${this.pbadge('COMMODITY PORT', '')}
+        <button class="popup-close" aria-label="Close">×</button>
+      </div>
+      <div class="popup-body">
+        <div class="popup-subtitle">${escapeHtml(port.city)}, ${escapeHtml(port.country)}</div>
+        <div class="popup-stats">
+          ${this.stat(t('popups.location'), `${escapeHtml(port.city)}, ${escapeHtml(port.country)}`)}
+          ${port.annualVolumeMt != null ? this.stat('Annual Volume', `${port.annualVolumeMt}Mt/yr`) : ''}
+          ${port.annualThroughput ? this.stat('Throughput', escapeHtml(port.annualThroughput)) : ''}
+        </div>
+        ${this.section('Commodities', this.tags(port.commodities.map(c => escapeHtml(c))))}
+        ${port.significance ? `<p class="popup-description">${escapeHtml(port.significance)}</p>` : ''}
+      </div>
+    `;
+  }
+
+  private renderTradeRoutePopup(seg: TradeRouteSegment): string {
+    const statusClass = seg.status === 'disrupted' ? 'high' : seg.status === 'high_risk' ? 'medium' : 'normal';
+    const statusLabel = seg.status === 'disrupted' ? 'DISRUPTED' : seg.status === 'high_risk' ? 'HIGH RISK' : 'ACTIVE';
+    const categoryLabel = seg.category.charAt(0).toUpperCase() + seg.category.slice(1);
+    return `
+      <div class="popup-header trade-route">
+        <span class="popup-title">${escapeHtml(seg.routeName)}</span>
+        ${this.pbadge(statusLabel, statusClass)}
+        <button class="popup-close" aria-label="Close">×</button>
+      </div>
+      <div class="popup-body">
+        <div class="popup-stats">
+          ${this.stat(t('popups.type'), categoryLabel)}
+          ${this.stat(t('components.investments.investment'), escapeHtml(seg.volumeDesc))}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderGulfInvestmentPopup(inv: GulfInvestment): string {
+    const flag = inv.investingCountry === 'SA' ? '🇸🇦' : '🇦🇪';
+    const usd = inv.investmentUSD != null
+      ? (inv.investmentUSD >= 1000 ? `$${(inv.investmentUSD / 1000).toFixed(1)}B` : `$${inv.investmentUSD}M`)
+      : t('components.investments.undisclosed');
+    const statusColors: Record<string, string> = {
+      'operational': 'normal', 'under-construction': 'medium', 'announced': 'low',
+      'rumoured': 'low', 'cancelled': 'high', 'divested': '',
+    };
+    const badgeClass = statusColors[inv.status] ?? '';
+    return `
+      <div class="popup-header gcc-investment">
+        <span class="popup-title">${flag} ${escapeHtml(inv.assetName)}</span>
+        ${this.pbadge(escapeHtml(inv.status.toUpperCase()), badgeClass)}
+        <button class="popup-close" aria-label="Close">×</button>
+      </div>
+      <div class="popup-body">
+        <div class="popup-stats">
+          ${this.stat(t('popups.location'), `${escapeHtml(inv.targetCountry)}`)}
+          ${this.stat(t('components.investments.asset'), escapeHtml(inv.assetType))}
+          ${this.stat(t('components.investments.investment'), usd)}
+          ${inv.stakePercent != null ? this.stat('Stake', `${inv.stakePercent}%`) : ''}
+          ${inv.yearAnnounced != null ? this.stat(t('components.investments.year'), String(inv.yearAnnounced)) : ''}
+        </div>
+        ${this.section(t('components.investments.allEntities'), this.tags([escapeHtml(inv.investingEntity)]))}
+        ${this.section(t('components.investments.allSectors'), this.tags([escapeHtml(inv.sector)]))}
+        ${inv.description ? `<p class="popup-description">${escapeHtml(inv.description)}</p>` : ''}
+        ${inv.sourceUrl ? `<a href="${escapeHtml(inv.sourceUrl)}" target="_blank" rel="noopener noreferrer nofollow" class="popup-link">${t('popups.source')} →</a>` : ''}
+      </div>
+    `;
+  }
+
   private renderGpsJammingPopup(data: GpsJammingPopupData): string {
     const isHigh = data.level === 'high';
     const badgeClass = isHigh ? 'critical' : 'medium';
@@ -2756,6 +2852,115 @@ export class MapPopup {
             <span class="stat-label">${t('popups.gpsJamming.h3Hex')}</span>
             <span class="stat-value" style="font-size:10px">${escapeHtml(data.h3)}</span>
           </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderFirePopup(fire: { region?: string; brightness?: number; frp?: number; acq_date?: string }): string {
+    const intensityClass = (fire.brightness ?? 0) > 400 ? 'high' : (fire.brightness ?? 0) > 350 ? 'medium' : 'low';
+    return `
+      <div class="popup-header fire">
+        <span class="popup-icon">🔥</span>
+        <span class="popup-title">${escapeHtml(fire.region || 'Active Fire')}</span>
+        ${this.pbadge(intensityClass.toUpperCase(), intensityClass)}
+        <button class="popup-close" aria-label="Close">×</button>
+      </div>
+      <div class="popup-body">
+        <div class="popup-stats">
+          ${fire.brightness != null ? this.stat('Brightness', `${fire.brightness.toFixed(0)}K`) : ''}
+          ${fire.frp != null ? this.stat('Fire Radiative Power', `${fire.frp.toFixed(0)} MW`) : ''}
+          ${fire.acq_date ? this.stat('Detected', escapeHtml(fire.acq_date)) : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderPositiveEventPopup(event: PositiveGeoEvent): string {
+    const catLabel = event.category ? event.category.replace(/-/g, ' & ') : 'Positive Event';
+    return `
+      <div class="popup-header positive-event">
+        <span class="popup-icon">⭐</span>
+        <span class="popup-title">${escapeHtml(event.name)}</span>
+        <button class="popup-close" aria-label="Close">×</button>
+      </div>
+      <div class="popup-body">
+        <div class="popup-stats">
+          ${this.stat('Category', escapeHtml(catLabel))}
+          ${event.count > 1 ? this.stat('Sources', String(event.count)) : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderKindnessEventPopup(point: KindnessPoint): string {
+    return `
+      <div class="popup-header kindness-event">
+        <span class="popup-icon">💚</span>
+        <span class="popup-title">${escapeHtml(point.name)}</span>
+        <button class="popup-close" aria-label="Close">×</button>
+      </div>
+      <div class="popup-body">
+        ${point.description ? `<p class="popup-description">${escapeHtml(point.description)}</p>` : ''}
+      </div>
+    `;
+  }
+
+  private renderUcdpEventPopup(event: UcdpGeoEvent): string {
+    const typeLabel = event.type_of_violence?.replace(/-/g, ' ') ?? 'Armed Conflict';
+    return `
+      <div class="popup-header conflict">
+        <span class="popup-title">${escapeHtml(event.side_a)} vs ${escapeHtml(event.side_b)}</span>
+        ${this.pbadge(typeLabel.toUpperCase(), 'high')}
+        <button class="popup-close" aria-label="Close">×</button>
+      </div>
+      <div class="popup-body">
+        <div class="popup-stats">
+          ${this.stat(t('popups.country'), escapeHtml(event.country))}
+          ${event.deaths_best > 0 ? this.stat('Est. Deaths', event.deaths_best.toLocaleString()) : ''}
+          ${event.date_start ? this.stat('Date', escapeHtml(event.date_start)) : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderSpeciesRecoveryPopup(species: SpeciesRecovery): string {
+    const trendIcon = species.populationTrend === 'increasing' ? '↑' : '→';
+    return `
+      <div class="popup-header species-recovery">
+        <span class="popup-icon">🌿</span>
+        <span class="popup-title">${escapeHtml(species.commonName)}</span>
+        ${this.pbadge(escapeHtml(species.recoveryStatus).toUpperCase(), 'normal')}
+        <button class="popup-close" aria-label="Close">×</button>
+      </div>
+      <div class="popup-body">
+        <div class="popup-stats">
+          ${this.stat('Scientific Name', `<em>${escapeHtml(species.scientificName)}</em>`)}
+          ${this.stat('IUCN Status', escapeHtml(species.iucnCategory))}
+          ${this.stat('Trend', `${trendIcon} ${escapeHtml(species.populationTrend)}`)}
+          ${species.region ? this.stat('Region', escapeHtml(species.region)) : ''}
+        </div>
+        ${species.summaryText ? `<p class="popup-description">${escapeHtml(species.summaryText)}</p>` : ''}
+      </div>
+    `;
+  }
+
+  private renderRenewableInstallationPopup(installation: RenewableInstallation): string {
+    const typeLabel = installation.type.charAt(0).toUpperCase() + installation.type.slice(1);
+    const statusClass = installation.status === 'operational' ? 'normal' : 'medium';
+    return `
+      <div class="popup-header renewable-installation">
+        <span class="popup-icon">⚡</span>
+        <span class="popup-title">${escapeHtml(installation.name)}</span>
+        ${this.pbadge(typeLabel.toUpperCase(), statusClass)}
+        <button class="popup-close" aria-label="Close">×</button>
+      </div>
+      <div class="popup-body">
+        <div class="popup-stats">
+          ${this.stat('Capacity', `${installation.capacityMW.toLocaleString()} MW`)}
+          ${this.stat(t('popups.country'), escapeHtml(installation.country))}
+          ${this.stat('Year', String(installation.year))}
+          ${this.stat('Status', escapeHtml(installation.status.replace(/_/g, ' ')))}
         </div>
       </div>
     `;

@@ -14,6 +14,7 @@ import {
   CentralBankRenderer,
   CommodityHubRenderer,
 } from '@/components/entity-detail/renderers/financial-center';
+import { TechHQRenderer } from '@/components/entity-detail/renderers/tech-hq';
 
 export class EntityIntelManager implements AppModule {
   private ctx: AppContext;
@@ -53,6 +54,7 @@ export class EntityIntelManager implements AppModule {
       financialCenter: new FinancialCenterRenderer(),
       centralBank: new CentralBankRenderer(),
       commodityHub: new CommodityHubRenderer(),
+      techHQ: new TechHQRenderer(),
     };
   }
 }
