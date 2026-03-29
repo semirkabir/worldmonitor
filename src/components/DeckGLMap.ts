@@ -280,6 +280,16 @@ const AIS_PORT_ICON_ATLAS = `data:image/svg+xml;charset=utf-8,${encodeURICompone
   '<svg viewBox="0 0 24 24" width="64" height="64" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10"/><circle cx="12" cy="4" r="1.5" fill="white"/><path d="M7 12a5 5 0 0 0 10 0"/><path d="M5 14a7 7 0 0 0 14 0"/></svg>'
 )}`;
 
+const AVIATION_AIRPORT_ICON_MAPPING = { airport: { x: 0, y: 0, width: 64, height: 64, mask: true } };
+const AVIATION_AIRPORT_ICON_ATLAS = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+  '<svg viewBox="0 0 24 24" width="64" height="64" xmlns="http://www.w3.org/2000/svg" fill="white"><path d="M3 19h18v2H3z"/><path d="M6 17V9l6-4 6 4v8h-3v-4h-6v4z"/><rect x="10" y="10" width="4" height="3" rx="0.6"/></svg>'
+)}`;
+
+const AVIATION_PLANE_ICON_MAPPING = { plane: { x: 0, y: 0, width: 64, height: 64, mask: true } };
+const AVIATION_PLANE_ICON_ATLAS = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+  '<svg viewBox="0 0 24 24" width="64" height="64" xmlns="http://www.w3.org/2000/svg" fill="white"><path d="M2 12.2 3.2 10.8l7.6.4 5.2-6.2c.5-.6 1.4-.7 2-.2.5.4.7 1 .5 1.6l-2.1 5 4.4.2 1.4-1.5 1 .8-1 1.5 1 1.5-1 .8-1.4-1.5-4.4.2 2.1 5c.2.6 0 1.3-.5 1.6-.6.4-1.5.3-2-.2l-5.2-6.2-7.6.4z"/></svg>'
+)}`;
+
 function getThemeMode(): 'light' | 'dark' {
   return getCurrentTheme() === 'light' ? 'light' : 'dark';
 }
@@ -1797,9 +1807,15 @@ export class DeckGLMap {
       id: 'flight-delays-layer',
       data: delays,
       getPosition: (d) => [d.lon, d.lat],
-      getIcon: () => 'marker',
-      iconAtlas: getSharedLayerIconAtlas('flights'),
-      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getIcon: () => 'airport',
+      iconAtlas: AVIATION_AIRPORT_ICON_ATLAS,
+      iconMapping: AVIATION_AIRPORT_ICON_MAPPING,
+      getColor: (d) => {
+        if (d.severity === 'severe') return [255, 92, 92, 235] as [number, number, number, number];
+        if (d.severity === 'major') return [255, 165, 0, 230] as [number, number, number, number];
+        if (d.severity === 'moderate') return [255, 214, 10, 225] as [number, number, number, number];
+        return [84, 214, 133, 220] as [number, number, number, number];
+      },
       getSize: 14,
       sizeMinPixels: 8,
       sizeMaxPixels: 20,
@@ -1813,13 +1829,13 @@ export class DeckGLMap {
       id: 'aircraft-positions-layer',
       data: this.aircraftPositions,
       getPosition: (d) => [d.lon, d.lat],
-      getIcon: () => 'marker',
-      iconAtlas: getSharedLayerIconAtlas('flights'),
-      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getIcon: () => 'plane',
+      iconAtlas: AVIATION_PLANE_ICON_ATLAS,
+      iconMapping: AVIATION_PLANE_ICON_MAPPING,
       getSize: (d) => d.onGround ? 14 : 18,
       getColor: (d) => {
-        if (d.onGround) return [120, 120, 120, 160] as [number, number, number, number];
-        return [160, 100, 255, 220] as [number, number, number, number]; // Purple for all airborne
+        if (d.onGround) return [182, 186, 196, 185] as [number, number, number, number];
+        return [184, 186, 184, 230] as [number, number, number, number];
       },
       getAngle: (d) => -d.trackDeg,
       sizeMinPixels: 8,

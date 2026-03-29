@@ -9197,11 +9197,24 @@ a.prediction-link:hover {
   filter: drop-shadow(0 0 6px var(--flight-color));
 }
 
+.flight-delay-icon svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
 .aircraft-marker {
   font-size: 14px;
   line-height: 1;
-  filter: drop-shadow(0 0 6px currentColor);
+  color: #b8bab8;
+  filter: drop-shadow(0 0 7px rgba(184, 186, 184, 0.45));
   transform-origin: center;
+}
+
+.aircraft-marker svg {
+  display: block;
+  width: 16px;
+  height: 16px;
 }
 
 .flight-delay-label {

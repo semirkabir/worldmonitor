@@ -362,6 +362,39 @@
   flex-direction: column;
 }
 
+.edp-aircraft-photo {
+  margin-bottom: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.edp-aircraft-photo-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: color-mix(in srgb, var(--surface) 70%, black);
+}
+
+.edp-aircraft-photo-credit {
+  padding: 8px 10px;
+  font-size: 10px;
+  color: var(--text-faint);
+  border-top: 1px solid var(--border);
+}
+
+.edp-aircraft-photo-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.edp-aircraft-photo-link:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
 /* ── Responsive ────────────────────────────────────────────────────── */
 
 @media (max-width: 600px) {

@@ -15,6 +15,7 @@ import {
   CommodityHubRenderer,
 } from '@/components/entity-detail/renderers/financial-center';
 import { TechHQRenderer } from '@/components/entity-detail/renderers/tech-hq';
+import { AircraftRenderer } from '@/components/entity-detail/renderers/aircraft';
 
 export class EntityIntelManager implements AppModule {
   private ctx: AppContext;
@@ -55,6 +56,7 @@ export class EntityIntelManager implements AppModule {
       centralBank: new CentralBankRenderer(),
       commodityHub: new CommodityHubRenderer(),
       techHQ: new TechHQRenderer(),
+      aircraft: new AircraftRenderer(),
     };
   }
 }

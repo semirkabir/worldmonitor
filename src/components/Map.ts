@@ -64,6 +64,9 @@ import { getTrayOpenPreference, setTrayOpenPreference } from '@/app/ui-preferenc
 export type TimeRange = '1h' | '6h' | '24h' | '48h' | '7d' | 'all';
 export type MapView = 'global' | 'america' | 'mena' | 'eu' | 'asia' | 'latam' | 'africa' | 'oceania';
 
+const AIRPORT_MARKER_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M3 19h18v2H3z"/><path d="M6 17V9l6-4 6 4v8h-3v-4h-6v4z"/><rect x="10" y="10" width="4" height="3" rx="0.6"/></svg>';
+const AIRCRAFT_MARKER_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M2 12.2 3.2 10.8l7.6.4 5.2-6.2c.5-.6 1.4-.7 2-.2.5.4.7 1 .5 1.6l-2.1 5 4.4.2 1.4-1.5 1 .8-1 1.5 1 1.5-1 .8-1.4-1.5-4.4.2 2.1 5c.2.6 0 1.3-.5 1.6-.6.4-1.5.3-2-.2l-5.2-6.2-7.6.4z"/></svg>';
+
 interface MapState {
   zoom: number;
   pan: { x: number; y: number };
@@ -2476,7 +2479,7 @@ export class MapComponent {
 
         const icon = document.createElement('div');
         icon.className = 'flight-delay-icon';
-        icon.textContent = delay.delayType === 'ground_stop' ? '🛑' : '🛩️';
+        icon.innerHTML = delay.delayType === 'ground_stop' ? '🛑' : AIRPORT_MARKER_SVG;
         div.appendChild(icon);
 
         if (this.state.zoom >= 3) {
@@ -2513,11 +2516,11 @@ export class MapComponent {
         div.style.left = `${pt[0]}px`;
         div.style.top = `${pt[1]}px`;
         div.style.transform = `translate(-50%, -50%) rotate(${ac.trackDeg}deg)`;
-        div.style.color = ac.onGround ? '#888' : '#a064ff';
+        div.style.color = ac.onGround ? '#c3c7cf' : '#b8bab8';
         div.style.lineHeight = '1';
         div.style.pointerEvents = 'auto';
         div.style.cursor = 'pointer';
-        div.textContent = '🛩️';
+        div.innerHTML = AIRCRAFT_MARKER_SVG;
 
         div.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -2528,6 +2531,7 @@ export class MapComponent {
             x: e.clientX - rect.left,
             y: e.clientY - rect.top,
           });
+          this.onEntityClick?.('aircraft', ac);
         });
 
         this.overlays.appendChild(div);
