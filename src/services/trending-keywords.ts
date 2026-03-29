@@ -9,6 +9,7 @@ export interface TrendingHeadlineInput {
   pubDate: Date;
   source: string;
   link?: string;
+  imageUrl?: string;
 }
 
 interface StoredHeadline {
@@ -17,6 +18,7 @@ interface StoredHeadline {
   link: string;
   publishedAt: number;
   ingestedAt: number;
+  imageUrl?: string;
 }
 
 interface TermCandidate {
@@ -389,6 +391,7 @@ function recordTermCandidates(
       link: headline.link ?? '',
       publishedAt: Number.isFinite(headline.pubDate.getTime()) ? headline.pubDate.getTime() : now,
       ingestedAt: now,
+      imageUrl: headline.imageUrl,
     });
     addedAny = true;
   }
@@ -540,6 +543,14 @@ async function handleSpike(spike: TrendingSpike, config: TrendingConfig): Promis
       ? Math.min(0.95, priorityBoost)
       : Math.min(0.8, 0.45 + spike.count / 20);
 
+    // Build related articles with images for display
+    const relatedArticles = spike.headlines.slice(0, 6).map(h => ({
+      title: h.title,
+      source: h.source,
+      link: h.link,
+      imageUrl: h.imageUrl,
+    }));
+
     pushSignal({
       id: generateSignalId(),
       type: 'keyword_spike',
@@ -555,6 +566,7 @@ async function handleSpike(spike: TrendingSpike, config: TrendingConfig): Promis
         multiplier: spike.baseline > 0 ? spike.multiplier : undefined,
         sourceCount: spike.uniqueSources,
         explanation: `${spike.term}: ${spike.count} mentions across ${spike.uniqueSources} sources (${multiplierText})`,
+        relatedArticles,
       },
     });
   } catch (error) {

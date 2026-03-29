@@ -5958,6 +5958,7 @@ export class DeckGLMap {
     natural: 'earthquake', minerals: 'mineral',
     startupHubs: 'startupHub', techHQs: 'techHQ',
     accelerators: 'accelerator', cloudRegions: 'cloudRegion',
+    flights: 'flight',
   };
 
   /** Add MapLibre native symbol layers for globe mode (deck.gl can't project onto globe). */
@@ -5989,6 +5990,7 @@ export class DeckGLMap {
       { key: 'hotspots', items: (this.hotspots || []) as unknown as Array<Record<string, unknown>>, active: !!mapLayers.hotspots },
       { key: 'natural', items: this.earthquakes as unknown as Array<Record<string, unknown>>, active: !!mapLayers.natural },
       { key: 'minerals', items: CRITICAL_MINERALS as unknown as Array<Record<string, unknown>>, active: !!mapLayers.minerals },
+      { key: 'flights', items: this.flightDelays as unknown as Array<Record<string, unknown>>, active: !!mapLayers.flights },
     ];
 
     if (SITE_VARIANT === 'tech') {

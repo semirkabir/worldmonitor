@@ -269,7 +269,7 @@ export async function fetchFeed(feed: Feed): Promise<NewsItem[]> {
           threat,
           ...(topGeo && { lat: topGeo.hub.lat, lon: topGeo.hub.lon, locationName: topGeo.hub.name }),
           lang: feed.lang,
-          ...(SITE_VARIANT === 'happy' && { imageUrl: extractImageUrl(item) }),
+          imageUrl: extractImageUrl(item),
         };
       });
 
@@ -281,6 +281,7 @@ export async function fetchFeed(feed: Feed): Promise<NewsItem[]> {
       pubDate: item.pubDate,
       source: item.source,
       link: item.link,
+      imageUrl: item.imageUrl,
     })));
 
     if (isHeadlineMemoryEnabled() && mlWorker.isAvailable && mlWorker.isModelLoaded('embeddings') && parsed.length > 0) {

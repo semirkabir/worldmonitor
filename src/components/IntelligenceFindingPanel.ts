@@ -223,7 +223,18 @@ export class IntelligenceFindingPanel {
     const focalPoints = data.focalPointContext as string[] | undefined;
     const correlatedNews = data.correlatedNews as string[] | undefined;
 
+    // Get related articles for keyword spikes (with images)
+    const relatedArticles = data.relatedArticles as Array<{ title: string; source: string; link: string; imageUrl?: string }> | undefined;
+    const featuredImage = this.getFeaturedImage(relatedArticles);
+
     this.content.innerHTML = `
+      <!-- Featured image for keyword spikes -->
+      ${featuredImage ? `
+        <div class="ifp-featured-image">
+          <img src="${escapeHtml(featuredImage)}" alt="" loading="lazy" />
+        </div>
+      ` : ''}
+
       <!-- Main card -->
       <div class="ifp-main">
         <div class="ifp-type-row">
@@ -534,6 +545,17 @@ export class IntelligenceFindingPanel {
         ${rows}
       </div>
     `;
+  }
+
+  private getFeaturedImage(relatedArticles?: Array<{ title: string; source: string; link: string; imageUrl?: string }>): string | null {
+    if (!relatedArticles || relatedArticles.length === 0) return null;
+    // Find the first article with a valid image URL
+    for (const article of relatedArticles) {
+      if (article.imageUrl && article.imageUrl.trim().length > 0) {
+        return article.imageUrl;
+      }
+    }
+    return null;
   }
 
   private open(): void {

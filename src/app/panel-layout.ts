@@ -68,6 +68,38 @@ export interface PanelLayoutCallbacks {
   loadSecurityAdvisories?: () => Promise<void>;
 }
 
+export interface CustomCategory {
+  id: string;
+  name: string;
+  icon: string;
+  createdAt: number;
+}
+
+const CUSTOM_CATEGORIES_KEY = 'wm-custom-categories-v1';
+
+function loadCustomCategories(): CustomCategory[] {
+  try {
+    const raw = localStorage.getItem(CUSTOM_CATEGORIES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as CustomCategory[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCustomCategories(categories: CustomCategory[]): void {
+  try {
+    localStorage.setItem(CUSTOM_CATEGORIES_KEY, JSON.stringify(categories));
+  } catch {
+    // ignore
+  }
+}
+
+function generateCategoryId(): string {
+  return 'custom-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+}
+
 export class PanelLayoutManager implements AppModule {
   private ctx: AppContext;
   private callbacks: PanelLayoutCallbacks;
@@ -77,6 +109,8 @@ export class PanelLayoutManager implements AppModule {
   private criticalBannerEl: HTMLElement | null = null;
   private aviationCommandBar: AviationCommandBar | null = null;
   private readonly applyTimeRangeFilterDebounced: (() => void) & { cancel(): void };
+  private customCategories: CustomCategory[] = [];
+  private hoverTimers: Map<string, number> = new Map();
 
   constructor(ctx: AppContext, callbacks: PanelLayoutCallbacks) {
     this.ctx = ctx;
@@ -84,6 +118,7 @@ export class PanelLayoutManager implements AppModule {
     this.applyTimeRangeFilterDebounced = debounce(() => {
       this.applyTimeRangeFilterToNewsPanels();
     }, 120);
+    this.customCategories = loadCustomCategories();
   }
 
   init(): void {
@@ -126,10 +161,21 @@ export class PanelLayoutManager implements AppModule {
           <button class="hamburger-btn" id="hamburgerBtn" aria-label="Menu">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
-          <div class="variant-switcher">${(() => {
+          <div class="variant-switcher" id="variantSwitcher">${(() => {
         const local = this.ctx.isDesktopApp || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
         const vHref = (v: string, prod: string) => local || SITE_VARIANT === v ? '#' : prod;
         const vTarget = (_v: string) => '';
+        const customCats = this.customCategories.map(cat => `
+            <span class="variant-divider"></span>
+            <a href="#"
+               class="variant-option custom-category"
+               data-custom-id="${cat.id}"
+               title="${escapeHtml(cat.name)}">
+              <span class="variant-icon">${cat.icon}</span>
+              <span class="variant-label">${escapeHtml(cat.name)}</span>
+              <button class="variant-delete" data-delete-id="${cat.id}" title="Delete category">×</button>
+            </a>
+        `).join('');
         return `
             <a href="${vHref('full', 'https://worldmonitor.app')}"
                class="variant-option ${SITE_VARIANT === 'full' ? 'active' : ''}"
@@ -183,7 +229,13 @@ export class PanelLayoutManager implements AppModule {
                title="${t('header.conflicts')}${SITE_VARIANT === 'conflicts' ? ` ${t('common.currentVariant')}` : ''}">
               <span class="variant-icon">⚔️</span>
               <span class="variant-label">${t('header.conflicts')}</span>
-            </a>`;
+            </a>
+            ${customCats}
+            <span class="variant-divider"></span>
+            <button class="variant-option new-category" id="newCategoryBtn" title="Create new category">
+              <span class="variant-icon">+</span>
+              <span class="variant-label">New</span>
+            </button>`;
       })()}</div>
           <span class="logo-mobile">World Monitor</span>${BETA_MODE ? '<span class="beta-badge">BETA</span>' : ''}
           <button class="mobile-settings-btn" id="mobileSettingsBtn" title="${t('header.settings')}">
@@ -355,10 +407,87 @@ export class PanelLayoutManager implements AppModule {
     `;
 
     this.createPanels();
+    this.setupCustomCategoryHandlers();
 
     if (this.ctx.isMobile) {
       this.setupMobileMapToggle();
     }
+  }
+
+  private setupCustomCategoryHandlers(): void {
+    const variantSwitcher = document.getElementById('variantSwitcher');
+    if (!variantSwitcher) return;
+
+    // Handle "New" category button
+    const newCategoryBtn = document.getElementById('newCategoryBtn');
+    newCategoryBtn?.addEventListener('click', () => this.handleCreateCategory());
+
+    // Handle hover effects and delete buttons for custom categories
+    const customCategoryLinks = variantSwitcher.querySelectorAll('.custom-category');
+    customCategoryLinks.forEach((link) => {
+      const categoryId = link.getAttribute('data-custom-id');
+      if (!categoryId) return;
+
+      // Show delete button after 3 seconds of hover
+      link.addEventListener('mouseenter', () => {
+        const timer = window.setTimeout(() => {
+          link.classList.add('show-delete');
+        }, 3000);
+        this.hoverTimers.set(categoryId, timer);
+      });
+
+      // Cancel timer and hide delete button on mouse leave
+      link.addEventListener('mouseleave', () => {
+        const timer = this.hoverTimers.get(categoryId);
+        if (timer) {
+          window.clearTimeout(timer);
+          this.hoverTimers.delete(categoryId);
+        }
+        link.classList.remove('show-delete');
+      });
+    });
+
+    // Handle delete button clicks
+    variantSwitcher.addEventListener('click', (e) => {
+      const deleteBtn = (e.target as HTMLElement).closest('.variant-delete');
+      if (!deleteBtn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const categoryId = deleteBtn.getAttribute('data-delete-id');
+      if (categoryId) {
+        this.handleDeleteCategory(categoryId);
+      }
+    });
+  }
+
+  private handleCreateCategory(): void {
+    const name = prompt('Enter category name:');
+    if (!name || name.trim().length === 0) return;
+
+    const icon = prompt('Enter icon emoji (e.g., 🎯):') || '📁';
+
+    const newCategory: CustomCategory = {
+      id: generateCategoryId(),
+      name: name.trim(),
+      icon: icon.trim(),
+      createdAt: Date.now(),
+    };
+
+    this.customCategories.push(newCategory);
+    saveCustomCategories(this.customCategories);
+    this.renderLayout();
+  }
+
+  private handleDeleteCategory(categoryId: string): void {
+    const category = this.customCategories.find(c => c.id === categoryId);
+    if (!category) return;
+
+    const confirmed = confirm(`Delete category "${category.name}"?`);
+    if (!confirmed) return;
+
+    this.customCategories = this.customCategories.filter(c => c.id !== categoryId);
+    saveCustomCategories(this.customCategories);
+    this.renderLayout();
   }
 
   private setupMobileMapToggle(): void {
