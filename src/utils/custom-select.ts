@@ -94,6 +94,7 @@ export function upgradeSelect(select: HTMLSelectElement): void {
   }
   if (cls.contains('popup-sound-select')) {
     trigger.style.maxWidth = '120px';
+    menu.classList.add('wm-sel-menu--right');
   }
 
   const valEl = document.createElement('span');

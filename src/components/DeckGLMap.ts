@@ -359,6 +359,10 @@ export class DeckGLMap {
   private techEvents: TechEventMarker[] = [];
   private flightDelays: AirportDelayAlert[] = [];
   private aircraftPositions: PositionSample[] = [];
+  private aircraftHistory = new Map<string, [number, number][]>();
+  private readonly AIRCRAFT_HISTORY_MAX = 20;
+  private selectedAircraftIcao: string | null = null;
+  private selectedAircraftType: 'commercial' | 'military' | null = null;
   private aircraftFetchTimer: ReturnType<typeof setInterval> | null = null;
   private news: NewsItem[] = [];
   private newsLocations: Array<{ lat: number; lon: number; title: string; threatLevel: string; timestamp?: Date }> = [];
@@ -717,10 +721,18 @@ export class DeckGLMap {
       onClick: (info: PickingInfo) => {
         if (info.object) {
           this.handleEntityClick(info);
-        } else if (info.coordinate && this.onCountryClick) {
-          const [lon, lat] = info.coordinate as [number, number];
-          const country = this.resolveCountryFromCoordinate(lon, lat);
-          this.onCountryClick({ lat, lon, ...(country ? { code: country.code, name: country.name } : {}) });
+        } else {
+          // Empty map click — clear any active aircraft trajectory
+          if (this.selectedAircraftIcao) {
+            this.selectedAircraftIcao = null;
+            this.selectedAircraftType = null;
+            this.render();
+          }
+          if (info.coordinate && this.onCountryClick) {
+            const [lon, lat] = info.coordinate as [number, number];
+            const country = this.resolveCountryFromCoordinate(lon, lat);
+            this.onCountryClick({ lat, lon, ...(country ? { code: country.code, name: country.name } : {}) });
+          }
         }
       },
       pickingRadius: 10,
@@ -1381,6 +1393,9 @@ export class DeckGLMap {
       layers.push(this.createFlightDelaysLayer(filteredFlightDelays));
     }
 
+    // Aircraft trajectory (trail + heading) for selected aircraft — rendered under icons
+    layers.push(...this.createAircraftTrajectoryLayers());
+
     // Aircraft positions layer (live tracking, under flights toggle)
     if (mapLayers.flights && this.aircraftPositions.length > 0) {
       layers.push(this.createAircraftPositionsLayer());
@@ -1844,6 +1859,85 @@ export class DeckGLMap {
       pickable: true,
       billboard: false,
     });
+  }
+
+  private createAircraftTrajectoryLayers(): Layer[] {
+    const layers: Layer[] = [];
+    if (!this.selectedAircraftIcao || !this.selectedAircraftType) return layers;
+
+    if (this.selectedAircraftType === 'commercial') {
+      const aircraft = this.aircraftPositions.find(a => a.icao24 === this.selectedAircraftIcao);
+      if (!aircraft) return layers;
+
+      // History trail
+      const hist = this.aircraftHistory.get(this.selectedAircraftIcao) ?? [];
+      if (hist.length > 1) {
+        layers.push(new PathLayer({
+          id: 'aircraft-trail-layer',
+          data: [{ path: hist }],
+          getPath: (d: { path: [number, number][] }) => d.path,
+          getColor: [255, 165, 0, 200] as [number, number, number, number],
+          getWidth: 2,
+          widthMinPixels: 2,
+          widthMaxPixels: 4,
+          pickable: false,
+        }));
+      }
+
+      // Heading projection (~500 km forward)
+      const headingRad = (aircraft.trackDeg * Math.PI) / 180;
+      const distDeg = 4.5;
+      const fwdLon = aircraft.lon + Math.sin(headingRad) * distDeg / Math.cos((aircraft.lat * Math.PI) / 180);
+      const fwdLat = aircraft.lat + Math.cos(headingRad) * distDeg;
+      layers.push(new PathLayer({
+        id: 'aircraft-heading-layer',
+        data: [{ path: [[aircraft.lon, aircraft.lat], [fwdLon, fwdLat]] as [number, number][] }],
+        getPath: (d: { path: [number, number][] }) => d.path,
+        getColor: [100, 210, 255, 160] as [number, number, number, number],
+        getWidth: 1.5,
+        widthMinPixels: 1,
+        widthMaxPixels: 3,
+        pickable: false,
+      }));
+    }
+
+    if (this.selectedAircraftType === 'military') {
+      const flight = this.militaryFlights.find(f => f.hexCode === this.selectedAircraftIcao);
+      if (!flight) return layers;
+
+      // History trail from track data (stored as [lat, lon], deck.gl needs [lon, lat])
+      if (flight.track && flight.track.length > 1) {
+        const path = flight.track.map(([lat, lon]) => [lon, lat] as [number, number]);
+        layers.push(new PathLayer({
+          id: 'aircraft-trail-layer',
+          data: [{ path }],
+          getPath: (d: { path: [number, number][] }) => d.path,
+          getColor: [255, 100, 100, 200] as [number, number, number, number],
+          getWidth: 2,
+          widthMinPixels: 2,
+          widthMaxPixels: 4,
+          pickable: false,
+        }));
+      }
+
+      // Heading projection
+      const headingRad = (flight.heading * Math.PI) / 180;
+      const distDeg = 4.5;
+      const fwdLon = flight.lon + Math.sin(headingRad) * distDeg / Math.cos((flight.lat * Math.PI) / 180);
+      const fwdLat = flight.lat + Math.cos(headingRad) * distDeg;
+      layers.push(new PathLayer({
+        id: 'aircraft-heading-layer',
+        data: [{ path: [[flight.lon, flight.lat], [fwdLon, fwdLat]] as [number, number][] }],
+        getPath: (d: { path: [number, number][] }) => d.path,
+        getColor: [255, 160, 100, 160] as [number, number, number, number],
+        getWidth: 1.5,
+        widthMinPixels: 1,
+        widthMaxPixels: 3,
+        pickable: false,
+      }));
+    }
+
+    return layers;
   }
 
   private createGhostLayer<T>(id: string, data: T[], getPosition: (d: T) => [number, number], opts: { radiusMinPixels?: number } = {}): ScatterplotLayer<T> {
@@ -3674,6 +3768,33 @@ export class DeckGLMap {
       if (fullConflict) data = fullConflict;
     }
 
+    // Toggle trajectory on aircraft/military-flight click
+    if (layerId === 'aircraft-positions-layer') {
+      const aircraft = data as PositionSample;
+      if (this.selectedAircraftIcao === aircraft.icao24 && this.selectedAircraftType === 'commercial') {
+        this.selectedAircraftIcao = null;
+        this.selectedAircraftType = null;
+      } else {
+        this.selectedAircraftIcao = aircraft.icao24;
+        this.selectedAircraftType = 'commercial';
+      }
+      this.render();
+    } else if (layerId === 'military-flights-layer') {
+      const flight = data as MilitaryFlight;
+      if (this.selectedAircraftIcao === flight.hexCode && this.selectedAircraftType === 'military') {
+        this.selectedAircraftIcao = null;
+        this.selectedAircraftType = null;
+      } else {
+        this.selectedAircraftIcao = flight.hexCode;
+        this.selectedAircraftType = 'military';
+      }
+      this.render();
+    } else {
+      // Clicking any other entity clears the trajectory
+      this.selectedAircraftIcao = null;
+      this.selectedAircraftType = null;
+    }
+
     // Dismiss the hover popup
     this.popup.hide();
 
@@ -4922,6 +5043,15 @@ export class DeckGLMap {
   }
 
   public setAircraftPositions(positions: PositionSample[]): void {
+    for (const pos of positions) {
+      const hist = this.aircraftHistory.get(pos.icao24) ?? [];
+      const last = hist[hist.length - 1];
+      if (!last || last[0] !== pos.lon || last[1] !== pos.lat) {
+        hist.push([pos.lon, pos.lat]);
+        if (hist.length > this.AIRCRAFT_HISTORY_MAX) hist.shift();
+        this.aircraftHistory.set(pos.icao24, hist);
+      }
+    }
     this.aircraftPositions = positions;
     this.render();
   }
