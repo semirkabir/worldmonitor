@@ -3927,20 +3927,6 @@ export class DeckGLMap {
       }
       toggle.appendChild(labelSpan);
 
-      // Add "+" button after the conflicts row
-      if (key === 'conflicts') {
-        const addBtn = document.createElement('button');
-        addBtn.className = 'custom-category-add-btn';
-        addBtn.title = 'Add custom category';
-        addBtn.textContent = '+';
-        addBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          this.openCustomCategoryModal(layerConfig, list, status, layersPanel);
-        });
-        toggle.appendChild(addBtn);
-      }
-
       list.appendChild(toggle);
     });
 

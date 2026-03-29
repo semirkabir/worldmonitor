@@ -792,7 +792,7 @@ export class MapContainer {
 
   public onEntityClicked(callback: (type: string, data: unknown) => void): void {
     this.cachedOnEntityClicked = callback;
-    if (this.useDeckGL) { this.deckGLMap?.setOnEntityClick(callback); }
+    if (this.useDeckGL) { this.deckGLMap?.setOnEntityClick(callback); } else { this.svgMap?.setOnEntityClick(callback); }
   }
 
   public fitCountry(code: string): void {

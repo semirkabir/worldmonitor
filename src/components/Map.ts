@@ -148,6 +148,7 @@ export class MapComponent {
   private onGeoHubClick?: (hub: GeoHubActivity) => void;
   private popup: MapPopup;
   private onHotspotClick?: (hotspot: Hotspot) => void;
+  private onEntityClick?: (type: string, data: unknown) => void;
   private onTimeRangeChange?: (range: TimeRange) => void;
   private onLayerChange?: (layer: keyof MapLayers, enabled: boolean, source: 'user' | 'programmatic') => void;
   private layerZoomOverrides: Partial<Record<keyof MapLayers, boolean>> = {};
@@ -1597,6 +1598,7 @@ export class MapComponent {
           });
           this.popup.loadHotspotGdeltContext(spot);
           this.onHotspotClick?.(spot);
+          this.onEntityClick?.('hotspot', spot);
         });
 
         this.overlays.appendChild(div);
@@ -2461,7 +2463,7 @@ export class MapComponent {
       });
     }
 
-    // Flight Delays (delay severity colors + ✈️ icons)
+    // Flight Delays (delay severity colors + plane icons)
     if (this.state.layers.flights) {
       this.flightDelays.forEach((delay) => {
         const pos = projection([delay.lon, delay.lat]);
@@ -2474,7 +2476,7 @@ export class MapComponent {
 
         const icon = document.createElement('div');
         icon.className = 'flight-delay-icon';
-        icon.textContent = delay.delayType === 'ground_stop' ? '🛑' : delay.severity === 'severe' ? '✈️' : '🛫';
+        icon.textContent = delay.delayType === 'ground_stop' ? '🛑' : '🛩️';
         div.appendChild(icon);
 
         if (this.state.zoom >= 3) {
@@ -2510,13 +2512,12 @@ export class MapComponent {
         div.style.position = 'absolute';
         div.style.left = `${pt[0]}px`;
         div.style.top = `${pt[1]}px`;
-        div.style.transform = `rotate(${ac.trackDeg}deg)`;
-        div.style.fontSize = '12px';
+        div.style.transform = `translate(-50%, -50%) rotate(${ac.trackDeg}deg)`;
         div.style.color = ac.onGround ? '#888' : '#a064ff';
         div.style.lineHeight = '1';
         div.style.pointerEvents = 'auto';
         div.style.cursor = 'pointer';
-        div.textContent = '\u25B2'; // ▲
+        div.textContent = '🛩️';
 
         div.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -2545,11 +2546,11 @@ export class MapComponent {
         div.style.left = `${pos[0]}px`;
         div.style.top = `${pos[1]}px`;
 
-        // Crosshair icon - rotates with heading
+        // Plane icon - rotates with heading
         const icon = document.createElement('div');
         icon.className = `military-flight-icon ${flight.aircraftType}`;
         icon.style.transform = `rotate(${flight.heading}deg)`;
-        // CSS handles the crosshair rendering
+        icon.textContent = '🛩️';
         div.appendChild(icon);
 
         // Show callsign at higher zoom levels
@@ -3225,6 +3226,7 @@ export class MapComponent {
     });
     this.popup.loadHotspotGdeltContext(hotspot);
     this.onHotspotClick?.(hotspot);
+    this.onEntityClick?.('hotspot', hotspot);
   }
 
   public triggerConflictClick(id: string): void {
@@ -3525,6 +3527,10 @@ export class MapComponent {
 
   public onHotspotClicked(callback: (hotspot: Hotspot) => void): void {
     this.onHotspotClick = callback;
+  }
+
+  public setOnEntityClick(callback: (type: string, data: unknown) => void): void {
+    this.onEntityClick = callback;
   }
 
   public onTimeRangeChanged(callback: (range: TimeRange) => void): void {

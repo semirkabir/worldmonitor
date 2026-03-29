@@ -31,7 +31,7 @@ const ICONS = {
   shield: svgIcon('<path d="M12 3 19 6v5c0 4.6-2.7 7.8-7 10-4.3-2.2-7-5.4-7-10V6l7-3Z"/>'),
   ship: svgIcon('<path d="M4 14h16"/>', '<path d="M7 14V9h10v5"/>', '<path d="M3 17c1.2 1 2.4 1.5 3.5 1.5S8.8 18 10 17c1.2 1 2.4 1.5 3.5 1.5S15.8 18 17 17c1.2 1 2.4 1.5 3.5 1.5"/>', '<path d="M12 5v4"/>'),
   route: svgIcon('<circle cx="6" cy="17" r="1.5"/>', '<circle cx="18" cy="7" r="1.5"/>', '<path d="M7.5 15.5c2-2 3.5-3 5.5-4"/>', '<path d="m13 8 4 0-2-2"/>'),
-  plane: svgIcon('<path d="M12 3v7"/>', '<path d="M5 10l7 2 7-2"/>', '<path d="M10 14l-2 5"/>', '<path d="M14 14l2 5"/>'),
+  plane: svgIcon('<path d="M2 12h7l3-8h2l-1 8h7l2-2 1 1-2 2 2 2-1 1-2-2h-7l1 8h-2l-3-8H2z"/>'),
   megaphone: svgIcon('<path d="M4 12v-2l10-4v12l-10-4v-2"/>', '<path d="M14 8h3a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-3"/>', '<path d="M6 15v4"/>'),
   usersArrow: svgIcon('<circle cx="8" cy="9" r="2"/>', '<circle cx="12.5" cy="9.5" r="1.5"/>', '<path d="M5 17c.6-2 2-3 4-3s3.4 1 4 3"/>', '<path d="M16 8h4"/>', '<path d="m18 6 2 2-2 2"/>'),
   cloud: svgIcon('<path d="M8 18h8a4 4 0 0 0 .5-8A5.5 5.5 0 0 0 6 11a3.5 3.5 0 0 0 2 7Z"/>'),

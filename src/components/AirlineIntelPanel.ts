@@ -55,9 +55,10 @@ function expCountdown(exp: Date | null, now: number): string {
 
 const TABS = ['ops', 'flights', 'airlines', 'tracking', 'news', 'prices'] as const;
 type Tab = typeof TABS[number];
+const AVIATION_ICON = '🛩️';
 
 const TAB_LABELS: Record<Tab, string> = {
-    ops: '🛫 Ops', flights: '✈️ Flights', airlines: '🏢 Airlines',
+    ops: `${AVIATION_ICON} Ops`, flights: `${AVIATION_ICON} Flights`, airlines: '🏢 Airlines',
     tracking: '📡 Track', news: '📰 News', prices: '💸 Prices',
 };
 
@@ -83,7 +84,7 @@ export class AirlineIntelPanel extends Panel {
     private tabBar!: HTMLElement;
 
     constructor() {
-        super({ id: 'airline-intel', title: '✈️ Airline Intelligence', trackActivity: true });
+        super({ id: 'airline-intel', title: `${AVIATION_ICON} Airline Intelligence`, trackActivity: true });
 
         const wl = aviationWatchlist.get();
         this.airports = wl.airports.slice(0, 8);

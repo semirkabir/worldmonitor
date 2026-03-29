@@ -562,10 +562,10 @@ test.describe('desktop runtime routing guardrails', () => {
         calls.push(url);
         const parsed = new URL(url);
 
-        // Sebuf proto: POST /api/market/v1/list-market-quotes
-        if (parsed.pathname === '/api/market/v1/list-market-quotes') {
-          const body = init?.body ? JSON.parse(String(init.body)) : {};
-          const symbols: string[] = body.symbols || [];
+      // Sebuf proto: POST /api/market/v1/list-market-quotes
+      if (parsed.pathname === '/api/market/v1/list-market-quotes') {
+        const body = init?.body ? JSON.parse(String(init.body)) : {};
+        const symbols: string[] = body.symbols || [];
           const quotes = symbols
             .filter((s: string) => yahooOnly.has(s))
             .map((s: string) => {
@@ -577,6 +577,17 @@ test.describe('desktop runtime routing guardrails', () => {
             finnhubSkipped: true,
             skipReason: 'FINNHUB_API_KEY not configured',
           });
+        }
+
+        // Sebuf proto: POST /api/market/v1/list-commodity-quotes
+        if (parsed.pathname === '/api/market/v1/list-commodity-quotes') {
+          const body = init?.body ? JSON.parse(String(init.body)) : {};
+          const symbols: string[] = body.symbols || [];
+          const quotes = symbols.map((s: string) => {
+            const base = s.length * 100;
+            return { symbol: s, name: s, display: s, price: base + 1, change: ((base + 1) - base) / base * 100, sparkline: [base - 2, base - 1, base, base + 1] };
+          });
+          return responseJson({ quotes });
         }
 
         // Sebuf proto: POST /api/market/v1/list-crypto-quotes
@@ -627,7 +638,9 @@ test.describe('desktop runtime routing guardrails', () => {
         await (DataLoaderManager.prototype as unknown as { loadMarkets: () => Promise<void> })
           .loadMarkets.call(fakeApp);
 
-        // Commodities now go through listMarketQuotes (batch), not individual Yahoo calls
+        const commodityQuoteCalls = calls.filter((url) =>
+          new URL(url).pathname === '/api/market/v1/list-commodity-quotes'
+        );
         const marketQuoteCalls = calls.filter((url) =>
           new URL(url).pathname === '/api/market/v1/list-market-quotes'
         );
@@ -642,6 +655,7 @@ test.describe('desktop runtime routing guardrails', () => {
           cryptoRenders,
           apiStatuses,
           latestMarketsCount: fakeApp.ctx.latestMarkets.length,
+          commodityQuoteCalls: commodityQuoteCalls.length,
           marketQuoteCalls: marketQuoteCalls.length,
         };
       } finally {
@@ -658,8 +672,8 @@ test.describe('desktop runtime routing guardrails', () => {
 
     expect(result.commoditiesRenders.some((count) => count > 0)).toBe(true);
     expect(result.commoditiesConfigErrors.length).toBe(0);
-    // Commodities go through listMarketQuotes batch (at least 2 calls: stocks + commodities)
-    expect(result.marketQuoteCalls).toBeGreaterThanOrEqual(2);
+    expect(result.commodityQuoteCalls).toBeGreaterThanOrEqual(1);
+    expect(result.marketQuoteCalls).toBeGreaterThanOrEqual(1);
 
     expect(result.cryptoRenders.some((count) => count > 0)).toBe(true);
     expect(result.apiStatuses.some((entry) => entry.name === 'Finnhub' && entry.status === 'error')).toBe(true);

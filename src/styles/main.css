@@ -9192,7 +9192,16 @@ a.prediction-link:hover {
 
 .flight-delay-icon {
   font-size: 18px;
+  line-height: 1;
+  color: var(--flight-color);
   filter: drop-shadow(0 0 6px var(--flight-color));
+}
+
+.aircraft-marker {
+  font-size: 14px;
+  line-height: 1;
+  filter: drop-shadow(0 0 6px currentColor);
+  transform-origin: center;
 }
 
 .flight-delay-label {
@@ -9330,59 +9339,31 @@ a.prediction-link:hover {
 .military-flight-icon {
   width: 20px;
   height: 20px;
-  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mil-color);
+  font-size: 18px;
+  line-height: 1;
+  text-shadow: 0 0 6px var(--mil-color), 0 0 12px var(--mil-color);
   transition: transform 0.3s ease;
-}
-
-/* Crosshair horizontal line */
-.military-flight-icon::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--mil-color);
-  transform: translateY(-50%);
-  box-shadow: 0 0 6px var(--mil-color), 0 0 12px var(--mil-color);
-}
-
-/* Crosshair vertical line */
-.military-flight-icon::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--mil-color);
-  transform: translateX(-50%);
-  box-shadow: 0 0 6px var(--mil-color), 0 0 12px var(--mil-color);
-}
-
-/* Special aircraft types get different crosshair styles */
-.military-flight-icon.bomber::before,
-.military-flight-icon.bomber::after {
-  background: var(--semantic-critical);
-  box-shadow: 0 0 4px var(--semantic-critical);
-}
-
-.military-flight-icon.reconnaissance::before,
-.military-flight-icon.reconnaissance::after,
-.military-flight-icon.awacs::before,
-.military-flight-icon.awacs::after {
-  background: var(--status-live);
-  box-shadow: 0 0 4px var(--status-live);
 }
 
 .military-flight-icon.fighter {
   width: 22px;
   height: 22px;
+  font-size: 20px;
 }
 
-.military-flight-icon.fighter::before,
-.military-flight-icon.fighter::after {
-  box-shadow: 0 0 5px var(--mil-color);
+.military-flight-icon.bomber {
+  color: var(--semantic-critical);
+  text-shadow: 0 0 5px var(--semantic-critical), 0 0 10px var(--semantic-critical);
+}
+
+.military-flight-icon.reconnaissance,
+.military-flight-icon.awacs {
+  color: var(--status-live);
+  text-shadow: 0 0 5px var(--status-live), 0 0 10px var(--status-live);
 }
 
 .military-flight-label {
@@ -12965,31 +12946,50 @@ a.prediction-link:hover {
 }
 
 /* Intelligence finding notification popup */
-.intel-notif-popup {
+.intel-notif-stack {
   position: fixed;
   top: 54px;
   right: 16px;
-  width: 300px;
+  width: 320px;
+  min-height: 120px;
+  pointer-events: none;
   z-index: 11500;
+  perspective: 1200px;
+  perspective-origin: top right;
+}
+
+.intel-notif-popup {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 300px;
   background: var(--panel-bg);
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
   overflow: hidden;
   opacity: 0;
-  transform: translateY(-12px);
-  transition: opacity 0.22s ease, transform 0.22s ease;
+  transform: translate3d(calc(var(--notif-offset-x, 0px) * -1), var(--notif-offset-y, 0px), 0) scale(var(--notif-scale, 1)) rotateX(var(--notif-rotate-x, 0deg));
+  transform-origin: top right;
+  transition: opacity 0.22s ease, transform 0.22s ease, box-shadow 0.22s ease, filter 0.22s ease;
   pointer-events: auto;
+  will-change: transform, opacity;
 }
 
 .intel-notif-popup.visible {
-  opacity: 1;
-  transform: translateY(0);
+  opacity: var(--notif-opacity, 1);
 }
 
 .intel-notif-popup.leaving {
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translate3d(18px, -12px, 0) scale(0.96) rotateX(10deg);
+}
+
+.intel-notif-popup.intel-notif-popup-stacked {
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.24),
+    0 4px 0 rgba(255, 255, 255, 0.03) inset;
+  filter: saturate(0.9) brightness(0.96);
 }
 
 .intel-notif-header {
@@ -13623,14 +13623,28 @@ a.prediction-link:hover {
 .ifp-news-item {
   display: flex;
   gap: 8px;
-  padding: 7px 0;
-  border-bottom: 1px solid var(--border-dim, rgba(255,255,255,0.05));
+  align-items: flex-start;
+  padding: 8px;
+  border: 1px solid var(--overlay-light);
   cursor: pointer;
   text-decoration: none;
+  color: inherit;
+  border-radius: 8px;
+  background: var(--overlay-subtle);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.ifp-news-item:visited {
+  color: inherit;
+}
+
+.ifp-news-item:hover {
+  background: var(--overlay-light);
+  border-color: var(--overlay-medium);
 }
 
 .ifp-news-item:last-child {
-  border-bottom: none;
+  border-bottom: 1px solid var(--overlay-light);
 }
 
 .ifp-news-item:hover .ifp-news-headline {

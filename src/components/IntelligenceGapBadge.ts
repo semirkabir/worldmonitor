@@ -111,6 +111,8 @@ export class IntelligenceFindingsBadge {
   private popupEnabled: boolean;
   private notificationSound: NotificationSound;
   private contextMenu: HTMLElement | null = null;
+  private popupContainer: HTMLElement | null = null;
+  private activePopups: HTMLElement[] = [];
 
   constructor() {
     this.enabled = IntelligenceFindingsBadge.getStoredEnabledState();
@@ -385,13 +387,56 @@ export class IntelligenceFindingsBadge {
     return map[priority] ?? 0;
   }
 
-  private showNotificationPopup(finding: UnifiedFinding): void {
-    document.querySelector('.intel-notif-popup')?.remove();
+  private ensurePopupContainer(): HTMLElement {
+    if (this.popupContainer?.isConnected) return this.popupContainer;
 
+    const container = document.createElement('div');
+    container.className = 'intel-notif-stack';
+    document.body.appendChild(container);
+    this.popupContainer = container;
+    return container;
+  }
+
+  private syncPopupStack(): void {
+    if (this.activePopups.length === 0) {
+      this.popupContainer?.remove();
+      this.popupContainer = null;
+      return;
+    }
+
+    this.activePopups.forEach((popup, index) => {
+      const depth = this.activePopups.length - index - 1;
+      popup.style.setProperty('--notif-depth', String(depth));
+      popup.style.setProperty('--notif-offset-y', `${depth * 14}px`);
+      popup.style.setProperty('--notif-offset-x', `${depth * 6}px`);
+      popup.style.setProperty('--notif-scale', `${Math.max(0.84, 1 - depth * 0.045)}`);
+      popup.style.setProperty('--notif-rotate-x', `${Math.min(18, depth * 4)}deg`);
+      popup.style.setProperty('--notif-opacity', `${Math.max(0.38, 1 - depth * 0.16)}`);
+      popup.style.zIndex = String(11500 - depth);
+      popup.classList.toggle('intel-notif-popup-stacked', depth > 0);
+    });
+  }
+
+  private removePopup(popup: HTMLElement): void {
+    if (!popup.isConnected) return;
+
+    popup.classList.add('leaving');
+    popup.classList.remove('visible');
+    const finish = () => {
+      const idx = this.activePopups.indexOf(popup);
+      if (idx >= 0) this.activePopups.splice(idx, 1);
+      popup.remove();
+      this.syncPopupStack();
+    };
+    window.setTimeout(finish, 240);
+  }
+
+  private showNotificationPopup(finding: UnifiedFinding): void {
     const priorityColor: Record<string, string> = {
       critical: '#ef4444', high: '#f97316', medium: '#eab308', low: '#6b7280',
     };
     const color = priorityColor[finding.priority] ?? '#6b7280';
+    const container = this.ensurePopupContainer();
 
     const popup = document.createElement('div');
     popup.className = 'intel-notif-popup';
@@ -409,8 +454,7 @@ export class IntelligenceFindingsBadge {
     `;
 
     const dismiss = () => {
-      popup.classList.add('leaving');
-      setTimeout(() => popup.remove(), 240);
+      this.removePopup(popup);
     };
 
     const openPanel = () => {
@@ -431,7 +475,9 @@ export class IntelligenceFindingsBadge {
       openPanel();
     });
 
-    document.body.appendChild(popup);
+    container.appendChild(popup);
+    this.activePopups.push(popup);
+    this.syncPopupStack();
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         popup.classList.add('visible');
@@ -710,6 +756,10 @@ export class IntelligenceFindingsBadge {
     }
     document.removeEventListener('wm:intelligence-updated', this.boundUpdate);
     document.removeEventListener('click', this.boundCloseDropdown);
+    this.activePopups.forEach((popup) => popup.remove());
+    this.activePopups = [];
+    this.popupContainer?.remove();
+    this.popupContainer = null;
     this.badge.remove();
   }
 }
