@@ -20419,55 +20419,6 @@ body:has(.tauri-titlebar) .breaking-news-container {
   font-size: 10px;
 }
 
-.map-tray-collapse {
-  display: none;
-}
-
-.map-tray-expand-handle {
-  width: 100%;
-  height: 24px;
-  border: none;
-  border-top: 1px solid var(--border);
-  border-radius: 0;
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  font-family: inherit;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  transition: background-color 0.2s ease;
-  animation: expand-handle-bounce 2s ease-in-out infinite;
-}
-
-.map-tray-expand-handle:hover {
-  background: var(--bg-tertiary);
-}
-
-.expand-handle-icon {
-  display: block;
-  color: var(--text-secondary);
-  transition: color 0.2s ease, transform 0.3s ease;
-  transform: rotate(0deg);
-}
-
-.map-tray-expand-handle.collapsed .expand-handle-icon {
-  transform: rotate(180deg);
-}
-
-.map-tray-expand-handle:hover .expand-handle-icon {
-  color: var(--text);
-}
-
-@keyframes expand-handle-bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-3px);
-  }
-}
 
 .map-tray-body.collapsed {
   display: none !important;

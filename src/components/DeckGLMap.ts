@@ -4493,11 +4493,6 @@ export class DeckGLMap {
     legend.className = 'map-legend deckgl-legend map-tray';
     legend.innerHTML = `
       <div class="legend-items map-tray-body"></div>
-      <button type="button" class="map-tray-expand-handle" title="Expand/Collapse">
-        <svg class="expand-handle-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="18 15 12 9 6 15"></polyline>
-        </svg>
-      </button>
     `;
 
     // CII choropleth gradient legend (shown when layer is active)
@@ -4517,19 +4512,6 @@ export class DeckGLMap {
     legend.appendChild(ciiLegend);
     this.legendEl = legend;
     this.ciiLegendEl = ciiLegend;
-    const expandBtn = legend.querySelector('.map-tray-expand-handle') as HTMLButtonElement | null;
-    const body = legend.querySelector('.map-tray-body') as HTMLElement | null;
-    const applyCollapsedState = (collapsed: boolean) => {
-      body?.classList.toggle('collapsed', collapsed);
-      legend.classList.toggle('collapsed', collapsed);
-      expandBtn?.classList.toggle('collapsed', collapsed);
-      if (this.ciiLegendEl) this.ciiLegendEl.classList.toggle('collapsed', collapsed);
-      setTrayOpenPreference('deckLegendCollapsed', collapsed);
-    };
-    expandBtn?.addEventListener('click', () => {
-      applyCollapsedState(!(body?.classList.contains('collapsed') ?? false));
-    });
-    applyCollapsedState(getTrayOpenPreference('deckLegendCollapsed', false));
     this.refreshLegend();
 
     this.container.appendChild(legend);
