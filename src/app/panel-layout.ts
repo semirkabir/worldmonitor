@@ -428,6 +428,11 @@ export class PanelLayoutManager implements AppModule {
       const categoryId = link.getAttribute('data-custom-id');
       if (!categoryId) return;
 
+      // Prevent default link behavior on click
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+      });
+
       // Show delete button after 3 seconds of hover
       link.addEventListener('mouseenter', () => {
         const timer = window.setTimeout(() => {
@@ -461,21 +466,96 @@ export class PanelLayoutManager implements AppModule {
   }
 
   private handleCreateCategory(): void {
-    const name = prompt('Enter category name:');
-    if (!name || name.trim().length === 0) return;
+    // Remove any existing modal
+    document.querySelector('.custom-category-modal-overlay')?.remove();
 
-    const icon = prompt('Enter icon emoji (e.g., 🎯):') || '📁';
+    const overlay = document.createElement('div');
+    overlay.className = 'custom-category-modal-overlay';
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        overlay.remove();
+      }
+    });
 
-    const newCategory: CustomCategory = {
-      id: generateCategoryId(),
-      name: name.trim(),
-      icon: icon.trim(),
-      createdAt: Date.now(),
-    };
+    const modal = document.createElement('div');
+    modal.className = 'custom-category-modal';
 
-    this.customCategories.push(newCategory);
-    saveCustomCategories(this.customCategories);
-    this.renderLayout();
+    const title = document.createElement('div');
+    title.className = 'custom-category-modal-title';
+    title.textContent = 'Create Custom Category';
+    modal.appendChild(title);
+
+    const nameLabel = document.createElement('label');
+    nameLabel.className = 'custom-category-modal-label';
+    nameLabel.textContent = 'Category name';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'custom-category-modal-input';
+    nameInput.placeholder = 'e.g. My Watch List';
+    nameInput.maxLength = 40;
+    nameInput.focus();
+    nameLabel.appendChild(nameInput);
+    modal.appendChild(nameLabel);
+
+    const iconLabel = document.createElement('label');
+    iconLabel.className = 'custom-category-modal-label';
+    iconLabel.textContent = 'Icon (emoji)';
+    const iconInput = document.createElement('input');
+    iconInput.type = 'text';
+    iconInput.className = 'custom-category-modal-input';
+    iconInput.placeholder = 'e.g. 🎯 📌 🔔';
+    iconInput.maxLength = 2;
+    iconInput.value = '📁';
+    iconLabel.appendChild(iconInput);
+    modal.appendChild(iconLabel);
+
+    const actions = document.createElement('div');
+    actions.className = 'custom-category-modal-actions';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'custom-category-modal-btn cancel';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => overlay.remove());
+    actions.appendChild(cancelBtn);
+
+    const createBtn = document.createElement('button');
+    createBtn.className = 'custom-category-modal-btn create';
+    createBtn.textContent = 'Create';
+    createBtn.addEventListener('click', () => {
+      const name = nameInput.value.trim();
+      if (!name) {
+        nameInput.focus();
+        return;
+      }
+      const icon = iconInput.value.trim() || '📁';
+
+      const newCategory: CustomCategory = {
+        id: generateCategoryId(),
+        name: name,
+        icon: icon,
+        createdAt: Date.now(),
+      };
+
+      this.customCategories.push(newCategory);
+      saveCustomCategories(this.customCategories);
+      overlay.remove();
+      this.renderLayout();
+    });
+    actions.appendChild(createBtn);
+    modal.appendChild(actions);
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Allow Enter to create, Escape to cancel
+    nameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') createBtn.click();
+      if (e.key === 'Escape') overlay.remove();
+    });
+    iconInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') createBtn.click();
+      if (e.key === 'Escape') overlay.remove();
+    });
   }
 
   private handleDeleteCategory(categoryId: string): void {
