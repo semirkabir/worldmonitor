@@ -4492,10 +4492,6 @@ export class DeckGLMap {
     const legend = document.createElement('div');
     legend.className = 'map-legend deckgl-legend map-tray';
     legend.innerHTML = `
-      <div class="map-tray-header">
-        <span class="map-tray-title">${t('components.deckgl.legend.title')}</span>
-        <span class="map-tray-status"></span>
-      </div>
       <div class="legend-items map-tray-body"></div>
       <button type="button" class="map-tray-expand-handle" title="Expand/Collapse">
         <svg class="expand-handle-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
