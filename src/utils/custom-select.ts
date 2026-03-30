@@ -105,7 +105,28 @@ export function upgradeSelect(select: HTMLSelectElement): void {
   arrow.className = 'wm-sel-arrow';
   arrow.innerHTML = `<svg width="9" height="5" viewBox="0 0 9 5" fill="none"><path d="M0 0l4.5 5L9 0z" fill="currentColor"/></svg>`;
 
-  trigger.append(valEl, arrow);
+  if (cls.contains('region-select')) {
+    const pin = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    pin.setAttribute('width', '10');
+    pin.setAttribute('height', '10');
+    pin.setAttribute('viewBox', '0 0 24 24');
+    pin.setAttribute('fill', 'none');
+    pin.setAttribute('stroke', 'currentColor');
+    pin.setAttribute('stroke-width', '2');
+    pin.setAttribute('stroke-linecap', 'round');
+    pin.setAttribute('stroke-linejoin', 'round');
+    pin.classList.add('wm-sel-pin');
+    const pinPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    pinPath.setAttribute('d', 'M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z');
+    const pinDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    pinDot.setAttribute('cx', '12');
+    pinDot.setAttribute('cy', '10');
+    pinDot.setAttribute('r', '3');
+    pin.append(pinPath, pinDot);
+    trigger.append(pin, valEl, arrow);
+  } else {
+    trigger.append(valEl, arrow);
+  }
 
   // --- Dropdown menu ---
   const menu = document.createElement('div');

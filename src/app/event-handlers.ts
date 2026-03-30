@@ -45,6 +45,7 @@ import { invokeTauri } from '@/services/tauri-bridge';
 import { dataFreshness } from '@/services/data-freshness';
 import { mlWorker } from '@/services/ml-worker';
 import { UnifiedSettings } from '@/components/UnifiedSettings';
+import { VisitorCounter } from '@/components/VisitorCounter';
 import { NotificationCenter } from '@/components/NotificationCenter';
 import { t } from '@/services/i18n';
 import { TvModeController } from '@/services/tv-mode';
@@ -808,7 +809,10 @@ export class EventHandlerManager implements AppModule {
 
     const headerRight = this.ctx.container.querySelector('.header-right');
     if (headerRight) {
+      // Insert export panel first, then visitor counter before it so eye sits left of camera
       headerRight.insertBefore(this.ctx.exportPanel.getElement(), headerRight.firstChild);
+      const visitorCounter = new VisitorCounter();
+      headerRight.insertBefore(visitorCounter.getElement(), this.ctx.exportPanel.getElement());
     }
   }
 

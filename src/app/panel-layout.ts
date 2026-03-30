@@ -1334,22 +1334,21 @@ export class PanelLayoutManager implements AppModule {
   private setupPanelCollapseHandle(): void {
     const mainContent = document.querySelector('.main-content') as HTMLElement | null;
     const mapSection = document.getElementById('mapSection') as HTMLElement | null;
-    const bottomGrid = document.getElementById('mapBottomGrid') as HTMLElement | null;
     const resizeHandle = document.getElementById('mapResizeHandle');
     const bottomGridHandle = document.getElementById('bottomGridResizeHandle') as HTMLElement | null;
     if (!mainContent || !resizeHandle) return;
-    const panelsGrid = document.getElementById('panelsGrid') as HTMLElement | null;
 
+    // Right-panel collapse button lives on the vertical map↔panel resize handle
     const btn = document.createElement('button');
     btn.className = 'panels-collapse-btn';
-    btn.title = 'Collapse panels';
-    // Positioning handled by .on-panels / .on-map CSS classes
-    (panelsGrid ?? mapSection ?? mainContent).appendChild(btn);
+    resizeHandle.appendChild(btn);
+    resizeHandle.classList.add('has-collapse-btns');
 
+    // Bottom-panel collapse button lives on the horizontal map↔bottom-grid resize handle
     const bottomBtn = document.createElement('button');
     bottomBtn.className = 'bottom-grid-collapse-btn';
-    bottomBtn.title = 'Collapse bottom panels';
     (bottomGridHandle ?? resizeHandle).appendChild(bottomBtn);
+    if (bottomGridHandle) bottomGridHandle.classList.add('has-collapse-btns');
 
     try {
       this.panelsHidden = localStorage.getItem(this.panelsCollapsedStorageKey) === 'true';
@@ -1358,82 +1357,39 @@ export class PanelLayoutManager implements AppModule {
       this.panelsHidden = false;
       this.bottomGridHidden = false;
     }
-    // Move bottom button to mapSection before hiding, so it doesn't vanish with the grid
-    if (this.bottomGridHidden && mapSection) {
-      mapSection.appendChild(bottomBtn);
-      bottomBtn.classList.add('floating', 'on-map');
-    }
+
     mainContent.classList.toggle('panels-hidden', this.panelsHidden);
-    if (mapSection) {
-      mapSection.classList.toggle('bottom-grid-hidden', this.bottomGridHidden);
-    }
+    if (mapSection) mapSection.classList.toggle('bottom-grid-hidden', this.bottomGridHidden);
     mainContent.classList.toggle('bottom-grid-hidden', this.bottomGridHidden);
 
-    const placePanelsBtn = () => {
-      if (!btn.isConnected) return;
-      if (this.panelsHidden) {
-        if (mapSection && btn.parentElement !== mapSection) mapSection.appendChild(btn);
-        btn.classList.add('on-map');
-        btn.classList.remove('on-panels');
-      } else {
-        if (panelsGrid && btn.parentElement !== panelsGrid) panelsGrid.appendChild(btn);
-        btn.classList.add('on-panels');
-        btn.classList.remove('on-map');
-      }
-    };
+    const isSideLayout = () => window.innerWidth >= 1600 || mainContent.classList.contains('layout-side');
 
     const updateIcon = () => {
       while (btn.firstChild) btn.removeChild(btn.firstChild);
-      const isSide = window.innerWidth >= 1600 || mainContent.classList.contains('layout-side');
-      if (this.panelsHidden) {
-        // Panels are hidden (collapsed right) → arrow points left to show "expand back"
-        btn.appendChild(this.buildChevronSvg(isSide ? 'left' : 'down'));
-        btn.title = 'Expand panels';
+      if (isSideLayout()) {
+        // Vertical handle: right = collapse, left = expand
+        btn.appendChild(this.buildChevronSvg(this.panelsHidden ? 'left' : 'right'));
       } else {
-        // Panels are visible → arrow points right to show "collapse this way"
-        btn.appendChild(this.buildChevronSvg(isSide ? 'right' : 'up'));
-        btn.title = 'Collapse panels';
+        // Horizontal handle: down = panels visible (collapse), up = panels hidden (expand)
+        btn.appendChild(this.buildChevronSvg(this.panelsHidden ? 'up' : 'down'));
       }
-      placePanelsBtn();
+      btn.title = this.panelsHidden ? 'Expand panels' : 'Collapse panels';
     };
 
     const updateBottomIcon = () => {
       while (bottomBtn.firstChild) bottomBtn.removeChild(bottomBtn.firstChild);
-      // Collapsed: arrow points up (expand upward)
-      // Visible: arrow points down (collapse downward)
       bottomBtn.appendChild(this.buildChevronSvg(this.bottomGridHidden ? 'up' : 'down'));
       bottomBtn.title = this.bottomGridHidden ? 'Expand bottom panels' : 'Collapse bottom panels';
     };
 
-    const placeBottomBtn = () => {
-      if (!bottomBtn.isConnected) return;
-      if (this.bottomGridHidden) {
-        if (mapSection && bottomBtn.parentElement !== mapSection) mapSection.appendChild(bottomBtn);
-        bottomBtn.classList.add('floating', 'on-map');
-      } else {
-        const targetParent = (bottomGridHandle ?? resizeHandle) as HTMLElement | null;
-        if (targetParent && bottomBtn.parentElement !== targetParent) targetParent.appendChild(bottomBtn);
-        bottomBtn.classList.remove('floating', 'on-map');
-      }
-    };
-
-    const syncBottomButtonVisibility = () => {
-      // Show button when bottom grid is visible OR when it's collapsed (so user can expand it)
-      const bottomGridVisible = !!bottomGrid && bottomGrid.offsetParent !== null;
-      bottomBtn.style.display = (bottomGridVisible || this.bottomGridHidden) ? '' : 'none';
-      updateBottomIcon();
-      placeBottomBtn();
-    };
-
-    // Also update icon when layout mode changes
     const origToggle = document.getElementById('layoutToggleBtn');
     origToggle?.addEventListener('click', () => setTimeout(updateIcon, 0));
-    const onWindowResize = () => updateIcon();
+    const onWindowResize = () => { updateIcon(); updateBottomIcon(); };
     window.addEventListener('resize', onWindowResize);
     this.panelDragCleanupHandlers.push(() => window.removeEventListener('resize', onWindowResize));
 
     btn.addEventListener('click', (e) => {
-      e.stopPropagation(); // don't trigger resize handle mousedown
+      e.stopPropagation();
       this.panelsHidden = !this.panelsHidden;
       mainContent.classList.toggle('panels-hidden', this.panelsHidden);
       try { localStorage.setItem(this.panelsCollapsedStorageKey, String(this.panelsHidden)); } catch { /* noop */ }
@@ -1444,44 +1400,21 @@ export class PanelLayoutManager implements AppModule {
     bottomBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.bottomGridHidden = !this.bottomGridHidden;
-      // Move button before toggling hidden class (otherwise parent display:none hides it)
-      placeBottomBtn();
-      if (mapSection) {
-        mapSection.classList.toggle('bottom-grid-hidden', this.bottomGridHidden);
-      }
-      if (mainContent) {
-        mainContent.classList.toggle('bottom-grid-hidden', this.bottomGridHidden);
-      }
+      if (mapSection) mapSection.classList.toggle('bottom-grid-hidden', this.bottomGridHidden);
+      if (mainContent) mainContent.classList.toggle('bottom-grid-hidden', this.bottomGridHidden);
       try { localStorage.setItem(this.bottomGridCollapsedStorageKey, String(this.bottomGridHidden)); } catch { /* noop */ }
-      // When collapsing bottom grid, reset any manual map height so the map
-      // can grow to use the freed space fully.
       if (this.bottomGridHidden) {
         const mapContainer = document.getElementById('mapContainer') as HTMLElement | null;
-        if (mapContainer) {
-          mapContainer.style.height = '';
-          mapContainer.style.flex = '';
-        }
-        if (mapSection) {
-          mapSection.style.height = '';
-        }
-        try {
-          localStorage.removeItem('map-height');
-        } catch {
-          /* noop */
-        }
+        if (mapContainer) { mapContainer.style.height = ''; mapContainer.style.flex = ''; }
+        if (mapSection) mapSection.style.height = '';
+        try { localStorage.removeItem('map-height'); } catch { /* noop */ }
       }
       updateBottomIcon();
       setTimeout(() => window.dispatchEvent(new Event('resize')), 0);
     });
 
     updateIcon();
-    syncBottomButtonVisibility();
-
-    if (bottomGrid) {
-      const obs = new MutationObserver(() => syncBottomButtonVisibility());
-      obs.observe(bottomGrid, { childList: true });
-      this.panelDragCleanupHandlers.push(() => obs.disconnect());
-    }
+    updateBottomIcon();
   }
 
   private addWidgetBtn: HTMLButtonElement | null = null;

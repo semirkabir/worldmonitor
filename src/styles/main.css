@@ -409,6 +409,48 @@ select optgroup {
   letter-spacing: 0.5px;
 }
 
+/* ── Region selector: pin icon + 3D pulse + zoom dropdown ── */
+
+.wm-sel-pin {
+  flex-shrink: 0;
+  color: var(--accent, #4f9cf9);
+  opacity: 0.8;
+}
+
+.region-selector .wm-sel-btn {
+  animation: region-btn-pulse 4s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+.region-selector .wm-sel-btn:hover,
+.region-selector .wm-sel-btn[aria-expanded="true"] {
+  animation: none;
+  box-shadow: 0 2px 12px rgba(79, 156, 249, 0.25);
+  border-color: var(--accent, #4f9cf9);
+}
+
+@keyframes region-btn-pulse {
+  0%, 100% {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25), 0 0 0 0 rgba(79,156,249,0);
+    transform: translateY(0) translateZ(0);
+  }
+  50% {
+    box-shadow: 0 3px 10px rgba(0,0,0,0.3), 0 0 10px 1px rgba(79,156,249,0.13);
+    transform: translateY(-0.5px) translateZ(0);
+  }
+}
+
+/* Zoom-open animation for the region dropdown */
+.region-selector .wm-sel-menu {
+  transform-origin: top left;
+  transform: scale(0.94) translateY(-4px);
+  transition: opacity 0.18s, transform 0.2s cubic-bezier(0.34, 1.4, 0.64, 1), visibility 0.18s;
+}
+
+.region-selector .wm-sel-menu--open {
+  transform: scale(1) translateY(0);
+}
+
 /* Pause all animations when tab is hidden or idle */
 body.animations-paused *,
 body.animations-paused *::before,
@@ -7451,6 +7493,168 @@ a.prediction-link:hover {
 }
 
 /* Export Panel */
+/* ── Visitor Counter ──────────────────────────────────────────────────────── */
+
+.visitor-counter {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  height: 28px;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-family: var(--font-body);
+  cursor: default;
+  user-select: none;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.visitor-counter:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* Eye icon wrapper */
+.vc-eye {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ef4444;
+  filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.55));
+  flex-shrink: 0;
+  transition: filter 0.15s;
+}
+
+.visitor-counter:hover .vc-eye {
+  color: #ef4444;
+  filter: drop-shadow(0 0 7px rgba(239, 68, 68, 0.85));
+}
+
+/* Subtle pulse ring */
+.vc-pulse-ring {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  animation: vc-pulse 3s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes vc-pulse {
+  0%   { transform: scale(1);   opacity: 0.5; }
+  70%  { transform: scale(1.9); opacity: 0; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+
+/* Count + trend wrapper */
+.vc-count-wrap {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Count label */
+.vc-count {
+  font-variant-numeric: tabular-nums;
+  min-width: 22px;
+  text-align: left;
+}
+
+/* Trending arrow */
+.vc-trend {
+  font-size: 8px;
+  opacity: 0;
+  transition: opacity 0.3s;
+  line-height: 1;
+}
+
+.vc-trend--visible {
+  opacity: 1;
+}
+
+.vc-trend--up {
+  color: #4ade80;
+}
+
+.vc-trend--down {
+  color: var(--text-dim);
+}
+
+/* Spike: eye flashes brighter */
+.vc-eye--spike {
+  filter: drop-shadow(0 0 10px rgba(239, 68, 68, 1)) !important;
+  color: #ff2222 !important;
+}
+
+/* Custom tooltip */
+.vc-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 180px;
+  background: var(--panel-bg, #1a1f2e);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  z-index: 10001;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.vc-tooltip--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.vc-tooltip-title {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.vc-tooltip-total {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.vc-tooltip-peak {
+  display: block;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 3px;
+}
+
+.vc-tooltip-spike {
+  display: none;
+  font-size: 11px;
+  color: #ef4444;
+  font-weight: 600;
+  margin-top: 5px;
+}
+
+.vc-tooltip-spike--visible {
+  display: block;
+}
+
+/* ── Export Panel ─────────────────────────────────────────────────────────── */
+
 .export-panel-container {
   position: relative;
 }
@@ -19517,7 +19721,8 @@ body:has(.tauri-titlebar) .breaking-news-container {
 .main-content.panels-hidden .panels-grid {
   display: none !important;
 }
-.main-content.panels-hidden .map-resize-handle,
+/* Keep the resize handle visible when it holds the collapse buttons */
+.main-content.panels-hidden .map-resize-handle:not(.has-collapse-btns),
 .main-content.panels-hidden .corner-resize-handle,
 .main-content.bottom-grid-hidden .corner-resize-handle {
   display: none !important;
@@ -19549,7 +19754,8 @@ body:has(.tauri-titlebar) .breaking-news-container {
 .map-section.bottom-grid-hidden #mapBottomGrid {
   display: none !important;
 }
-.map-section.bottom-grid-hidden #bottomGridResizeHandle {
+/* Keep the resize handle visible so the expand button remains accessible */
+.map-section.bottom-grid-hidden #bottomGridResizeHandle:not(.has-collapse-btns) {
   display: none !important;
 }
 
@@ -19562,112 +19768,100 @@ body:has(.tauri-titlebar) .breaking-news-container {
 .main-content.bottom-grid-hidden:not(.layout-side) .map-section .map-container {
   flex: 1 1 auto;
 }
-.main-content.bottom-grid-hidden #mapBottomGrid,
-.main-content.bottom-grid-hidden #bottomGridResizeHandle {
+.main-content.bottom-grid-hidden #mapBottomGrid {
+  display: none !important;
+}
+.main-content.bottom-grid-hidden #bottomGridResizeHandle:not(.has-collapse-btns) {
   display: none !important;
 }
 
-/* ── Panels sidebar collapse button (lives on right panel edge) ── */
-.panels-collapse-btn {
-  position: absolute;
+/* ── Collapse buttons — each on its own resize handle ── */
+
+/* In stacked/bottom layout (<1600px, no layout-side): hide the bottom-grid handle.
+   mapBottomGrid is empty in this layout — the handle stacks on top of mapResizeHandle
+   and causes both buttons to overlap. */
+@media (max-width: 1599px) {
+  .main-content:not(.layout-side) #bottomGridResizeHandle {
+    display: none !important;
+  }
+}
+
+/* Vertical map↔panel handle (side layout): stays visible, overflows the button */
+.map-resize-handle.has-collapse-btns {
+  display: flex !important;
+  overflow: visible;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* panels-collapse-btn: vertical orientation for side layout (16×28) */
+.map-resize-handle .panels-collapse-btn {
+  position: relative;
+  top: auto; right: auto; bottom: auto; left: auto;
+  transform: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 40px;
-  border-radius: 4px 0 0 4px;
+  width: 16px;
+  height: 28px;
+  border-radius: 4px;
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text-muted);
   cursor: pointer;
   z-index: 30;
   padding: 0;
+  flex-shrink: 0;
   transition: background 0.15s, color 0.15s;
 }
-.panels-collapse-btn:hover {
+.map-resize-handle .panels-collapse-btn:hover {
   background: var(--accent);
   color: var(--bg);
   border-color: var(--accent);
 }
 
-/* When panels are visible, anchor to LEFT edge of panels grid (side layout)
-   so it collapses the panel to the left, or top center (bottom layout) */
-.panels-grid {
-  position: relative;
-}
-/* Side layout (class or wide screen): button inside left edge of panels grid */
-.panels-collapse-btn.on-panels {
-  left: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-/* Narrow non-side: button inside top edge instead */
+/* panels-collapse-btn: horizontal orientation for bottom/stacked layout (28×16) */
 @media (max-width: 1599px) {
-  .main-content:not(.layout-side) .panels-collapse-btn.on-panels {
-    right: auto;
-    left: 50%;
-    top: 4px;
-    transform: translateX(-50%);
+  .main-content:not(.layout-side) .map-resize-handle.has-collapse-btns {
+    flex-direction: row;
+  }
+  .main-content:not(.layout-side) .map-resize-handle .panels-collapse-btn {
+    width: 28px;
+    height: 16px;
   }
 }
 
-/* When panels are hidden, button inside right edge of map */
-.map-section {
+/* Horizontal map↔bottom-grid handle: always visible in side layout, button centered */
+.bottom-grid-resize-handle.has-collapse-btns {
+  display: flex !important;
+  overflow: visible;
+  align-items: center;
+  justify-content: center;
+}
+.bottom-grid-resize-handle .bottom-grid-collapse-btn {
   position: relative;
-}
-.panels-collapse-btn.on-map {
-  right: 4px;
-  left: auto;
-  top: 50%;
-  transform: translateY(-50%);
-}
-/* Narrow non-side: button inside bottom edge instead */
-@media (max-width: 1599px) {
-  .main-content:not(.layout-side) .panels-collapse-btn.on-map {
-    right: auto;
-    left: 50%;
-    top: auto;
-    bottom: 4px;
-    transform: translateX(-50%);
-  }
-}
-
-/* Secondary collapse button for the map bottom grid */
-.bottom-grid-collapse-btn {
-  position: absolute;
-  left: 50%;
-  top: 0;
-  transform: translate(-50%, -100%);
+  top: auto; right: auto; bottom: auto; left: auto;
+  transform: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 40px;
-  border-radius: 4px 4px 0 0;
+  width: 28px;
+  height: 16px;
+  border-radius: 4px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-bottom: none;
   color: var(--text-muted);
   cursor: pointer;
   z-index: 30;
   padding: 0;
+  flex-shrink: 0;
   transition: background 0.15s, color 0.15s;
 }
-.bottom-grid-collapse-btn:hover {
+.bottom-grid-resize-handle .bottom-grid-collapse-btn:hover {
   background: var(--accent);
   color: var(--bg);
   border-color: var(--accent);
-}
-.bottom-grid-collapse-btn.floating,
-.bottom-grid-collapse-btn.on-map {
-  left: 50%;
-  top: auto;
-  bottom: 0;
-  transform: translateX(-50%);
-  width: 16px;
-  height: 40px;
-  border-radius: 4px 4px 0 0;
-  z-index: 101;
 }
 
 #layoutToggleBtn.active {
