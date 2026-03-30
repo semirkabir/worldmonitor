@@ -6805,6 +6805,7 @@ a.prediction-link:hover {
 .map-popup {
   position: fixed;
   width: 380px;
+  max-width: calc(100vw - 40px);
   max-height: calc(100vh - 120px);
   background: var(--bg);
   border: 1px solid var(--border);

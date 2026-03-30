@@ -248,6 +248,7 @@ export class MapPopup {
     if (!this.popup) return;
 
     const popupWidth = 380;
+    const minMargin = 20; // Minimum margin from viewport edges
     const bottomBuffer = 50; // Buffer from viewport bottom
     const topBuffer = 60; // Header height
 
@@ -265,11 +266,27 @@ export class MapPopup {
     const viewportY = containerRect.top + data.y;
 
     // Horizontal positioning (viewport-relative)
-    const maxX = window.innerWidth - popupWidth - 20;
-    let left = viewportX + 20;
-    if (left > maxX) {
-      // Position to the left of click if it would overflow right
-      left = Math.max(10, viewportX - popupWidth - 20);
+    // Calculate available space on each side
+    const spaceToRight = window.innerWidth - viewportX - minMargin;
+    const spaceToLeft = viewportX - minMargin;
+
+    let left: number;
+    if (spaceToRight >= popupWidth) {
+      // Enough space to the right - position to the right of click
+      left = viewportX + 20;
+    } else if (spaceToLeft >= popupWidth) {
+      // Not enough right, but enough left - position to the left of click
+      left = viewportX - popupWidth - 20;
+    } else {
+      // Not enough space on either side - clamp to right edge of viewport
+      left = Math.max(minMargin, window.innerWidth - popupWidth - minMargin);
+    }
+
+    // Ensure popup doesn't extend off left or right edge
+    left = Math.max(minMargin, left);
+    const maxLeft = window.innerWidth - popupWidth - minMargin;
+    if (maxLeft > minMargin) {
+      left = Math.min(left, maxLeft);
     }
 
     // Vertical positioning - prefer below click, but flip above if needed
