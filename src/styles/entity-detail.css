@@ -395,6 +395,57 @@
   text-decoration: underline;
 }
 
+/* ── Launch schedule items ──────────────────────────────────────────── */
+
+.edp-launch-item {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.edp-launch-item:last-child {
+  border-bottom: none;
+}
+
+.edp-launch-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 3px;
+}
+
+.edp-launch-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.edp-launch-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+
+.edp-launch-date {
+  font-size: 12px;
+  color: var(--accent-blue, #60a5fa);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 4px;
+}
+
+.edp-launch-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 4px 0 2px;
+  line-height: 1.5;
+}
+
+.edp-launch-weather {
+  font-size: 10px;
+  color: var(--text-faint);
+  margin-top: 4px;
+}
+
 /* ── Responsive ────────────────────────────────────────────────────── */
 
 @media (max-width: 600px) {

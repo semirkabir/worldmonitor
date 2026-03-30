@@ -280,15 +280,11 @@ const AIS_PORT_ICON_ATLAS = `data:image/svg+xml;charset=utf-8,${encodeURICompone
   '<svg viewBox="0 0 24 24" width="64" height="64" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v10"/><circle cx="12" cy="4" r="1.5" fill="white"/><path d="M7 12a5 5 0 0 0 10 0"/><path d="M5 14a7 7 0 0 0 14 0"/></svg>'
 )}`;
 
-const AVIATION_AIRPORT_ICON_MAPPING = { airport: { x: 0, y: 0, width: 64, height: 64, mask: true } };
-const AVIATION_AIRPORT_ICON_ATLAS = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
-  '<svg viewBox="0 0 24 24" width="64" height="64" xmlns="http://www.w3.org/2000/svg" fill="white"><path d="M3 19h18v2H3z"/><path d="M6 17V9l6-4 6 4v8h-3v-4h-6v4z"/><rect x="10" y="10" width="4" height="3" rx="0.6"/></svg>'
-)}`;
+const AVIATION_AIRPORT_ICON_MAPPING = { airport: { x: 0, y: 0, width: 512, height: 512, mask: false } };
+const AVIATION_AIRPORT_ICON_ATLAS = '/icons/airport.png';
 
-const AVIATION_PLANE_ICON_MAPPING = { plane: { x: 0, y: 0, width: 64, height: 64, mask: true } };
-const AVIATION_PLANE_ICON_ATLAS = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
-  '<svg viewBox="0 0 24 24" width="64" height="64" xmlns="http://www.w3.org/2000/svg" fill="white"><path d="M2 12.2 3.2 10.8l7.6.4 5.2-6.2c.5-.6 1.4-.7 2-.2.5.4.7 1 .5 1.6l-2.1 5 4.4.2 1.4-1.5 1 .8-1 1.5 1 1.5-1 .8-1.4-1.5-4.4.2 2.1 5c.2.6 0 1.3-.5 1.6-.6.4-1.5.3-2-.2l-5.2-6.2-7.6.4z"/></svg>'
-)}`;
+const AVIATION_PLANE_ICON_MAPPING = { plane: { x: 0, y: 0, width: 512, height: 512, mask: false } };
+const AVIATION_PLANE_ICON_ATLAS = '/icons/plane.png';
 
 function getThemeMode(): 'light' | 'dark' {
   return getCurrentTheme() === 'light' ? 'light' : 'dark';
@@ -1680,19 +1676,13 @@ export class DeckGLMap {
       id: 'bases-layer',
       data,
       getPosition: (d) => [d.lon, d.lat],
-      getIcon: () => 'marker',
-      iconAtlas: getSharedLayerIconAtlas('bases'),
-      iconMapping: SHARED_LAYER_ICON_MAPPING,
-      getSize: (d) => highlightedBases.has(d.id) ? 16 : 11,
-      getColor: (d) => {
-        if (highlightedBases.has(d.id)) {
-          return [255, 100, 100, 220] as [number, number, number, number];
-        }
-        return this.getBaseColor(d.type, a);
-      },
+      getIcon: () => 'base',
+      iconAtlas: '/icons/military-base.png',
+      iconMapping: { base: { x: 0, y: 0, width: 512, height: 512, mask: false } },
+      getSize: (d) => highlightedBases.has(d.id) ? 28 : 22,
       sizeScale: 1,
-      sizeMinPixels: 6,
-      sizeMaxPixels: 16,
+      sizeMinPixels: 10,
+      sizeMaxPixels: 32,
       pickable: true,
     });
   }
@@ -1738,22 +1728,13 @@ export class DeckGLMap {
       id: 'nuclear-layer',
       data,
       getPosition: (d) => [d.lon, d.lat],
-      getIcon: () => 'marker',
-      iconAtlas: getSharedLayerIconAtlas('nuclear'),
-      iconMapping: SHARED_LAYER_ICON_MAPPING,
-      getSize: (d) => highlightedNuclear.has(d.id) ? 15 : 11,
-      getColor: (d) => {
-        if (highlightedNuclear.has(d.id)) {
-          return [255, 100, 100, 220] as [number, number, number, number];
-        }
-        if (d.status === 'contested') {
-          return [255, 50, 50, 200] as [number, number, number, number];
-        }
-        return [255, 220, 0, 200] as [number, number, number, number]; // Semi-transparent yellow
-      },
+      getIcon: () => 'nuclear',
+      iconAtlas: '/icons/nuclear.png',
+      iconMapping: { nuclear: { x: 0, y: 0, width: 512, height: 512, mask: false } },
+      getSize: (d) => highlightedNuclear.has(d.id) ? 28 : 22,
       sizeScale: 1,
-      sizeMinPixels: 6,
-      sizeMaxPixels: 15,
+      sizeMinPixels: 10,
+      sizeMaxPixels: 32,
       pickable: true,
     });
   }
@@ -1763,12 +1744,12 @@ export class DeckGLMap {
       id: 'irradiators-layer',
       data: GAMMA_IRRADIATORS,
       getPosition: (d) => [d.lon, d.lat],
-      getIcon: () => 'marker',
-      iconAtlas: getSharedLayerIconAtlas('irradiators'),
-      iconMapping: SHARED_LAYER_ICON_MAPPING,
-      getSize: () => 12,
-      sizeMinPixels: 6,
-      sizeMaxPixels: 14,
+      getIcon: () => 'radiation',
+      iconAtlas: '/icons/radiation.png',
+      iconMapping: { radiation: { x: 0, y: 0, width: 512, height: 512, mask: false } },
+      getSize: 22,
+      sizeMinPixels: 10,
+      sizeMaxPixels: 28,
       pickable: true,
       billboard: true,
     });
@@ -1779,12 +1760,12 @@ export class DeckGLMap {
       id: 'spaceports-layer',
       data: SPACEPORTS,
       getPosition: (d) => [d.lon, d.lat],
-      getIcon: () => 'marker',
-      iconAtlas: getSharedLayerIconAtlas('spaceports'),
-      iconMapping: SHARED_LAYER_ICON_MAPPING,
-      getSize: () => 14,
-      sizeMinPixels: 6,
-      sizeMaxPixels: 16,
+      getIcon: () => 'rocket',
+      iconAtlas: 'https://cdn-icons-png.flaticon.com/512/1086/1086091.png',
+      iconMapping: { rocket: { x: 0, y: 0, width: 512, height: 512, mask: false } },
+      getSize: () => 28,
+      sizeMinPixels: 14,
+      sizeMaxPixels: 36,
       pickable: true,
       billboard: true,
     });
@@ -1825,15 +1806,9 @@ export class DeckGLMap {
       getIcon: () => 'airport',
       iconAtlas: AVIATION_AIRPORT_ICON_ATLAS,
       iconMapping: AVIATION_AIRPORT_ICON_MAPPING,
-      getColor: (d) => {
-        if (d.severity === 'severe') return [255, 92, 92, 235] as [number, number, number, number];
-        if (d.severity === 'major') return [255, 165, 0, 230] as [number, number, number, number];
-        if (d.severity === 'moderate') return [255, 214, 10, 225] as [number, number, number, number];
-        return [84, 214, 133, 220] as [number, number, number, number];
-      },
-      getSize: 14,
-      sizeMinPixels: 8,
-      sizeMaxPixels: 20,
+      getSize: 22,
+      sizeMinPixels: 12,
+      sizeMaxPixels: 32,
       pickable: true,
       billboard: true,
     });
@@ -1847,14 +1822,10 @@ export class DeckGLMap {
       getIcon: () => 'plane',
       iconAtlas: AVIATION_PLANE_ICON_ATLAS,
       iconMapping: AVIATION_PLANE_ICON_MAPPING,
-      getSize: (d) => d.onGround ? 14 : 18,
-      getColor: (d) => {
-        if (d.onGround) return [182, 186, 196, 185] as [number, number, number, number];
-        return [184, 186, 184, 230] as [number, number, number, number];
-      },
+      getSize: (d) => d.onGround ? 18 : 24,
       getAngle: (d) => -d.trackDeg,
-      sizeMinPixels: 8,
-      sizeMaxPixels: 28,
+      sizeMinPixels: 10,
+      sizeMaxPixels: 36,
       sizeScale: 1,
       pickable: true,
       billboard: false,
@@ -2237,12 +2208,12 @@ export class DeckGLMap {
       id: 'military-vessels-layer',
       data: vessels,
       getPosition: (d) => [d.lon, d.lat],
-      getIcon: () => 'marker',
-      iconAtlas: getSharedLayerIconAtlas('military'),
-      iconMapping: SHARED_LAYER_ICON_MAPPING,
-      getSize: 13,
-      sizeMinPixels: 8,
-      sizeMaxPixels: 20,
+      getIcon: () => 'vessel',
+      iconAtlas: 'https://cdn-icons-png.flaticon.com/512/6175/6175141.png',
+      iconMapping: { vessel: { x: 0, y: 0, width: 512, height: 512, mask: false } },
+      getSize: 24,
+      sizeMinPixels: 12,
+      sizeMaxPixels: 32,
       pickable: true,
       billboard: true,
     });
@@ -2253,42 +2224,14 @@ export class DeckGLMap {
       id: 'military-vessel-clusters-layer',
       data: clusters,
       getPosition: (d) => [d.lon, d.lat],
-      getIcon: (d: MilitaryVesselCluster) => {
-        const activity = d.activityType || 'unknown';
-        if (activity === 'deployment') return 'deployment';
-        if (activity === 'transit') return 'transit';
-        if (activity === 'exercise') return 'exercise';
-        return 'unknown';
-      },
-      iconAtlas: (() => {
-        // Reuse the military layer accent color for the base icon color
-        const theme = getThemeMode();
-        const baseColor = resolveLayerAccentColor('military', theme);
-        const svg = resolveLayerIcon('military')
-          .replace(
-            '<svg ',
-            `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" style="color:${baseColor}" `,
-          );
-        return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-      })(),
-      iconMapping: {
-        deployment: { x: 0, y: 0, width: 32, height: 32, mask: false },
-        transit: { x: 0, y: 0, width: 32, height: 32, mask: false },
-        exercise: { x: 0, y: 0, width: 32, height: 32, mask: false },
-        unknown: { x: 0, y: 0, width: 32, height: 32, mask: false },
-      },
-      getSize: (d: MilitaryVesselCluster) => 14 + Math.min(6, (d.vesselCount || 1) * 0.7),
-      sizeMinPixels: 10,
-      sizeMaxPixels: 24,
+      getIcon: () => 'vessel',
+      iconAtlas: 'https://cdn-icons-png.flaticon.com/512/6175/6175141.png',
+      iconMapping: { vessel: { x: 0, y: 0, width: 512, height: 512, mask: false } },
+      getSize: (d: MilitaryVesselCluster) => 24 + Math.min(8, (d.vesselCount || 1) * 0.7),
+      sizeMinPixels: 14,
+      sizeMaxPixels: 36,
       pickable: true,
       billboard: true,
-      getColor: (d: MilitaryVesselCluster) => {
-        const activity = d.activityType || 'unknown';
-        if (activity === 'deployment') return [255, 80, 80, 230] as [number, number, number, number];
-        if (activity === 'exercise') return [255, 150, 80, 220] as [number, number, number, number];
-        if (activity === 'transit') return [255, 210, 120, 210] as [number, number, number, number];
-        return [200, 180, 180, 200] as [number, number, number, number];
-      },
     });
   }
 
@@ -2297,14 +2240,16 @@ export class DeckGLMap {
       id: 'military-flights-layer',
       data: flights,
       getPosition: (d) => [d.lon, d.lat],
-      getIcon: () => 'marker',
-      iconAtlas: getSharedLayerIconAtlas('military'),
-      iconMapping: SHARED_LAYER_ICON_MAPPING,
-      getSize: 14,
-      sizeMinPixels: 8,
-      sizeMaxPixels: 20,
+      getIcon: () => 'plane',
+      iconAtlas: AVIATION_PLANE_ICON_ATLAS,
+      iconMapping: AVIATION_PLANE_ICON_MAPPING,
+      getSize: 16,
+      sizeMinPixels: 10,
+      sizeMaxPixels: 24,
+      getColor: () => [220, 50, 50, 230] as [number, number, number, number],
+      getAngle: (d) => -d.heading,
       pickable: true,
-      billboard: true,
+      billboard: false,
     });
   }
 
@@ -2444,12 +2389,12 @@ export class DeckGLMap {
       id: 'minerals-layer',
       data: CRITICAL_MINERALS,
       getPosition: (d) => [d.lon, d.lat],
-      getIcon: () => 'marker',
-      iconAtlas: getSharedLayerIconAtlas('minerals'),
-      iconMapping: SHARED_LAYER_ICON_MAPPING,
-      getSize: () => 12,
-      sizeMinPixels: 6,
-      sizeMaxPixels: 14,
+      getIcon: () => 'mineral',
+      iconAtlas: '/icons/minerals.png',
+      iconMapping: { mineral: { x: 0, y: 0, width: 512, height: 512, mask: false } },
+      getSize: 22,
+      sizeMinPixels: 10,
+      sizeMaxPixels: 28,
       pickable: true,
       billboard: true,
     });
@@ -2461,12 +2406,12 @@ export class DeckGLMap {
       id: 'mining-sites-layer',
       data: MINING_SITES,
       getPosition: (d) => [d.lon, d.lat],
-      getIcon: () => 'marker',
-      iconAtlas: getSharedLayerIconAtlas('miningSites'),
-      iconMapping: SHARED_LAYER_ICON_MAPPING,
-      getSize: (d) => d.status === 'producing' ? 17 : d.status === 'development' ? 15 : 13,
-      sizeMinPixels: 8,
-      sizeMaxPixels: 22,
+      getIcon: () => 'mineral',
+      iconAtlas: '/icons/minerals.png',
+      iconMapping: { mineral: { x: 0, y: 0, width: 512, height: 512, mask: false } },
+      getSize: (d) => d.status === 'producing' ? 26 : d.status === 'development' ? 22 : 18,
+      sizeMinPixels: 10,
+      sizeMaxPixels: 32,
       pickable: true,
       billboard: true,
     });
@@ -2477,12 +2422,12 @@ export class DeckGLMap {
       id: 'processing-plants-layer',
       data: PROCESSING_PLANTS,
       getPosition: (d) => [d.lon, d.lat],
-      getIcon: () => 'marker',
-      iconAtlas: getSharedLayerIconAtlas('processingPlants'),
-      iconMapping: SHARED_LAYER_ICON_MAPPING,
-      getSize: 15,
-      sizeMinPixels: 8,
-      sizeMaxPixels: 20,
+      getIcon: () => 'mineral',
+      iconAtlas: '/icons/minerals.png',
+      iconMapping: { mineral: { x: 0, y: 0, width: 512, height: 512, mask: false } },
+      getSize: 22,
+      sizeMinPixels: 10,
+      sizeMaxPixels: 28,
       pickable: true,
       billboard: true,
     });
@@ -2557,21 +2502,19 @@ export class DeckGLMap {
     this.updateClusterData();
     const layers: Layer[] = [];
 
-    layers.push(new ScatterplotLayer<MapProtestCluster>({
+    layers.push(new IconLayer<MapProtestCluster>({
       id: 'protest-clusters-layer',
       data: this.protestClusters,
       getPosition: d => [d.lon, d.lat],
-      getRadius: d => 15000 + d.count * 2000,
-      radiusMinPixels: 6,
-      radiusMaxPixels: 22,
-      getFillColor: d => {
-        if (d.hasRiot) return [220, 40, 40, 200] as [number, number, number, number];
-        if (d.maxSeverity === 'high') return [255, 80, 60, 180] as [number, number, number, number];
-        if (d.maxSeverity === 'medium') return [255, 160, 40, 160] as [number, number, number, number];
-        return [255, 220, 80, 140] as [number, number, number, number];
-      },
+      getIcon: () => 'protest',
+      iconAtlas: '/icons/protest.png',
+      iconMapping: { protest: { x: 0, y: 0, width: 512, height: 512, mask: false } },
+      getSize: d => d.count > 1 ? Math.min(36, 22 + d.count * 1.5) : 22,
+      sizeMinPixels: 12,
+      sizeMaxPixels: 40,
       pickable: true,
-      updateTriggers: { getRadius: this.lastSCZoom, getFillColor: this.lastSCZoom },
+      billboard: true,
+      updateTriggers: { getSize: this.lastSCZoom },
     }));
 
     const multiClusters = this.protestClusters.filter(c => c.count > 1);

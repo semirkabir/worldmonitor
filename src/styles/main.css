@@ -13795,6 +13795,23 @@ a.prediction-link:hover {
   display: block;
 }
 
+/* Article image for velocity spike — sits above signal metrics */
+.ifp-article-image {
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  background: var(--overlay-subtle);
+  border: 1px solid var(--border-dim, rgba(255,255,255,0.07));
+}
+
+.ifp-article-image img {
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
 
 /* ===== Tech Events Panel ===== */
 .tech-events-panel {

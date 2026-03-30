@@ -227,6 +227,15 @@ export class IntelligenceFindingPanel {
     const relatedArticles = data.relatedArticles as Array<{ title: string; source: string; link: string; imageUrl?: string }> | undefined;
     const featuredImage = this.getFeaturedImage(relatedArticles);
 
+    // For velocity spikes, find an image from the related news articles (filtered first, then all news)
+    const velocityArticleImage = signal.type === 'velocity_spike'
+      ? (
+          news.find(n => n.imageUrl && n.imageUrl.trim().length > 0)?.imageUrl
+          ?? this.getNews().find(n => n.imageUrl && n.imageUrl.trim().length > 0)?.imageUrl
+          ?? null
+        )
+      : null;
+
     this.content.innerHTML = `
       <!-- Featured image for keyword spikes -->
       ${featuredImage ? `
@@ -248,6 +257,13 @@ export class IntelligenceFindingPanel {
           ${signal.data.sourceCount ? `<span>· ${signal.data.sourceCount} sources</span>` : ''}
         </div>
       </div>
+
+      <!-- Article image for velocity spike -->
+      ${velocityArticleImage ? `
+        <div class="ifp-article-image">
+          <img src="${escapeHtml(velocityArticleImage)}" alt="" loading="lazy" onerror="this.closest('.ifp-article-image').remove()" />
+        </div>
+      ` : ''}
 
       <!-- Signal-specific metrics -->
       ${this.renderSignalStats(signal)}
@@ -360,6 +376,11 @@ export class IntelligenceFindingPanel {
     const news    = filterNewsForTerms(this.getNews(), terms);
     const markets = filterMarketsForTerms(this.getMarkets(), terms);
 
+    const alertArticleImage =
+      news.find(n => n.imageUrl && n.imageUrl.trim().length > 0)?.imageUrl
+      ?? this.getNews().find(n => n.imageUrl && n.imageUrl.trim().length > 0)?.imageUrl
+      ?? null;
+
     this.content.innerHTML = `
       <!-- Main card -->
       <div class="ifp-main">
@@ -371,6 +392,13 @@ export class IntelligenceFindingPanel {
         <div class="ifp-description">${escapeHtml(alert.summary)}</div>
         <div class="ifp-meta"><span>${timeAgo(alert.timestamp)}</span></div>
       </div>
+
+      <!-- Article image from related headlines -->
+      ${alertArticleImage ? `
+        <div class="ifp-article-image">
+          <img src="${escapeHtml(alertArticleImage)}" alt="" loading="lazy" onerror="this.closest('.ifp-article-image').remove()" />
+        </div>
+      ` : ''}
 
       <!-- Alert-specific details -->
       ${this.renderAlertDetails(alert, pc)}

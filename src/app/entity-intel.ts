@@ -16,6 +16,7 @@ import {
 } from '@/components/entity-detail/renderers/financial-center';
 import { TechHQRenderer } from '@/components/entity-detail/renderers/tech-hq';
 import { AircraftRenderer } from '@/components/entity-detail/renderers/aircraft';
+import { SpaceportRenderer } from '@/components/entity-detail/renderers/spaceport';
 
 export class EntityIntelManager implements AppModule {
   private ctx: AppContext;
@@ -57,6 +58,7 @@ export class EntityIntelManager implements AppModule {
       commodityHub: new CommodityHubRenderer(),
       techHQ: new TechHQRenderer(),
       aircraft: new AircraftRenderer(),
+      spaceport: new SpaceportRenderer(),
     };
   }
 }
