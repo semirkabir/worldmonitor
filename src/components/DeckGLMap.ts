@@ -1272,10 +1272,14 @@ export class DeckGLMap {
     }
 
 
-    // Military bases layer — hidden at low zoom (E: progressive disclosure) + clusters
+    // Military bases layer — clusters at low zoom, individual markers at high zoom
+    const basesZoom = this.maplibreMap?.getZoom() || 2;
     if (mapLayers.bases && this.isLayerVisible('bases')) {
-      layers.push(this.createBasesLayer());
-      layers.push(...this.createBasesClusterLayer());
+      if (basesZoom >= 5) {
+        layers.push(this.createBasesLayer());
+      } else {
+        layers.push(...this.createBasesClusterLayer());
+      }
     }
     layers.push(this.createEmptyGhost('bases-layer'));
 
