@@ -709,20 +709,21 @@ export class MapComponent {
       <div class="map-tray-header">
         <span class="map-tray-title">Legend</span>
         <span class="map-tray-status"></span>
-        <button type="button" class="map-tray-collapse"></button>
       </div>
       <div class="map-legend-items map-tray-body"></div>
+      <button type="button" class="map-tray-expand-handle" title="Expand/Collapse">
+        <span class="expand-handle-indicator"></span>
+      </button>
     `;
     this.legendEl = legend;
-    const collapseBtn = legend.querySelector('.map-tray-collapse') as HTMLButtonElement | null;
+    const expandBtn = legend.querySelector('.map-tray-expand-handle') as HTMLButtonElement | null;
     const body = legend.querySelector('.map-tray-body') as HTMLElement | null;
     const applyCollapsedState = (collapsed: boolean) => {
       body?.classList.toggle('collapsed', collapsed);
       legend.classList.toggle('collapsed', collapsed);
-      if (collapseBtn) collapseBtn.textContent = collapsed ? '+' : '−';
       setTrayOpenPreference('svgLegendCollapsed', collapsed);
     };
-    collapseBtn?.addEventListener('click', () => {
+    expandBtn?.addEventListener('click', () => {
       applyCollapsedState(!(body?.classList.contains('collapsed') ?? false));
     });
     applyCollapsedState(getTrayOpenPreference('svgLegendCollapsed', false));
