@@ -20445,17 +20445,14 @@ body:has(.tauri-titlebar) .breaking-news-container {
   background: var(--bg-tertiary);
 }
 
-.expand-handle-indicator {
-  width: 24px;
-  height: 3px;
-  background: var(--text-secondary);
-  border-radius: 2px;
+.expand-handle-icon {
   display: block;
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
 }
 
-.map-tray-expand-handle:hover .expand-handle-indicator {
-  height: 4px;
-  transition: height 0.2s ease;
+.map-tray-expand-handle:hover .expand-handle-icon {
+  color: var(--text);
 }
 
 @keyframes expand-handle-bounce {

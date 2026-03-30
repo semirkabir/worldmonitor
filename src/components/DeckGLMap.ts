@@ -4498,7 +4498,9 @@ export class DeckGLMap {
       </div>
       <div class="legend-items map-tray-body"></div>
       <button type="button" class="map-tray-expand-handle" title="Expand/Collapse">
-        <span class="expand-handle-indicator"></span>
+        <svg class="expand-handle-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
       </button>
     `;
 
