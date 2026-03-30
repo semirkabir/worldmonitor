@@ -723,6 +723,7 @@ export class MapComponent {
     const applyCollapsedState = (collapsed: boolean) => {
       body?.classList.toggle('collapsed', collapsed);
       legend.classList.toggle('collapsed', collapsed);
+      expandBtn?.classList.toggle('collapsed', collapsed);
       setTrayOpenPreference('svgLegendCollapsed', collapsed);
     };
     expandBtn?.addEventListener('click', () => {

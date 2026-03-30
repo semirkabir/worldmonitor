@@ -4526,6 +4526,7 @@ export class DeckGLMap {
     const applyCollapsedState = (collapsed: boolean) => {
       body?.classList.toggle('collapsed', collapsed);
       legend.classList.toggle('collapsed', collapsed);
+      expandBtn?.classList.toggle('collapsed', collapsed);
       if (this.ciiLegendEl) this.ciiLegendEl.classList.toggle('collapsed', collapsed);
       setTrayOpenPreference('deckLegendCollapsed', collapsed);
     };

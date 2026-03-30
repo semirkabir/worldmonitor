@@ -20448,7 +20448,12 @@ body:has(.tauri-titlebar) .breaking-news-container {
 .expand-handle-icon {
   display: block;
   color: var(--text-secondary);
-  transition: color 0.2s ease;
+  transition: color 0.2s ease, transform 0.3s ease;
+  transform: rotate(0deg);
+}
+
+.map-tray-expand-handle.collapsed .expand-handle-icon {
+  transform: rotate(180deg);
 }
 
 .map-tray-expand-handle:hover .expand-handle-icon {
