@@ -675,6 +675,19 @@ export class DeckGLMap {
       this.maplibreMap?.triggerRepaint();
     });
 
+    // Right-click on Intel hotspots opens the entity detail panel
+    canvas.addEventListener('contextmenu', (e) => {
+      if (!this.onEntityClick || !this.deckOverlay) return;
+      const info = this.deckOverlay.pickObject({ x: e.offsetX, y: e.offsetY, radius: 8 });
+      if (!info?.object) return;
+      const rawId = info.layer?.id || '';
+      const layerId = rawId.endsWith('-ghost') ? rawId.slice(0, -6) : rawId;
+      if (layerId !== 'hotspots-layer') return;
+      e.preventDefault();
+      this.popup.hide();
+      this.onEntityClick('hotspot', info.object);
+    });
+
     // Pin top edge during drag-resize: correct center shift synchronously
     // inside MapLibre's own resize() call (before it renders the frame).
     this.maplibreMap.on('move', () => {
@@ -2719,15 +2732,15 @@ export class DeckGLMap {
       id: 'hotspots-layer',
       data: this.hotspots,
       getPosition: (d) => [d.lon, d.lat],
-      getIcon: () => 'marker',
-      iconAtlas: getSharedLayerIconAtlas('hotspots'),
-      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getIcon: () => 'spy',
+      iconAtlas: '/icons/spy-icon.png',
+      iconMapping: { spy: { x: 0, y: 0, width: 512, height: 512, mask: false } },
       getSize: (d) => {
         const score = d.escalationScore || 1;
         return 10 + score * 3;
       },
-      sizeMinPixels: 6,
-      sizeMaxPixels: maxPx,
+      sizeMinPixels: 8,
+      sizeMaxPixels: maxPx + 4,
       pickable: true,
       billboard: true,
     }));
@@ -3651,6 +3664,7 @@ export class DeckGLMap {
 
     // Reuse the same layerToPopupType mapping
     const layerToPopupType: Record<string, string> = {
+      'hotspots-layer': 'hotspot',
       'conflict-zones-layer': 'conflict',
       'bases-layer': 'base',
       'nuclear-layer': 'nuclear',

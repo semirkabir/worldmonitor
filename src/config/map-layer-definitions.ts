@@ -74,7 +74,7 @@ const def = (
 
 export const LAYER_REGISTRY: Record<keyof MapLayers, LayerDefinition> = {
   iranAttacks:              def('iranAttacks',              ICONS.target,    'iranAttacks',            'Iran Attacks', ['flat', 'globe'], _desktop ? 'locked' : undefined),
-  hotspots:                 def('hotspots',                 ICONS.target,    'intelHotspots',          'Intel Hotspots'),
+  hotspots:                 def('hotspots',                 '<img src="/icons/spy-icon.png" width="16" height="16" style="display:block;object-fit:contain" />', 'intelHotspots', 'Intel Hotspots'),
   conflicts:                def('conflicts',                ICONS.flags,     'conflictZones',          'Conflict Zones'),
   bases:                    def('bases',                    ICONS.fort,      'militaryBases',          'Military Bases'),
   nuclear:                  def('nuclear',                  ICONS.atom,      'nuclearSites',           'Nuclear Sites'),

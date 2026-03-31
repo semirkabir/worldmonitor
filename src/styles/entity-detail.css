@@ -446,6 +446,80 @@
   margin-top: 4px;
 }
 
+/* ── Military Vessel Cluster ───────────────────────────────────────── */
+
+.edp-vessel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edp-vessel-item {
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--bg) 40%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.edp-vessel-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 3px;
+}
+
+.edp-vessel-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.edp-vessel-hull {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono, monospace);
+}
+
+.edp-vessel-status {
+  font-size: 10px;
+  padding: 1px 5px;
+}
+
+.edp-vessel-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.edp-vessel-type,
+.edp-vessel-operator,
+.edp-vessel-speed {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.edp-vessel-type::after {
+  content: '·';
+  margin-left: 8px;
+}
+
+.edp-vessel-operator::after {
+  content: '·';
+  margin-left: 8px;
+}
+
+.edp-vessel-speed:last-child::after {
+  content: none;
+}
+
+.edp-vessel-note {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
 /* ── Responsive ────────────────────────────────────────────────────── */
 
 @media (max-width: 600px) {

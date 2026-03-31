@@ -250,7 +250,7 @@ export class MapPopup {
     const popupWidth = 380;
     const minMargin = 20; // Minimum margin from viewport edges
     const bottomBuffer = 50; // Buffer from viewport bottom
-    const topBuffer = 60; // Header height
+    const topBuffer = 80; // Header height + breathing room
 
     // Cap popup height to available vertical space before measuring
     const maxAllowedHeight = window.innerHeight - topBuffer - bottomBuffer;
@@ -314,6 +314,12 @@ export class MapPopup {
     // CRITICAL: Ensure popup stays within viewport vertically
     top = Math.max(topBuffer, top);
     top = Math.min(top, window.innerHeight - popupHeight - bottomBuffer);
+
+    // Tighten max-height to the space actually available from this position so
+    // async content (GDELT articles) that loads after positioning can never push
+    // the popup below the viewport.
+    const fittingMaxHeight = window.innerHeight - top - bottomBuffer;
+    this.popup.style.maxHeight = `${Math.min(maxAllowedHeight, fittingMaxHeight)}px`;
 
     this.popup.style.left = `${left}px`;
     this.popup.style.top = `${top}px`;
@@ -712,14 +718,21 @@ export class MapPopup {
       </div>
     ` : '';
 
+    // Use the localized subtext as the primary display title if available;
+    // fall back to the raw name. Show the short ID code only when it differs.
+    const displayTitle = localizedSubtext || hotspot.name;
+    const showCodeBadge = localizedSubtext && hotspot.name.toUpperCase() !== localizedSubtext.toUpperCase();
+
     return `
-      <div class="popup-header hotspot">
-        <span class="popup-title">${escapeHtml(hotspot.name.toUpperCase())}</span>
+      <div class="popup-header hotspot ${severityClass}">
+        <div class="popup-title-block">
+          <span class="popup-title">${escapeHtml(displayTitle.toUpperCase())}</span>
+          ${showCodeBadge ? `<span class="popup-code">${escapeHtml(hotspot.name)}</span>` : ''}
+        </div>
         <span class="popup-badge ${severityClass}">${severityLabel}</span>
         <button class="popup-close" aria-label="Close">×</button>
       </div>
       <div class="popup-body">
-        ${localizedSubtext ? `<div class="popup-subtitle">${escapeHtml(localizedSubtext)}</div>` : ''}
         ${hotspot.description ? `<p class="popup-description">${escapeHtml(hotspot.description)}</p>` : ''}
         ${escalationSection}
         <div class="popup-stats">
@@ -749,7 +762,6 @@ export class MapPopup {
           </div>
         ` : ''}
         ${relatedNews && relatedNews.length > 0 ? `
-          <div class="popup-section">
           <div class="popup-section">
             <span class="section-label">${t('popups.relatedHeadlines')}</span>
             <div class="popup-news">

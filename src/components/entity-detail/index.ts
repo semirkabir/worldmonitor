@@ -4,6 +4,8 @@ export { CableRenderer } from './renderers/cable';
 export { PortRenderer } from './renderers/port';
 export { StockExchangeRenderer } from './renderers/stock-exchange';
 export { MilitaryBaseRenderer } from './renderers/military-base';
+export { MilitaryVesselClusterRenderer } from './renderers/military-vessel-cluster';
+export { HotspotRenderer } from './renderers/hotspot';
 export { PipelineRenderer } from './renderers/pipeline';
 export { NuclearRenderer } from './renderers/nuclear';
 export { DatacenterRenderer } from './renderers/datacenter';

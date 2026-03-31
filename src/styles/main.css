@@ -6908,7 +6908,23 @@ a.prediction-link:hover {
 }
 
 .popup-header.hotspot {
-  background: rgba(68, 255, 136, 0.1);
+  background: linear-gradient(90deg, rgba(68, 255, 136, 0.15) 0%, transparent 100%);
+  border-left: 3px solid var(--green);
+}
+
+.popup-header.hotspot.high {
+  border-left-color: var(--semantic-critical);
+  background: linear-gradient(90deg, rgba(255, 50, 50, 0.15) 0%, transparent 100%);
+}
+
+.popup-header.hotspot.elevated {
+  border-left-color: var(--semantic-high);
+  background: linear-gradient(90deg, rgba(255, 165, 0, 0.15) 0%, transparent 100%);
+}
+
+.popup-header.hotspot.low {
+  border-left-color: var(--green);
+  background: linear-gradient(90deg, rgba(68, 255, 136, 0.12) 0%, transparent 100%);
 }
 
 .popup-header.earthquake {
@@ -6917,6 +6933,25 @@ a.prediction-link:hover {
 
 .popup-header.ais {
   background: rgba(0, 209, 255, 0.12);
+}
+
+.popup-title-block {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.popup-title-block .popup-title {
+  flex: none;
+}
+
+.popup-code {
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+  font-weight: normal;
 }
 
 .popup-title {
@@ -6929,6 +6964,29 @@ a.prediction-link:hover {
 
 .popup-header.hotspot .popup-title {
   color: var(--green);
+}
+
+.popup-header.hotspot.high .popup-title {
+  color: var(--semantic-critical);
+}
+
+.popup-header.hotspot.elevated .popup-title {
+  color: var(--semantic-high);
+}
+
+/* Hotspot severity badge colors — override the generic muted .low */
+.popup-header.hotspot .popup-badge.high {
+  background: var(--semantic-critical);
+}
+
+.popup-header.hotspot .popup-badge.elevated {
+  background: var(--semantic-high);
+  color: var(--bg);
+}
+
+.popup-header.hotspot .popup-badge.low {
+  background: var(--green);
+  color: var(--bg);
 }
 
 .popup-header.earthquake .popup-title {

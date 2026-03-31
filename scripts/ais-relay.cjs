@@ -3442,19 +3442,17 @@ function processPositionReportForSnapshot(data) {
   // Maintain exact chokepoint membership so moving vessels don't get "stuck" in old buckets.
   updateVesselChokepoints(mmsi, lat, lon);
 
-  if (isLikelyMilitaryCandidate(meta)) {
-    candidateReports.set(mmsi, {
-      mmsi,
-      name: meta.ShipName || '',
-      lat,
-      lon,
-      shipType: meta.ShipType,
-      heading: pos.TrueHeading,
-      speed: pos.Sog,
-      course: pos.Cog,
-      timestamp: now,
-    });
-  }
+  candidateReports.set(mmsi, {
+    mmsi,
+    name: meta.ShipName || '',
+    lat,
+    lon,
+    shipType: meta.ShipType,
+    heading: pos.TrueHeading,
+    speed: pos.Sog,
+    course: pos.Cog,
+    timestamp: now,
+  });
 }
 
 function cleanupAggregates() {
