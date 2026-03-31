@@ -63,11 +63,7 @@ function extractMetadataFromLink(link: string | undefined): Pick<PlanespottersPh
 
 async function requestPhoto(endpoint: string, signal?: AbortSignal): Promise<PlanespottersPhoto | null> {
   try {
-    const resp = await fetch(endpoint, {
-      method: 'GET',
-      signal,
-      headers: { Accept: 'application/json' },
-    });
+    const resp = await fetch(endpoint, { method: 'GET', signal, headers: { Accept: 'application/json' } });
     if (!resp.ok) return null;
     const data = (await resp.json()) as PlanespottersApiResponse;
     return normalizePhoto(data.photos?.[0]);
@@ -103,12 +99,12 @@ export async function getPlanePhoto(registration?: string | null, signal?: Abort
   const reg = (registration || '').trim().toUpperCase();
   if (!reg) return null;
 
-  return requestPhoto(`https://api.planespotters.net/pub/photos/reg/${encodeURIComponent(reg)}`, signal);
+  return requestPhoto(`/api/planespotters?reg=${encodeURIComponent(reg)}`, signal);
 }
 
 export async function getPlanePhotoByHex(icao24?: string | null, signal?: AbortSignal): Promise<PlanespottersPhoto | null> {
   const hex = (icao24 || '').trim().toLowerCase();
   if (!hex) return null;
 
-  return requestPhoto(`https://api.planespotters.net/pub/photos/hex/${encodeURIComponent(hex)}`, signal);
+  return requestPhoto(`/api/planespotters?hex=${encodeURIComponent(hex)}`, signal);
 }

@@ -2,6 +2,7 @@ import type { Hotspot, EscalationTrend, MilitaryFlight, MilitaryVessel } from '@
 import { INTEL_HOTSPOTS } from '@/config/geo';
 import { getHotspotCountries } from '@/config/countries';
 import { haversineKm } from '@/utils/geo';
+import { triggerUrgencyMode } from '@/services/urgency-mode';
 
 export interface DynamicEscalationScore {
   hotspotId: string;
@@ -186,6 +187,14 @@ export function calculateDynamicScore(
   };
 
   scores.set(hotspotId, result);
+
+  // Fire urgency mode on critical escalation events
+  const signal = shouldEmitSignal(hotspotId, existing?.combinedScore ?? null, combinedScore);
+  if (signal && (signal.type === 'critical_reached' || signal.type === 'rapid_increase')) {
+    markSignalEmitted(hotspotId);
+    triggerUrgencyMode(`hotspot:${hotspotId}`);
+  }
+
   return result;
 }
 

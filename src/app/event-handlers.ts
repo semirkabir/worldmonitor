@@ -1224,21 +1224,38 @@ export class EventHandlerManager implements AppModule {
 
     if (rightHandle) {
       rightHandle.addEventListener('mousedown', (e) => {
-        if (!isSideLikeLayout()) return;
-        resizeMode = 'right';
-        startX = e.clientX;
-        startMapWidth = mapSection.getBoundingClientRect().width;
+        // In side layout: horizontal split resize
+        // In stacked/bottom layout: vertical height resize (same as bottomHandle)
+        if (isSideLikeLayout()) {
+          resizeMode = 'right';
+          startX = e.clientX;
+          startMapWidth = mapSection.getBoundingClientRect().width;
+          document.body.style.cursor = 'ew-resize';
+        } else {
+          resizeMode = 'bottom';
+          startY = e.clientY;
+          const target = getBottomResizeTarget();
+          startHeight = target.offsetHeight;
+          document.body.style.cursor = 'ns-resize';
+        }
         this.ctx.map?.setIsResizing(true);
         mapSection.classList.add('resizing');
-        document.body.style.cursor = 'ew-resize';
         document.body.style.userSelect = 'none';
         e.preventDefault();
       });
 
       rightHandle.addEventListener('dblclick', () => {
-        if (!isSideLikeLayout()) return;
-        applySidebarSplit(DEFAULT_SIDEBAR_SPLIT, true);
-        this.ctx.map?.resize();
+        if (isSideLikeLayout()) {
+          applySidebarSplit(DEFAULT_SIDEBAR_SPLIT, true);
+          this.ctx.map?.resize();
+        } else {
+          // Double-click resets to 50% height in stacked layout
+          const target = getBottomResizeTarget();
+          const finalHeight = clamp(window.innerHeight * 0.5, getMinHeight(), getMaxHeight());
+          target.style.height = `${finalHeight}px`;
+          localStorage.setItem(MAP_HEIGHT_KEY, `${finalHeight}px`);
+          this.ctx.map?.resize();
+        }
       });
     }
 

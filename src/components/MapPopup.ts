@@ -252,14 +252,20 @@ export class MapPopup {
     const bottomBuffer = 50; // Buffer from viewport bottom
     const topBuffer = 60; // Header height
 
+    // Cap popup height to available vertical space before measuring
+    const maxAllowedHeight = window.innerHeight - topBuffer - bottomBuffer;
+    this.popup.style.maxHeight = `${maxAllowedHeight}px`;
+
     // Temporarily append popup off-screen to measure actual height
     this.popup.style.visibility = 'hidden';
     this.popup.style.top = '0';
     this.popup.style.left = '-9999px';
     document.body.appendChild(this.popup);
-    const popupHeight = this.popup.offsetHeight;
+    const rawPopupHeight = this.popup.offsetHeight;
     document.body.removeChild(this.popup);
     this.popup.style.visibility = '';
+
+    const popupHeight = Math.min(rawPopupHeight, maxAllowedHeight);
 
     // Convert container-relative coords to viewport coords
     const viewportX = containerRect.left + data.x;
@@ -307,10 +313,7 @@ export class MapPopup {
 
     // CRITICAL: Ensure popup stays within viewport vertically
     top = Math.max(topBuffer, top);
-    const maxTop = window.innerHeight - popupHeight - bottomBuffer;
-    if (maxTop > topBuffer) {
-      top = Math.min(top, maxTop);
-    }
+    top = Math.min(top, window.innerHeight - popupHeight - bottomBuffer);
 
     this.popup.style.left = `${left}px`;
     this.popup.style.top = `${top}px`;

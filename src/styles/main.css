@@ -7654,6 +7654,40 @@ a.prediction-link:hover {
   display: block;
 }
 
+/* ── Urgency Mode ─────────────────────────────────────────────────────────── */
+
+@keyframes urgency-border-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.25), 0 0 6px rgba(239, 68, 68, 0.1); }
+  50%       { box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.55), 0 0 14px rgba(239, 68, 68, 0.22); }
+}
+
+@keyframes urgency-header-glow {
+  0%, 100% { box-shadow: 0 1px 0 rgba(239, 68, 68, 0.18); }
+  50%       { box-shadow: 0 2px 8px rgba(239, 68, 68, 0.32); }
+}
+
+/* Insights panel gets a pulsing red border */
+body.urgency-mode .panel[data-panel="insights"] {
+  animation: urgency-border-pulse 2.5s ease-in-out infinite;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+
+/* Panel header title shifts to a warmer red tone */
+body.urgency-mode .panel[data-panel="insights"] .panel-title {
+  color: #ef4444;
+  transition: color 0.4s;
+}
+
+/* Alert stat badge gets emphasis */
+body.urgency-mode .insight-stat.alert .insight-stat-value {
+  color: #ff4444;
+}
+
+/* Thin pulsing red bottom-border on the main header bar */
+body.urgency-mode #header {
+  animation: urgency-header-glow 2.5s ease-in-out infinite;
+}
+
 /* ── Export Panel ─────────────────────────────────────────────────────────── */
 
 .export-panel-container {
@@ -19794,9 +19828,10 @@ body:has(.tauri-titlebar) .breaking-news-container {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
 }
 
-/* panels-collapse-btn: vertical orientation for side layout (16×28) */
+/* panels-collapse-btn: infused pill — vertical orientation for side layout */
 .map-resize-handle .panels-collapse-btn {
   position: relative;
   top: auto; right: auto; bottom: auto; left: auto;
@@ -19804,32 +19839,38 @@ body:has(.tauri-titlebar) .breaking-news-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 28px;
-  border-radius: 4px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
+  width: 20px;
+  height: 38px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.45);
   cursor: pointer;
   z-index: 30;
   padding: 0;
   flex-shrink: 0;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .map-resize-handle .panels-collapse-btn:hover {
   background: var(--accent);
-  color: var(--bg);
   border-color: var(--accent);
+  color: var(--bg);
 }
 
-/* panels-collapse-btn: horizontal orientation for bottom/stacked layout (28×16) */
+/* panels-collapse-btn: infused pill — horizontal orientation for stacked layout */
 @media (max-width: 1599px) {
   .main-content:not(.layout-side) .map-resize-handle.has-collapse-btns {
     flex-direction: row;
   }
+  /* In stacked layout the handle resizes map height — use ns-resize cursor */
+  .main-content:not(.layout-side) .map-resize-handle {
+    cursor: ns-resize;
+  }
   .main-content:not(.layout-side) .map-resize-handle .panels-collapse-btn {
-    width: 28px;
-    height: 16px;
+    width: 40px;
+    height: 20px;
+    border-radius: 100px;
+    cursor: pointer; /* button keeps its own cursor */
   }
 }
 
@@ -19847,22 +19888,22 @@ body:has(.tauri-titlebar) .breaking-news-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 16px;
-  border-radius: 4px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
+  width: 40px;
+  height: 20px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.45);
   cursor: pointer;
   z-index: 30;
   padding: 0;
   flex-shrink: 0;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .bottom-grid-resize-handle .bottom-grid-collapse-btn:hover {
   background: var(--accent);
-  color: var(--bg);
   border-color: var(--accent);
+  color: var(--bg);
 }
 
 #layoutToggleBtn.active {

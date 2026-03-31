@@ -24,7 +24,7 @@ export interface SpendingSummary {
   fetchedAt: Date;
 }
 
-const API_BASE = 'https://api.usaspending.gov/api/v2';
+const API_BASE = '/api/usa-spending';
 
 // Award type code mapping
 const AWARD_TYPE_MAP: Record<string, GovernmentAward['awardType']> = {
@@ -80,30 +80,16 @@ export async function fetchRecentAwards(options: {
   if (awardTypes.includes('loan')) awardTypeCodes.push('07', '08');
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
+  const timeout = setTimeout(() => controller.abort(), 25000);
   try {
-    const response = await fetch(`${API_BASE}/search/spending_by_award/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const params = new URLSearchParams({
+      daysBack: String(daysBack),
+      limit: String(limit),
+      awardTypes: awardTypeCodes.join(','),
+    });
+    const response = await fetch(`${API_BASE}?${params}`, {
+      method: 'GET',
       signal: controller.signal,
-      body: JSON.stringify({
-        filters: {
-          time_period: [{ start_date: periodStart, end_date: periodEnd }],
-          award_type_codes: awardTypeCodes,
-        },
-        fields: [
-          'Award ID',
-          'Recipient Name',
-          'Award Amount',
-          'Awarding Agency',
-          'Description',
-          'Start Date',
-          'Award Type',
-        ],
-        limit,
-        order: 'desc',
-        sort: 'Award Amount',
-      }),
     });
 
     if (!response.ok) {
