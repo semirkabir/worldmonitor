@@ -6,12 +6,10 @@ import { CableRenderer } from '@/components/entity-detail/renderers/cable';
 import { PortRenderer } from '@/components/entity-detail/renderers/port';
 import { StockExchangeRenderer } from '@/components/entity-detail/renderers/stock-exchange';
 import { MilitaryBaseRenderer } from '@/components/entity-detail/renderers/military-base';
-import { MilitaryVesselRenderer } from '@/components/entity-detail/renderers/military-vessel';
 import { MilitaryVesselClusterRenderer } from '@/components/entity-detail/renderers/military-vessel-cluster';
 import { HotspotRenderer } from '@/components/entity-detail/renderers/hotspot';
 import { PipelineRenderer } from '@/components/entity-detail/renderers/pipeline';
 import { NuclearRenderer } from '@/components/entity-detail/renderers/nuclear';
-import { IrradiatorRenderer } from '@/components/entity-detail/renderers/irradiator';
 import { DatacenterRenderer } from '@/components/entity-detail/renderers/datacenter';
 import {
   FinancialCenterRenderer,
@@ -30,13 +28,12 @@ export class EntityIntelManager implements AppModule {
   private ctx: AppContext;
   private panel: EntityDetailPanel | null = null;
   private hotspotRenderer: HotspotRenderer;
+  private tickerClickHandler: ((e: MouseEvent) => void) | null = null;
 
   constructor(ctx: AppContext) {
     this.ctx = ctx;
     this.hotspotRenderer = new HotspotRenderer();
   }
-
-  private tickerClickHandler: ((e: MouseEvent) => void) | null = null;
 
   init(): void {
     this.panel = new EntityDetailPanel(this.buildRegistry());
@@ -80,12 +77,10 @@ export class EntityIntelManager implements AppModule {
       port: new PortRenderer(),
       stockExchange: new StockExchangeRenderer(),
       base: new MilitaryBaseRenderer(),
-      militaryVessel: new MilitaryVesselRenderer(),
       militaryVesselCluster: new MilitaryVesselClusterRenderer(),
       hotspot: this.hotspotRenderer,
       pipeline: new PipelineRenderer(),
       nuclear: new NuclearRenderer(),
-      irradiator: new IrradiatorRenderer(),
       datacenter: new DatacenterRenderer(),
       financialCenter: new FinancialCenterRenderer(),
       centralBank: new CentralBankRenderer(),
