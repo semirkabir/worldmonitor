@@ -583,124 +583,78 @@
   margin-top: 4px;
 }
 
-/* ── News items ────────────────────────────────────────────────────── */
+/* ── Military Vessel Cluster ───────────────────────────────────────── */
 
-.edp-news-item {
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border);
+.edp-vessel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.edp-news-item:last-child {
-  border-bottom: none;
+.edp-vessel-item {
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--bg) 40%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 6px;
 }
 
-.edp-news-title {
-  display: block;
+.edp-vessel-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 3px;
+}
+
+.edp-vessel-name {
   font-size: 13px;
   font-weight: 600;
-  color: var(--accent-blue, #60a5fa);
-  text-decoration: none;
-  margin-bottom: 4px;
-  line-height: 1.4;
+  color: var(--text-primary);
 }
 
-.edp-news-title:hover {
-  text-decoration: underline;
-}
-
-.edp-news-meta {
+.edp-vessel-hull {
   font-size: 11px;
   color: var(--text-secondary);
+  font-family: var(--font-mono, monospace);
 }
 
-.edp-news-image {
-  margin-top: 8px;
-  width: 100%;
-  max-height: 120px;
-  object-fit: cover;
-  border-radius: 4px;
-  background: var(--surface);
-}
-
-/* ── Escalation display ──────────────────────────────────────────── */
-
-.edp-escalation-score {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.edp-score-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text);
-  background: var(--semantic-elevated, #eab308);
-  color: var(--bg);
-  padding: 8px 12px;
-  border-radius: 4px;
-}
-
-.edp-score-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-}
-
-.edp-escalation-trend {
-  font-size: 13px;
-  color: var(--semantic-elevated, #eab308);
-  margin-bottom: 12px;
-}
-
-.edp-trend-icon {
-  font-size: 16px;
-  margin-right: 4px;
-}
-
-.edp-component-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-
-.edp-component-label {
+.edp-vessel-status {
   font-size: 10px;
-  color: var(--text-secondary);
-  width: 70px;
-  flex-shrink: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  padding: 1px 5px;
 }
 
-.edp-component-bar-bg {
-  flex: 1;
-  height: 6px;
-  background: var(--surface);
-  border-radius: 3px;
-  overflow: hidden;
+.edp-vessel-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.edp-component-bar {
-  height: 100%;
-  background: var(--semantic-elevated, #eab308);
-  border-radius: 3px;
-  transition: width 0.3s ease;
-}
-
-.edp-component-bar.news { background: #3b82f6; }
-.edp-component-bar.cii { background: #f59e0b; }
-.edp-component-bar.geo { background: #22c55e; }
-.edp-component-bar.military { background: #ef4444; }
-
-.edp-component-value {
+.edp-vessel-type,
+.edp-vessel-operator,
+.edp-vessel-speed {
   font-size: 11px;
   color: var(--text-secondary);
-  width: 30px;
-  text-align: right;
-  flex-shrink: 0;
+}
+
+.edp-vessel-type::after {
+  content: '·';
+  margin-left: 8px;
+}
+
+.edp-vessel-operator::after {
+  content: '·';
+  margin-left: 8px;
+}
+
+.edp-vessel-speed:last-child::after {
+  content: none;
+}
+
+.edp-vessel-note {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 4px;
+  line-height: 1.4;
 }
 
 
