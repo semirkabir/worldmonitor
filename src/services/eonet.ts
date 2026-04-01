@@ -27,6 +27,15 @@ export function getNaturalEventIcon(category: NaturalEventCategory): string {
   return CATEGORY_ICONS[category] || '⚠️';
 }
 
+const CATEGORY_ICON_URLS: Partial<Record<NaturalEventCategory, string>> = {
+  floods: '/icons/flood-warning.png',
+  earthquakes: '/icons/earthquake.png',
+};
+
+export function getNaturalEventIconUrl(category: NaturalEventCategory): string | null {
+  return CATEGORY_ICON_URLS[category] ?? null;
+}
+
 function normalizeNaturalCategory(category: string | undefined): NaturalEventCategory {
   if (!category) return 'manmade';
   return NATURAL_EVENT_CATEGORIES.has(category as NaturalEventCategory)

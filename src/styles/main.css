@@ -5677,6 +5677,19 @@ body.playback-mode .status-dot {
   filter: drop-shadow(0 0 4px var(--shadow-color));
 }
 
+.nat-event-icon-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
+}
+
+.popup-icon-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
 .nat-event-label {
   font-size: 8px;
   color: var(--accent);
@@ -7891,7 +7904,7 @@ body.urgency-mode #header {
 
 .snap-menu-label {
   padding: 8px 14px 5px;
-  font-family: var(--font-body);
+  font-family: inherit;
   font-size: 9.5px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -7910,8 +7923,11 @@ body.urgency-mode #header {
   background: none;
   border: none;
   color: var(--text-primary, var(--text));
-  font-family: var(--font-body);
-  font-size: 13px;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
   text-align: left;
   cursor: pointer;
   transition: background 0.12s ease;
@@ -20192,6 +20208,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
   overflow: visible;
   align-items: center;
   justify-content: center;
+<<<<<<< HEAD
   background: transparent;
 }
 /* Show resize bar under button */
@@ -20202,6 +20219,17 @@ body:has(.tauri-titlebar) .breaking-news-container {
 }
 
 /* panels-collapse-btn: pill centered on the resize bar — side layout */
+=======
+  height: 14px;
+}
+
+/* Hide pill indicator when collapse button is present */
+.map-resize-handle.has-collapse-btns::after {
+  display: none;
+}
+
+/* panels-collapse-btn: seamless within the bar */
+>>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
 .map-resize-handle .panels-collapse-btn {
   position: absolute;
   top: 50%;
@@ -20210,16 +20238,26 @@ body:has(.tauri-titlebar) .breaking-news-container {
   display: flex;
   align-items: center;
   justify-content: center;
+<<<<<<< HEAD
   width: 22px;
   height: 40px;
   border-radius: 100px;
   background: var(--surface);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #fff;
+=======
+  width: 40px;
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  opacity: 0.5;
+>>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
   cursor: pointer;
   z-index: 30;
   padding: 0;
   flex-shrink: 0;
+<<<<<<< HEAD
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 [data-theme="light"] .map-resize-handle .panels-collapse-btn {
@@ -20234,10 +20272,22 @@ body:has(.tauri-titlebar) .breaking-news-container {
 }
 
 /* panels-collapse-btn: pill centered on the resize bar — stacked/bottom layout */
+=======
+  transition: opacity 0.15s, color 0.15s;
+}
+.map-resize-handle .panels-collapse-btn:hover,
+.map-resize-handle:hover .panels-collapse-btn {
+  opacity: 1;
+  color: var(--accent);
+}
+
+/* panels-collapse-btn: horizontal orientation for bottom/stacked layout */
+>>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
 @media (max-width: 1599px) {
   .main-content:not(.layout-side) .map-resize-handle.has-collapse-btns {
     flex-direction: row;
   }
+<<<<<<< HEAD
   .main-content:not(.layout-side) .map-resize-handle {
     cursor: ns-resize;
   }
@@ -20255,6 +20305,8 @@ body:has(.tauri-titlebar) .breaking-news-container {
     color: #000;
     border-color: rgba(0, 0, 0, 0.12);
   }
+=======
+>>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
 }
 
 /* Horizontal map↔bottom-grid handle: button centered on the resize bar */
@@ -20263,6 +20315,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
   overflow: visible;
   align-items: center;
   justify-content: center;
+<<<<<<< HEAD
   background: transparent;
 }
 /* Show resize bar under button */
@@ -20270,6 +20323,13 @@ body:has(.tauri-titlebar) .breaking-news-container {
   opacity: 0.3;
   width: 100%;
   height: 3px;
+=======
+  height: 14px;
+}
+
+.bottom-grid-resize-handle.has-collapse-btns::after {
+  display: none;
+>>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
 }
 
 .bottom-grid-resize-handle .bottom-grid-collapse-btn {
@@ -20281,15 +20341,24 @@ body:has(.tauri-titlebar) .breaking-news-container {
   align-items: center;
   justify-content: center;
   width: 40px;
+<<<<<<< HEAD
   height: 22px;
   border-radius: 100px;
   background: var(--surface);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #fff;
+=======
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  opacity: 0.5;
+>>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
   cursor: pointer;
   z-index: 30;
   padding: 0;
   flex-shrink: 0;
+<<<<<<< HEAD
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 [data-theme="light"] .bottom-grid-resize-handle .bottom-grid-collapse-btn {
@@ -20301,6 +20370,14 @@ body:has(.tauri-titlebar) .breaking-news-container {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--bg);
+=======
+  transition: opacity 0.15s, color 0.15s;
+}
+.bottom-grid-resize-handle .bottom-grid-collapse-btn:hover,
+.bottom-grid-resize-handle:hover .bottom-grid-collapse-btn {
+  opacity: 1;
+  color: var(--accent);
+>>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
 }
 
 #layoutToggleBtn.active {
