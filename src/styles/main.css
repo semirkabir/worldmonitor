@@ -5608,6 +5608,19 @@ body.playback-mode .status-dot {
   filter: drop-shadow(0 0 4px var(--shadow-color));
 }
 
+.nat-event-icon-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  display: block;
+}
+
+.popup-icon-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
 .nat-event-label {
   font-size: 8px;
   color: var(--accent);
@@ -7698,7 +7711,7 @@ a.prediction-link:hover {
 
 .snap-menu-label {
   padding: 8px 14px 5px;
-  font-family: var(--font-body);
+  font-family: inherit;
   font-size: 9.5px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -7717,8 +7730,11 @@ a.prediction-link:hover {
   background: none;
   border: none;
   color: var(--text-primary, var(--text));
-  font-family: var(--font-body);
-  font-size: 13px;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
   text-align: left;
   cursor: pointer;
   transition: background 0.12s ease;
@@ -19794,9 +19810,15 @@ body:has(.tauri-titlebar) .breaking-news-container {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  height: 14px;
 }
 
-/* panels-collapse-btn: vertical orientation for side layout (16×28) */
+/* Hide pill indicator when collapse button is present */
+.map-resize-handle.has-collapse-btns::after {
+  display: none;
+}
+
+/* panels-collapse-btn: seamless within the bar */
 .map-resize-handle .panels-collapse-btn {
   position: relative;
   top: auto; right: auto; bottom: auto; left: auto;
@@ -19804,32 +19826,28 @@ body:has(.tauri-titlebar) .breaking-news-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 28px;
-  border-radius: 4px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
+  width: 40px;
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  opacity: 0.5;
   cursor: pointer;
   z-index: 30;
   padding: 0;
   flex-shrink: 0;
-  transition: background 0.15s, color 0.15s;
+  transition: opacity 0.15s, color 0.15s;
 }
-.map-resize-handle .panels-collapse-btn:hover {
-  background: var(--accent);
-  color: var(--bg);
-  border-color: var(--accent);
+.map-resize-handle .panels-collapse-btn:hover,
+.map-resize-handle:hover .panels-collapse-btn {
+  opacity: 1;
+  color: var(--accent);
 }
 
-/* panels-collapse-btn: horizontal orientation for bottom/stacked layout (28×16) */
+/* panels-collapse-btn: horizontal orientation for bottom/stacked layout */
 @media (max-width: 1599px) {
   .main-content:not(.layout-side) .map-resize-handle.has-collapse-btns {
     flex-direction: row;
-  }
-  .main-content:not(.layout-side) .map-resize-handle .panels-collapse-btn {
-    width: 28px;
-    height: 16px;
   }
 }
 
@@ -19839,7 +19857,13 @@ body:has(.tauri-titlebar) .breaking-news-container {
   overflow: visible;
   align-items: center;
   justify-content: center;
+  height: 14px;
 }
+
+.bottom-grid-resize-handle.has-collapse-btns::after {
+  display: none;
+}
+
 .bottom-grid-resize-handle .bottom-grid-collapse-btn {
   position: relative;
   top: auto; right: auto; bottom: auto; left: auto;
@@ -19847,22 +19871,22 @@ body:has(.tauri-titlebar) .breaking-news-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 16px;
-  border-radius: 4px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
+  width: 40px;
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  opacity: 0.5;
   cursor: pointer;
   z-index: 30;
   padding: 0;
   flex-shrink: 0;
-  transition: background 0.15s, color 0.15s;
+  transition: opacity 0.15s, color 0.15s;
 }
-.bottom-grid-resize-handle .bottom-grid-collapse-btn:hover {
-  background: var(--accent);
-  color: var(--bg);
-  border-color: var(--accent);
+.bottom-grid-resize-handle .bottom-grid-collapse-btn:hover,
+.bottom-grid-resize-handle:hover .bottom-grid-collapse-btn {
+  opacity: 1;
+  color: var(--accent);
 }
 
 #layoutToggleBtn.active {

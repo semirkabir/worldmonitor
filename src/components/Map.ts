@@ -10,9 +10,9 @@ import type { Earthquake } from '@/services/earthquakes';
 import { type IranEvent, getIranEventCssColor, getIranEventSize } from '@/services/conflict';
 import type { TechHubActivity } from '@/services/tech-activity';
 import type { GeoHubActivity } from '@/services/geo-activity';
-import { getNaturalEventIcon } from '@/services/eonet';
+import { getNaturalEventIcon, getNaturalEventIconUrl } from '@/services/eonet';
 import type { WeatherAlert } from '@/services/weather';
-import { getSeverityColor } from '@/services/weather';
+import { getSeverityColor, getWeatherAlertIconUrl } from '@/services/weather';
 import { startSmartPollLoop, type SmartPollLoopHandle } from '@/services/runtime';
 import {
   MAP_URLS,
@@ -1712,7 +1712,19 @@ export class MapComponent {
         div.style.top = `${pos[1]}px`;
         div.style.borderColor = getSeverityColor(alert.severity);
 
-        const icon = this.createSharedIcon('weather', 'weather-icon');
+        const alertIconUrl = getWeatherAlertIconUrl(alert.event);
+        let icon: HTMLElement;
+        if (alertIconUrl) {
+          icon = document.createElement('div');
+          icon.className = 'weather-icon map-shared-icon';
+          const img = document.createElement('img');
+          img.src = alertIconUrl;
+          img.alt = alert.event;
+          img.className = 'nat-event-icon-img';
+          icon.appendChild(img);
+        } else {
+          icon = this.createSharedIcon('weather', 'weather-icon');
+        }
         div.appendChild(icon);
 
         div.addEventListener('click', (e) => {
@@ -2741,7 +2753,16 @@ export class MapComponent {
 
         const icon = document.createElement('div');
         icon.className = 'nat-event-icon';
-        icon.textContent = getNaturalEventIcon(event.category);
+        const iconUrl = getNaturalEventIconUrl(event.category);
+        if (iconUrl) {
+          const img = document.createElement('img');
+          img.src = iconUrl;
+          img.alt = event.category;
+          img.className = 'nat-event-icon-img';
+          icon.appendChild(img);
+        } else {
+          icon.textContent = getNaturalEventIcon(event.category);
+        }
         div.appendChild(icon);
 
         if (this.state.zoom >= 2) {

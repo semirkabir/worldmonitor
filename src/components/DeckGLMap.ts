@@ -49,6 +49,7 @@ import { ArcLayer } from '@deck.gl/layers';
 import { HeatmapLayer } from '@deck.gl/aggregation-layers';
 import { H3HexagonLayer } from '@deck.gl/geo-layers';
 import type { WeatherAlert } from '@/services/weather';
+import { getWeatherAlertIconUrl } from '@/services/weather';
 import { escapeHtml } from '@/utils/sanitize';
 import { tokenizeForMatch, matchKeyword, matchesAnyKeyword, findMatchingKeywords } from '@/utils/keyword-match';
 import { t } from '@/services/i18n';
@@ -1338,7 +1339,7 @@ export class DeckGLMap {
 
     // Weather alerts layer
     if (mapLayers.weather && filteredWeatherAlerts.length > 0) {
-      layers.push(this.createWeatherLayer(filteredWeatherAlerts));
+      layers.push(...this.createWeatherLayer(filteredWeatherAlerts));
     }
 
     // Internet outages layer
@@ -2028,23 +2029,47 @@ export class DeckGLMap {
     });
   }
 
-  private createWeatherLayer(alerts: WeatherAlert[]): IconLayer {
-    // Filter weather alerts that have centroid coordinates
+  private createWeatherLayer(alerts: WeatherAlert[]): IconLayer[] {
     const alertsWithCoords = alerts.filter(a => a.centroid && a.centroid.length === 2);
+    const floodAlerts = alertsWithCoords.filter(a => getWeatherAlertIconUrl(a.event) !== null);
+    const otherAlerts = alertsWithCoords.filter(a => getWeatherAlertIconUrl(a.event) === null);
+    const sizeFor = (d: WeatherAlert) => d.severity === 'Extreme' ? 18 : d.severity === 'Severe' ? 16 : 14;
 
-    return new IconLayer({
-      id: 'weather-layer',
-      data: alertsWithCoords,
-      getPosition: (d) => d.centroid as [number, number],
-      getIcon: () => 'marker',
-      iconAtlas: getSharedLayerIconAtlas('weather'),
-      iconMapping: SHARED_LAYER_ICON_MAPPING,
-      getSize: (d) => d.severity === 'Extreme' ? 18 : d.severity === 'Severe' ? 16 : 14,
-      sizeMinPixels: 8,
-      sizeMaxPixels: 20,
-      pickable: true,
-      billboard: true,
-    });
+    const layers: IconLayer[] = [];
+
+    if (otherAlerts.length > 0) {
+      layers.push(new IconLayer({
+        id: 'weather-layer',
+        data: otherAlerts,
+        getPosition: (d) => d.centroid as [number, number],
+        getIcon: () => 'marker',
+        iconAtlas: getSharedLayerIconAtlas('weather'),
+        iconMapping: SHARED_LAYER_ICON_MAPPING,
+        getSize: sizeFor,
+        sizeMinPixels: 8,
+        sizeMaxPixels: 20,
+        pickable: true,
+        billboard: true,
+      }));
+    }
+
+    if (floodAlerts.length > 0) {
+      layers.push(new IconLayer({
+        id: 'weather-flood-layer',
+        data: floodAlerts,
+        getPosition: (d) => d.centroid as [number, number],
+        getIcon: () => 'marker',
+        iconAtlas: '/icons/flood-warning.png',
+        iconMapping: { marker: { x: 0, y: 0, width: 512, height: 512, mask: false } },
+        getSize: sizeFor,
+        sizeMinPixels: 8,
+        sizeMaxPixels: 20,
+        pickable: true,
+        billboard: true,
+      }));
+    }
+
+    return layers;
   }
 
   private createOutagesLayer(outages: InternetOutage[]): IconLayer {
@@ -3277,7 +3302,8 @@ export class DeckGLMap {
       }
       case 'repair-ships-layer':
         return { html: `<div class="deckgl-tooltip"><strong>${text(obj.name || t('components.deckgl.tooltip.repairShip'))}</strong><br/>${text(obj.status)}</div>` };
-      case 'weather-layer': {
+      case 'weather-layer':
+      case 'weather-flood-layer': {
         const areaDesc = typeof obj.areaDesc === 'string' ? obj.areaDesc : '';
         const area = areaDesc ? `<br/><small>${text(areaDesc.slice(0, 50))}${areaDesc.length > 50 ? '...' : ''}</small>` : '';
         return { html: `<div class="deckgl-tooltip"><strong>${text(obj.event || t('components.deckgl.layers.weatherAlerts'))}</strong><br/>${text(obj.severity)}${area}</div>` };
@@ -3533,6 +3559,7 @@ export class DeckGLMap {
       'pipelines-layer': 'pipeline',
       'earthquakes-layer': 'earthquake',
       'weather-layer': 'weather',
+      'weather-flood-layer': 'weather',
       'outages-layer': 'outage',
       'cyber-threats-layer': 'cyberThreat',
       'iran-events-layer': 'iranEvent',
@@ -3660,6 +3687,7 @@ export class DeckGLMap {
       'pipelines-layer': 'pipeline',
       'earthquakes-layer': 'earthquake',
       'weather-layer': 'weather',
+      'weather-flood-layer': 'weather',
       'outages-layer': 'outage',
       'cyber-threats-layer': 'cyberThreat',
       'iran-events-layer': 'iranEvent',
@@ -4718,8 +4746,8 @@ export class DeckGLMap {
       data: events,
       getPosition: (d) => [d.longitude, d.latitude],
       getIcon: () => 'marker',
-      iconAtlas: getSharedLayerIconAtlas('ucdpEvents'),
-      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      iconAtlas: '/icons/armed-conflict.png',
+      iconMapping: { marker: { x: 0, y: 0, width: 512, height: 512, mask: false } },
       getSize: (d) => Math.min(18, Math.max(11, Math.sqrt(d.deaths_best || 1) * 2 + 11)),
       sizeMinPixels: 8,
       sizeMaxPixels: 20,

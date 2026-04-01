@@ -142,10 +142,6 @@ function downloadFile(content: string, filename: string, mimeType: string): void
 export class ExportPanel {
   private element: HTMLElement;
   private menu: HTMLElement;
-  private isOpen = false;
-  private boundClose = (e: MouseEvent) => {
-    if (!this.element.contains(e.target as Node)) this.closeMenu();
-  };
 
   constructor() {
     this.element = document.createElement('div');
@@ -180,11 +176,8 @@ export class ExportPanel {
   }
 
   private setupEventListeners(): void {
-    const btn = this.element.querySelector('.export-btn')!;
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.isOpen ? this.closeMenu() : this.openMenu();
-    });
+    this.element.addEventListener('mouseenter', () => this.openMenu());
+    this.element.addEventListener('mouseleave', () => this.closeMenu());
 
     this.menu.addEventListener('click', async (e) => {
       const item = (e.target as HTMLElement).closest('[data-action]') as HTMLElement | null;
@@ -202,17 +195,13 @@ export class ExportPanel {
   }
 
   private openMenu(): void {
-    this.isOpen = true;
     this.menu.classList.remove('hidden');
     this.element.querySelector('.export-btn')!.setAttribute('aria-expanded', 'true');
-    setTimeout(() => document.addEventListener('click', this.boundClose), 0);
   }
 
   private closeMenu(): void {
-    this.isOpen = false;
     this.menu.classList.add('hidden');
     this.element.querySelector('.export-btn')!.setAttribute('aria-expanded', 'false');
-    document.removeEventListener('click', this.boundClose);
   }
 
   private async buildCanvas(): Promise<HTMLCanvasElement | null> {
