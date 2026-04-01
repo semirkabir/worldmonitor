@@ -17,7 +17,7 @@ import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
 import { isMobileDevice, getCSSColor } from '@/utils';
 import { t } from '@/services/i18n';
 import { fetchHotspotContext, formatArticleDate, extractDomain, type GdeltArticle } from '@/services/gdelt-intel';
-import { getNaturalEventIcon } from '@/services/eonet';
+import { getNaturalEventIcon, getNaturalEventIconUrl } from '@/services/eonet';
 import { getHotspotEscalation, getEscalationChange24h } from '@/services/hotspot-escalation';
 import { getCableHealthRecord } from '@/services/cable-health';
 
@@ -2493,7 +2493,10 @@ export class MapPopup {
       waterColor: 'low',
       manmade: 'elevated',
     };
-    const icon = getNaturalEventIcon(event.category);
+    const iconUrl = getNaturalEventIconUrl(event.category);
+    const icon = iconUrl
+      ? `<img src="${iconUrl}" alt="${event.category}" class="nat-event-icon-img popup-icon-img" />`
+      : getNaturalEventIcon(event.category);
     const severityClass = categoryColors[event.category] || 'low';
     const categoryClass = this.sanitizeClassToken(event.category, 'manmade');
     const timeAgo = this.getTimeAgo(event.date);

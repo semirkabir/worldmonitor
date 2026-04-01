@@ -40,11 +40,14 @@ export function getWeatherAlertIconUrl(event: string): string | null {
   return null;
 }
 
+const NWS_API = 'https://api.weather.gov/alerts/active';
 const breaker = createCircuitBreaker<WeatherAlert[]>({ name: 'NWS Weather', cacheTtlMs: 30 * 60 * 1000, persistCache: true });
 
 export async function fetchWeatherAlerts(): Promise<WeatherAlert[]> {
   return breaker.execute(async () => {
-    const response = await fetch(NWS_API);
+    const response = await fetch(NWS_API, {
+      headers: { 'User-Agent': 'WorldMonitor/1.0' }
+    });
 
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
@@ -102,23 +105,6 @@ function calculateCentroid(coords: [number, number][]): [number, number] | undef
   );
 
   return [sum[0] / coords.length, sum[1] / coords.length];
-}
-
-export type WeatherCategory =
-  'tornado' | 'flood' | 'thunderstorm' | 'snow' | 'heat' |
-  'hurricane' | 'fire' | 'wind' | 'default';
-
-export function getWeatherEventCategory(event: string): WeatherCategory {
-  const e = event.toLowerCase();
-  if (/tornado|waterspout/.test(e)) return 'tornado';
-  if (/flood|surge/.test(e)) return 'flood';
-  if (/thunderstorm|lightning/.test(e)) return 'thunderstorm';
-  if (/snow|blizzard|ice storm|winter storm|winter weather|freezing/.test(e)) return 'snow';
-  if (/excessive heat|heat wave/.test(e)) return 'heat';
-  if (/hurricane|typhoon|tropical storm|cyclone/.test(e)) return 'hurricane';
-  if (/fire|red flag/.test(e)) return 'fire';
-  if (/\bwind\b|gale|dust storm/.test(e)) return 'wind';
-  return 'default';
 }
 
 export function getSeverityColor(severity: WeatherAlert['severity']): string {
