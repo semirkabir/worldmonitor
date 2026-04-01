@@ -6931,7 +6931,8 @@ a.prediction-link:hover {
 
 .popup-header.iranEvent.low {
   border-left: 3px solid #cccc00;
-=======
+}
+
 .popup-title-block {
   flex: 1;
   min-width: 0;
@@ -6949,7 +6950,6 @@ a.prediction-link:hover {
   color: var(--text-dim);
   letter-spacing: 0.5px;
   font-weight: normal;
->>>>>>> 1cb194e1470f72d02cf63ae528f7cce0a93fd78a
 }
 
 .popup-title {
