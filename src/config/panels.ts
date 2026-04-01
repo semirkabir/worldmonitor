@@ -91,6 +91,11 @@ const FULL_PANELS: Record<string, PanelConfig> = {
   'alert-rules':         p2('Alert Rules'),
   'geopolitical-risk':   p1('Geopolitical Risk Index'),
   'trade-flows':         p2('Trade Flows'),
+  'earnings-calendar':   p2('Earnings Calendar'),
+  'ipo-calendar':        p2('IPO Calendar'),
+  'insider-trading':     p2('Insider Trading'),
+  'social-sentiment':    p2('Social Sentiment'),
+  'options-chain':       p2('Options Chain'),
 };
 
 const FULL_MAP_LAYERS: MapLayers = {
@@ -212,6 +217,11 @@ const FINANCE_PANELS: Record<string, PanelConfig> = {
   polymarket:         p2('Predictions'),
   'world-clock':      p2('World Clock'),
   monitors:           p2('My Monitors'),
+  'earnings-calendar': p2('Earnings Calendar'),
+  'ipo-calendar':     p2('IPO Calendar'),
+  'insider-trading':  p2('Insider Trading'),
+  'social-sentiment': p2('Social Sentiment'),
+  'options-chain':    p2('Options Chain'),
 };
 
 const FINANCE_MAP_LAYERS: MapLayers = {
@@ -522,3 +532,7 @@ export const STORAGE_KEYS = {
   mapLayers:     'worldmonitor-layers',
   disabledFeeds: 'worldmonitor-disabled-feeds',
 } as const;
+
+export function getVariantStorageKey(baseKey: string, variant: string): string {
+  return `${baseKey}-${variant}`;
+}

@@ -8,6 +8,7 @@ import {
   MOBILE_DEFAULT_MAP_LAYERS,
   STORAGE_KEYS,
   SITE_VARIANT,
+  getVariantStorageKey,
 } from '@/config';
 import { initDB, cleanOldSnapshots, isAisConfigured, initAisStream, isOutagesConfigured, disconnectAisStream } from '@/services';
 import { initAuth } from '@/services/user-auth';
@@ -107,7 +108,10 @@ export class App {
       localStorage.setItem(APPLIED_VARIANT_KEY, currentVariant);
       localStorage.setItem('worldmonitor-variant', currentVariant);
       localStorage.removeItem(STORAGE_KEYS.mapLayers);
-      localStorage.removeItem(STORAGE_KEYS.panels);
+      if (appliedVariant) {
+        localStorage.removeItem(getVariantStorageKey(STORAGE_KEYS.panels, appliedVariant));
+      }
+      localStorage.removeItem(getVariantStorageKey(STORAGE_KEYS.panels, currentVariant));
       localStorage.removeItem(PANEL_ORDER_KEY);
       localStorage.removeItem(PANEL_ORDER_KEY + '-bottom');
       localStorage.removeItem(PANEL_ORDER_KEY + '-bottom-set');
@@ -116,7 +120,7 @@ export class App {
       panelSettings = { ...DEFAULT_PANELS };
     } else {
       localStorage.setItem('worldmonitor-variant', currentVariant);
-      mapLayers = loadFromStorage<MapLayers>(STORAGE_KEYS.mapLayers, defaultLayers);
+      mapLayers = loadFromStorage<MapLayers>(getVariantStorageKey(STORAGE_KEYS.mapLayers, currentVariant), defaultLayers);
       // For non-full variants, clamp any layer that isn't in this variant's allowed set to false.
       // This prevents stale localStorage values from other variants (or the full variant) leaking
       // markers onto the map that don't belong to the current category.
@@ -127,7 +131,7 @@ export class App {
         }
       }
       panelSettings = loadFromStorage<Record<string, PanelConfig>>(
-        STORAGE_KEYS.panels,
+        getVariantStorageKey(STORAGE_KEYS.panels, SITE_VARIANT),
         DEFAULT_PANELS
       );
       // Merge in any new panels that didn't exist when settings were saved
@@ -232,7 +236,7 @@ export class App {
         }
       });
       if (panelSettingsChanged) {
-        saveToStorage(STORAGE_KEYS.panels, panelSettings);
+        saveToStorage(getVariantStorageKey(STORAGE_KEYS.panels, SITE_VARIANT), panelSettings);
       }
 
       localStorage.setItem(REQUIRED_DEFAULTS_MIGRATION_KEY, 'done');
@@ -261,7 +265,7 @@ export class App {
           enabled: true,
           priority: 2,
         };
-        saveToStorage(STORAGE_KEYS.panels, panelSettings);
+        saveToStorage(getVariantStorageKey(STORAGE_KEYS.panels, SITE_VARIANT), panelSettings);
       }
     }
 

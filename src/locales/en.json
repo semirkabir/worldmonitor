@@ -197,7 +197,8 @@
     "panelCatCentralBanks": "Central Banks & Econ",
     "panelCatDeals": "Deals & Institutional",
     "panelCatGulfMena": "Gulf & MENA",
-    "panelCatTradePolicy": "Trade Policy"
+    "panelCatTradePolicy": "Trade Policy",
+    "panelCatAdvancedMarkets": "Advanced Markets"
   },
   "panels": {
     "liveNews": "Live News",
@@ -272,7 +273,47 @@
     "gulfEconomies": "Gulf Economies",
     "gulfIndices": "Gulf Indices",
     "gulfCurrencies": "Gulf Currencies",
-    "gulfOil": "Gulf Oil"
+    "gulfOil": "Gulf Oil",
+    "earningsCalendar": "Earnings Calendar",
+    "ipoCalendar": "IPO Calendar",
+    "insiderTrading": "Insider Trading",
+    "socialSentiment": "Social Sentiment",
+    "optionsChain": "Options Chain",
+    "marketsNews": "Markets News",
+    "forex": "Forex & Currencies",
+    "bonds": "Fixed Income",
+    "commoditiesNews": "Commodities News",
+    "cryptoNews": "Crypto News",
+    "centralbanks": "Central Bank Watch",
+    "economicNews": "Economic News",
+    "derivatives": "Derivatives & Options",
+    "fintech": "Fintech & Trading",
+    "institutional": "Hedge Funds & PE",
+    "analysis": "Market Analysis",
+    "gccNews": "GCC Business News",
+    "worldClock": "World Clock",
+    "positiveFeed": "Good News Feed",
+    "progress": "Human Progress",
+    "counters": "Live Counters",
+    "spotlight": "Today's Hero",
+    "breakthroughs": "Breakthroughs",
+    "digest": "5 Good Things",
+    "species": "Conservation Wins",
+    "renewable": "Renewable Energy",
+    "goldSilver": "Gold & Silver",
+    "miningNews": "Mining Industry",
+    "criticalMinerals": "Critical Minerals",
+    "baseMetals": "Base Metals",
+    "miningCompanies": "Major Miners",
+    "commodityNews": "Commodity News",
+    "commodityRegulation": "Mining Policy & ESG",
+    "gulfEconomies": "Gulf & OPEC Economies",
+    "satelliteFires": "Fires & Operational Risk",
+    "airlineIntel": "Airline Intelligence",
+    "liveWebcams": "Live Webcams",
+    "strategicPosture": "Strategic Posture",
+    "sanctions": "Sanctions Tracker",
+    "insights": "AI Market Insights"
   },
   "commands": {
     "prefixes": {
@@ -2294,29 +2335,21 @@
   },
   "intel": {
     "topics": {
-      "military": {
-        "name": "Military Activity",
-        "description": "Military exercises, deployments, and operations"
-      },
       "cyber": {
         "name": "Cyber Threats",
         "description": "Cyber attacks, ransomware, and digital threats"
       },
-      "nuclear": {
-        "name": "Nuclear",
-        "description": "Nuclear programs, IAEA inspections, proliferation"
+      "ukraine": {
+        "name": "Ukraine",
+        "description": "Ukraine war and related military activity"
       },
-      "sanctions": {
-        "name": "Sanctions",
-        "description": "Economic sanctions and trade restrictions"
+      "iran-war": {
+        "name": "Iran War",
+        "description": "Iran-Israel conflict and Middle East tensions"
       },
-      "intelligence": {
-        "name": "Intelligence",
-        "description": "Espionage, intelligence operations, surveillance"
-      },
-      "maritime": {
-        "name": "Maritime Security",
-        "description": "Naval operations, maritime chokepoints, sea lanes"
+      "china-taiwan": {
+        "name": "China, Taiwan",
+        "description": "China-Taiwan tensions and Indo-Pacific security"
       }
     }
   },

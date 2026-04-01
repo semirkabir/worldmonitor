@@ -25,6 +25,7 @@ import {
   FEEDS,
   INTEL_SOURCES,
   DEFAULT_PANELS,
+  getVariantStorageKey,
 } from '@/config';
 import {
   saveSnapshot,
@@ -143,9 +144,9 @@ export class EventHandlerManager implements AppModule {
     trackVariantSwitch(SITE_VARIANT, variant);
     localStorage.setItem('worldmonitor-variant', variant);
 
-    // Clear persisted UI/map state so previous variant layers/panels cannot leak.
+    // Clear persisted UI/map state for the old variant only
     localStorage.removeItem(STORAGE_KEYS.mapLayers);
-    localStorage.removeItem(STORAGE_KEYS.panels);
+    localStorage.removeItem(getVariantStorageKey(STORAGE_KEYS.panels, SITE_VARIANT));
     localStorage.removeItem('panel-order');
     localStorage.removeItem('panel-order-bottom');
     localStorage.removeItem('panel-order-bottom-set');

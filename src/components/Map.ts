@@ -706,8 +706,18 @@ export class MapComponent {
     const legend = document.createElement('div');
     legend.className = 'map-legend map-tray';
     legend.innerHTML = `
+      <div class="map-tray-header">
+        <span class="map-tray-title">Legend</span>
+        <span class="map-tray-status"></span>
+      </div>
       <div class="map-legend-items map-tray-body"></div>
     `;
+
+    const header = legend.querySelector('.map-tray-header');
+    header?.addEventListener('click', () => {
+      legend.classList.toggle('collapsed');
+    });
+
     this.legendEl = legend;
     this.refreshLegend();
     return legend;

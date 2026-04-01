@@ -96,6 +96,64 @@ export const COMMANDS: Command[] = [
   { id: 'panel:stablecoins', keywords: ['stablecoins', 'usdt', 'usdc'], label: 'Panel: Stablecoins', icon: '\u{1FA99}', category: 'panels' },
   { id: 'panel:monitors', keywords: ['monitors', 'my monitors', 'watchlist'], label: 'Panel: My Monitors', icon: '\u{1F4CB}', category: 'panels' },
 
+  // Tech variant panels
+  { id: 'panel:events', keywords: ['tech events', 'conferences', 'summits'], label: 'Panel: Tech Events', icon: '\u{1F4C5}', category: 'panels' },
+  { id: 'panel:startups', keywords: ['startups', 'vc', 'venture capital', 'funding'], label: 'Panel: Startups & VC', icon: '\u{1F4B5}', category: 'panels' },
+  { id: 'panel:vcblogs', keywords: ['vc blogs', 'essays', 'investor insights'], label: 'Panel: VC Insights', icon: '\u{1F4DD}', category: 'panels' },
+  { id: 'panel:regionalStartups', keywords: ['global startups', 'startup news worldwide'], label: 'Panel: Global Startup News', icon: '\u{1F30D}', category: 'panels' },
+  { id: 'panel:unicorns', keywords: ['unicorns', 'billion-dollar startups'], label: 'Panel: Unicorn Tracker', icon: '\u{1F451}', category: 'panels' },
+  { id: 'panel:accelerators', keywords: ['accelerators', 'demo days', 'incubators'], label: 'Panel: Accelerators', icon: '\u{1F3AF}', category: 'panels' },
+  { id: 'panel:security', keywords: ['cybersecurity', 'infosec', 'hacks'], label: 'Panel: Cybersecurity', icon: '\u{1F6E1}\uFE0F', category: 'panels' },
+  { id: 'panel:policy', keywords: ['ai policy', 'regulation', 'government ai'], label: 'Panel: AI Policy', icon: '\u{1F3DB}\uFE0F', category: 'panels' },
+  { id: 'panel:hardware', keywords: ['semiconductors', 'chips', 'hardware', 'nvidia'], label: 'Panel: Semiconductors', icon: '\u{1F4BC}', category: 'panels' },
+  { id: 'panel:cloud', keywords: ['cloud', 'aws', 'azure', 'gcp', 'infrastructure'], label: 'Panel: Cloud & Infra', icon: '\u2601\uFE0F', category: 'panels' },
+  { id: 'panel:dev', keywords: ['developers', 'dev community', 'programming'], label: 'Panel: Developer Community', icon: '\u{1F4BB}', category: 'panels' },
+  { id: 'panel:layoffs', keywords: ['layoffs', 'job cuts', 'tech layoffs'], label: 'Panel: Layoffs Tracker', icon: '\u{1F4CB}', category: 'panels' },
+
+  // Finance variant panels
+  { id: 'panel:insights', keywords: ['ai insights', 'market insights', 'ai analysis'], label: 'Panel: AI Market Insights', icon: '\u{1F9E0}', category: 'panels' },
+  { id: 'panel:forex', keywords: ['forex', 'currencies', 'usd', 'eur', 'jpy'], label: 'Panel: Forex & Currencies', icon: '\u{1F4B1}', category: 'panels' },
+  { id: 'panel:bonds', keywords: ['bonds', 'fixed income', 'treasury', 'yields'], label: 'Panel: Fixed Income', icon: '\u{1F4C8}', category: 'panels' },
+  { id: 'panel:markets-news', keywords: ['markets news', 'stock news'], label: 'Panel: Markets News', icon: '\u{1F4F0}', category: 'panels' },
+  { id: 'panel:commodities-news', keywords: ['commodities news', 'commodity news'], label: 'Panel: Commodities News', icon: '\u{1F4E6}', category: 'panels' },
+  { id: 'panel:crypto-news', keywords: ['crypto news', 'bitcoin news'], label: 'Panel: Crypto News', icon: '\u20BF', category: 'panels' },
+  { id: 'panel:centralbanks', keywords: ['central banks', 'fed', 'ecb', 'monetary'], label: 'Panel: Central Bank Watch', icon: '\u{1F3E6}', category: 'panels' },
+  { id: 'panel:economic-news', keywords: ['economic news', 'economy news'], label: 'Panel: Economic News', icon: '\u{1F4CA}', category: 'panels' },
+  { id: 'panel:ipo', keywords: ['ipo', 'earnings', 'mergers', 'ma'], label: 'Panel: IPOs, Earnings & M&A', icon: '\u{1F4BD}', category: 'panels' },
+  { id: 'panel:derivatives', keywords: ['derivatives', 'options', 'futures', 'swaps'], label: 'Panel: Derivatives & Options', icon: '\u{1F4C8}', category: 'panels' },
+  { id: 'panel:fintech', keywords: ['fintech', 'payment', 'stripe', 'square'], label: 'Panel: Fintech & Trading', icon: '\u{1F4B0}', category: 'panels' },
+  { id: 'panel:institutional', keywords: ['hedge funds', 'private equity', 'pe'], label: 'Panel: Hedge Funds & PE', icon: '\u{1F3AF}', category: 'panels' },
+  { id: 'panel:analysis', keywords: ['analysis', 'market analysis', 'research'], label: 'Panel: Market Analysis', icon: '\u{1F4CA}', category: 'panels' },
+  { id: 'panel:gcc-investments', keywords: ['gcc investments', 'gulf investments'], label: 'Panel: GCC Investments', icon: '\u{1F4B5}', category: 'panels' },
+  { id: 'panel:gccNews', keywords: ['gcc news', 'gulf news', 'middle east business'], label: 'Panel: GCC Business News', icon: '\u{1F1EA}\u{1F1EC}', category: 'panels' },
+
+  // Happy variant panels
+  { id: 'panel:positive-feed', keywords: ['good news', 'positive news', 'happy'], label: 'Panel: Good News Feed', icon: '\u{1F60A}', category: 'panels' },
+  { id: 'panel:progress', keywords: ['human progress', 'development'], label: 'Panel: Human Progress', icon: '\u{1F3C6}', category: 'panels' },
+  { id: 'panel:counters', keywords: ['live counters', 'global counters', 'stats'], label: 'Panel: Live Counters', icon: '\u{1F4CA}', category: 'panels' },
+  { id: 'panel:spotlight', keywords: ['hero', 'today hero', 'spotlight'], label: 'Panel: Today\'s Hero', icon: '\u{1F451}', category: 'panels' },
+  { id: 'panel:breakthroughs', keywords: ['breakthroughs', 'discoveries', 'science'], label: 'Panel: Breakthroughs', icon: '\u{1F52C}', category: 'panels' },
+  { id: 'panel:digest', keywords: ['5 good things', 'digest', 'good news'], label: 'Panel: 5 Good Things', icon: '\u270D\uFE0F', category: 'panels' },
+  { id: 'panel:species', keywords: ['species', 'conservation', 'wildlife'], label: 'Panel: Conservation Wins', icon: '\u{1F98A}', category: 'panels' },
+  { id: 'panel:renewable', keywords: ['renewable', 'solar', 'wind', 'energy'], label: 'Panel: Renewable Energy', icon: '\u{1F300}', category: 'panels' },
+
+  // Commodity variant panels
+  { id: 'panel:gold-silver', keywords: ['gold', 'silver', 'precious metals'], label: 'Panel: Gold & Silver', icon: '\u{1F48E}', category: 'panels' },
+  { id: 'panel:mining-news', keywords: ['mining news', 'minerals news'], label: 'Panel: Mining Industry', icon: '\u{1F6CF}\uFE0F', category: 'panels' },
+  { id: 'panel:critical-minerals', keywords: ['critical minerals', 'battery metals', 'lithium'], label: 'Panel: Critical Minerals', icon: '\u{1F6CF}\uFE0F', category: 'panels' },
+  { id: 'panel:base-metals', keywords: ['base metals', 'copper', 'aluminum', 'zinc'], label: 'Panel: Base Metals', icon: '\u{1F6E2}\uFE0F', category: 'panels' },
+  { id: 'panel:mining-companies', keywords: ['mining companies', 'miners', 'majors'], label: 'Panel: Major Miners', icon: '\u{1F3AF}', category: 'panels' },
+  { id: 'panel:commodity-news', keywords: ['commodity news', 'commodities news'], label: 'Panel: Commodity News', icon: '\u{1F4E6}', category: 'panels' },
+  { id: 'panel:commodity-regulation', keywords: ['mining regulation', 'esg', 'policy'], label: 'Panel: Mining Policy & ESG', icon: '\u{1F3DB}\uFE0F', category: 'panels' },
+  { id: 'panel:gulf-economies', keywords: ['gulf', 'opec', 'oil economies'], label: 'Panel: Gulf & OPEC Economies', icon: '\u{1F1E6}\u{1F1EA}', category: 'panels' },
+  { id: 'panel:satellite-fires', keywords: ['fires', 'satellite fires', 'wildfires'], label: 'Panel: Fires & Operational Risk', icon: '\u{1F525}', category: 'panels' },
+  { id: 'panel:airline-intel', keywords: ['airline', 'aviation', 'flights'], label: 'Panel: Airline Intelligence', icon: '\u2708\uFE0F', category: 'panels' },
+
+  // Full variant additional panels
+  { id: 'panel:live-webcams', keywords: ['webcams', 'live cameras', 'views'], label: 'Panel: Live Webcams', icon: '\u{1F4F7}', category: 'panels' },
+  { id: 'panel:strategic-posture', keywords: ['strategic posture', 'military posture'], label: 'Panel: Strategic Posture', icon: '\u{1F396}\uFE0F', category: 'panels' },
+  { id: 'panel:sanctions', keywords: ['sanctions', 'sanctions tracker'], label: 'Panel: Sanctions Tracker', icon: '\u{1F6AB}', category: 'panels' },
+
   // View / settings
   { id: 'view:dark', keywords: ['dark', 'dark mode', 'night'], label: 'Switch to dark mode', icon: '\u{1F319}', category: 'view' },
   { id: 'view:light', keywords: ['light', 'light mode', 'day'], label: 'Switch to light mode', icon: '\u2600\uFE0F', category: 'view' },

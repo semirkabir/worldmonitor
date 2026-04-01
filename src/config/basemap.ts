@@ -310,7 +310,7 @@ export function isLightMapTheme(theme: string): boolean {
 export const CUSTOM_THEME_FILTERS: Partial<Record<string, string>> = {
   'custom:matrix': 'saturate(0) sepia(1) hue-rotate(80deg) saturate(4) brightness(0.55)',
   'custom:smooth_dark': 'brightness(0.85) contrast(1.05) saturate(0.7)',
-  'custom:toner': 'grayscale(1) contrast(1.3) brightness(0.9)',
+  'custom:toner': 'contrast(1.3) brightness(0.9)',
   'custom:toner_lite': 'grayscale(1) contrast(1.15) brightness(1.05)',
   'custom:smooth_light': 'brightness(1.05) saturate(0.85) contrast(0.95)',
   'custom:outdoors_approx': 'saturate(1.2) hue-rotate(10deg) brightness(1.02)',

@@ -1505,6 +1505,42 @@ export default defineConfig({
           });
         },
       },
+      // Market Data (Finnhub) - dev proxy for serverless function
+      '/api/market-data': {
+        target: 'https://finnhub.io/api/v1',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => {
+          const url = new URL(path, 'http://localhost');
+          const endpoint = url.searchParams.get('endpoint');
+          const symbol = url.searchParams.get('symbol');
+          const from = url.searchParams.get('from');
+          const to = url.searchParams.get('to');
+          const apiKey = process.env.FINNHUB_API_KEY || '';
+
+          switch (endpoint) {
+            case 'earnings-calendar':
+              return `/calendar/earnings?symbol=${symbol || ''}&from=${from || ''}&to=${to || ''}&token=${apiKey}`;
+            case 'ipo-calendar':
+              return `/calendar/ipo?from=${from || ''}&to=${to || ''}&token=${apiKey}`;
+            case 'insider-transactions':
+              return `/stock/insider-transactions?symbol=${symbol || ''}&token=${apiKey}`;
+            case 'social-sentiment':
+              return `/stock/social-sentiment?symbol=${symbol || ''}&token=${apiKey}`;
+            case 'recommendation-trends':
+              return `/stock/recommendation?symbol=${symbol || ''}&token=${apiKey}`;
+            case 'option-chain':
+              return `/stock/option-chain?symbol=${symbol || ''}&token=${apiKey}`;
+            default:
+              return `/quote?symbol=${symbol || ''}&token=${apiKey}`;
+          }
+        },
+        configure: (proxy) => {
+          proxy.on('error', (err) => {
+            console.log('Market data proxy error:', err.message);
+          });
+        },
+      },
     },
   },
 });

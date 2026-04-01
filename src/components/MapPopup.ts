@@ -250,7 +250,7 @@ export class MapPopup {
     const popupWidth = 380;
     const minMargin = 20; // Minimum margin from viewport edges
     const bottomBuffer = 50; // Buffer from viewport bottom
-    const topBuffer = 60; // Header height
+    const topBuffer = 80; // Header height + extra margin
 
     // Cap popup height to available vertical space before measuring
     const maxAllowedHeight = window.innerHeight - topBuffer - bottomBuffer;

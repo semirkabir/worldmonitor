@@ -3651,6 +3651,7 @@ export class DeckGLMap {
 
     // Reuse the same layerToPopupType mapping
     const layerToPopupType: Record<string, string> = {
+      'hotspots-layer': 'hotspot',
       'conflict-zones-layer': 'conflict',
       'bases-layer': 'base',
       'nuclear-layer': 'nuclear',
@@ -4492,8 +4493,20 @@ export class DeckGLMap {
     const legend = document.createElement('div');
     legend.className = 'map-legend deckgl-legend map-tray';
     legend.innerHTML = `
+      <div class="map-tray-header">
+        <span class="map-tray-title">Legend</span>
+        <span class="map-tray-status"></span>
+      </div>
       <div class="legend-items map-tray-body"></div>
     `;
+
+    const header = legend.querySelector('.map-tray-header');
+    header?.addEventListener('click', () => {
+      console.log('[Legend] Clicked, toggling collapsed');
+      legend.classList.toggle('collapsed');
+      console.log('[Legend] collapsed class:', legend.classList.contains('collapsed'));
+      this.refreshLegend();
+    });
 
     // CII choropleth gradient legend (shown when layer is active)
     const ciiLegend = document.createElement('div');

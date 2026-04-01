@@ -40,6 +40,11 @@ import {
   GeopoliticalRiskPanel,
   CorrelationMatrixPanel,
   TradeFlowPanel,
+  EarningsCalendarPanel,
+  IPOCalendarPanel,
+  InsiderTradingPanel,
+  SocialSentimentPanel,
+  OptionsChainPanel,
 } from '@/components';
 import { SatelliteFiresPanel } from '@/components/SatelliteFiresPanel';
 import { focusInvestmentOnMap } from '@/services/investments-focus';
@@ -51,6 +56,7 @@ import {
   DEFAULT_PANELS,
   STORAGE_KEYS,
   SITE_VARIANT,
+  getVariantStorageKey,
 } from '@/config';
 import { BETA_MODE } from '@/config/beta';
 import { t } from '@/services/i18n';
@@ -761,9 +767,8 @@ export class PanelLayoutManager implements AppModule {
     this.ctx.newsPanels['gov'] = govPanel;
     this.ctx.panels['gov'] = govPanel;
 
-    const intelPanel = new NewsPanel('intel', t('panels.intel'));
-    this.attachRelatedAssetHandlers(intelPanel);
-    this.ctx.newsPanels['intel'] = intelPanel;
+    // Intel Feed - uses GDELT real-time events (RSS-based version reserved for Pro)
+    const intelPanel = new GdeltIntelPanel();
     this.ctx.panels['intel'] = intelPanel;
 
     const cryptoPanel = new CryptoPanel();
@@ -1058,6 +1063,11 @@ export class PanelLayoutManager implements AppModule {
       this.ctx.panels['geopolitical-risk'] = new GeopoliticalRiskPanel();
       this.ctx.panels['correlation-matrix'] = new CorrelationMatrixPanel();
       this.ctx.panels['trade-flows'] = new TradeFlowPanel();
+      this.ctx.panels['earnings-calendar'] = new EarningsCalendarPanel();
+      this.ctx.panels['ipo-calendar'] = new IPOCalendarPanel();
+      this.ctx.panels['insider-trading'] = new InsiderTradingPanel();
+      this.ctx.panels['social-sentiment'] = new SocialSentimentPanel();
+      this.ctx.panels['options-chain'] = new OptionsChainPanel();
     }
 
     if (this.ctx.isDesktopApp) {
@@ -1423,13 +1433,14 @@ export class PanelLayoutManager implements AppModule {
     const config = this.ctx.panelSettings[key];
     if (!config) return;
     config.enabled = false;
-    saveToStorage(STORAGE_KEYS.panels, this.ctx.panelSettings);
+    saveToStorage(getVariantStorageKey(STORAGE_KEYS.panels, SITE_VARIANT), this.ctx.panelSettings);
     this.ctx.panels[key]?.hide();
     this.refreshAddWidgetBtn();
     this.saveCurrentLayout();
   }
 
   private saveCurrentLayout(): void {
+    const variantPanelsKey = getVariantStorageKey(STORAGE_KEYS.panels, SITE_VARIANT);
     const keys = [
       this.ctx.PANEL_ORDER_KEY,
       this.ctx.PANEL_ORDER_KEY + '-bottom-set',
@@ -1445,7 +1456,7 @@ export class PanelLayoutManager implements AppModule {
     for (const key of keys) {
       snapshot[key] = localStorage.getItem(key);
     }
-    snapshot[STORAGE_KEYS.panels] = localStorage.getItem(STORAGE_KEYS.panels);
+    snapshot[STORAGE_KEYS.panels] = localStorage.getItem(variantPanelsKey);
     localStorage.setItem('worldmonitor-saved-panel-layout', JSON.stringify(snapshot));
     localStorage.setItem('worldmonitor-saved-map-layout', window.location.search);
   }
@@ -1511,7 +1522,7 @@ export class PanelLayoutManager implements AppModule {
         const config = this.ctx.panelSettings[key];
         if (config) {
           config.enabled = true;
-          saveToStorage(STORAGE_KEYS.panels, this.ctx.panelSettings);
+          saveToStorage(getVariantStorageKey(STORAGE_KEYS.panels, SITE_VARIANT), this.ctx.panelSettings);
           this.ctx.panels[key]?.show();
           item.remove();
           this.refreshAddWidgetBtn();

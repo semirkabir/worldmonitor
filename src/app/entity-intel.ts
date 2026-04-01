@@ -17,16 +17,20 @@ import {
 import { TechHQRenderer } from '@/components/entity-detail/renderers/tech-hq';
 import { AircraftRenderer } from '@/components/entity-detail/renderers/aircraft';
 import { SpaceportRenderer } from '@/components/entity-detail/renderers/spaceport';
+import { HotspotRenderer } from '@/components/entity-detail/renderers/hotspot';
 
 export class EntityIntelManager implements AppModule {
   private ctx: AppContext;
   private panel: EntityDetailPanel | null = null;
+  private hotspotRenderer: HotspotRenderer;
 
   constructor(ctx: AppContext) {
     this.ctx = ctx;
+    this.hotspotRenderer = new HotspotRenderer();
   }
 
   init(): void {
+    this.hotspotRenderer.setNewsGetter(() => this.ctx.allNews);
     this.panel = new EntityDetailPanel(this.buildRegistry());
     this.ctx.entityDetailPanel = this.panel;
 
@@ -59,6 +63,7 @@ export class EntityIntelManager implements AppModule {
       techHQ: new TechHQRenderer(),
       aircraft: new AircraftRenderer(),
       spaceport: new SpaceportRenderer(),
+      hotspot: this.hotspotRenderer,
     };
   }
 }
