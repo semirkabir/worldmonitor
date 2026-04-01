@@ -88,6 +88,12 @@ export function upgradeSelect(select: HTMLSelectElement): void {
   trigger.setAttribute('aria-haspopup', 'listbox');
   trigger.setAttribute('aria-expanded', 'false');
 
+  // --- Dropdown menu (create early so conditional blocks can reference it) ---
+  const menu = document.createElement('div');
+  menu.className = 'wm-sel-menu';
+  menu.setAttribute('role', 'listbox');
+  populateMenu(menu, select);
+
   // Compact size for small header selects
   if (cls.contains('region-select') || cls.contains('focus-select') || cls.contains('popup-sound-select')) {
     trigger.classList.add('wm-sel-btn--sm');
@@ -127,12 +133,6 @@ export function upgradeSelect(select: HTMLSelectElement): void {
   } else {
     trigger.append(valEl, arrow);
   }
-
-  // --- Dropdown menu ---
-  const menu = document.createElement('div');
-  menu.className = 'wm-sel-menu';
-  menu.setAttribute('role', 'listbox');
-  populateMenu(menu, select);
 
   // --- Assemble ---
   select.parentNode?.insertBefore(wrap, select);

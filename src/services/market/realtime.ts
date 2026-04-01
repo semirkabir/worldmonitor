@@ -37,18 +37,17 @@ class MarketWebSocketService {
     if (this.ws?.readyState === WebSocket.OPEN) return;
     if (this.ws?.readyState === WebSocket.CONNECTING) return;
 
-    // Support both VITE_FINNHUB_API_KEY (client) and FINNHUB_API_KEY (server)
-    const apiKey = import.meta.env.VITE_FINNHUB_API_KEY || import.meta.env.FINNHUB_API_KEY || '';
-    
-    // Debug logging
-    console.log('[MarketWS] Checking API key:', {
-      viteKey: import.meta.env.VITE_FINNHUB_API_KEY ? 'present' : 'missing',
-      serverKey: import.meta.env.FINNHUB_API_KEY ? 'present' : 'missing',
-      finalKey: apiKey ? `present (${apiKey.length} chars)` : 'missing'
-    });
-    
+    // API key must be provided server-side only — never expose in client bundle.
+    // Use VITE_FINNHUB_WS_ENABLED=true to opt in; the relay handles auth server-side.
+    const wsEnabled = import.meta.env.VITE_FINNHUB_WS_ENABLED === 'true';
+    if (!wsEnabled) {
+      // Graceful no-op: market data is served via the server-side ListMarketQuotes RPC
+      return;
+    }
+
+    const apiKey = import.meta.env.VITE_FINNHUB_API_KEY || '';
     if (!apiKey) {
-      console.warn('[MarketWS] No Finnhub API key available, WebSocket disabled');
+      console.warn('[MarketWS] VITE_FINNHUB_WS_ENABLED is set but VITE_FINNHUB_API_KEY is missing');
       return;
     }
 

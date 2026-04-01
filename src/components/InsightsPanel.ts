@@ -16,6 +16,7 @@ import { isDesktopRuntime } from '@/services/runtime';
 import { getAiFlowSettings, isAnyAiProviderEnabled, subscribeAiFlowChange } from '@/services/ai-flow-settings';
 import { getServerInsights, type ServerInsights, type ServerInsightStory } from '@/services/insights-loader';
 import type { ClusteredEvent, FocalPoint, MilitaryFlight } from '@/types';
+import { triggerUrgencyMode } from '@/services/urgency-mode';
 
 export class InsightsPanel extends Panel {
   private lastBriefUpdate = 0;
@@ -484,6 +485,10 @@ export class InsightsPanel extends Panel {
       const html = this.renderInsights(importantClusters, sentiments, worldBrief);
       this.setContent(html);
       void setPersistentCache(InsightsPanel.CONTENT_CACHE_KEY, { html, badge });
+
+      // Urgency mode — escalate UI when 2+ alerts are active
+      const alertCount = importantClusters.filter(c => c.isAlert).length;
+      if (alertCount >= 2) triggerUrgencyMode('insights');
     } catch (error) {
       console.error('[InsightsPanel] Error:', error);
       this.showError();

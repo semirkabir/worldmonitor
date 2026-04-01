@@ -43,6 +43,7 @@ export {
   DEFAULT_MAP_LAYERS,
   MOBILE_DEFAULT_MAP_LAYERS,
   LAYER_TO_SOURCE,
+  getVariantStorageKey,
 } from './panels';
 
 // ============================================

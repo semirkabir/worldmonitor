@@ -1018,7 +1018,7 @@ export const SOURCE_REGION_MAP: Record<string, { labelKey: string; feedKeys: str
   latam: { labelKey: 'header.sourceRegionLatAm', feedKeys: ['latam'] },
   asia: { labelKey: 'header.sourceRegionAsiaPacific', feedKeys: ['asia'] },
   topical: { labelKey: 'header.sourceRegionTopical', feedKeys: ['energy', 'tech', 'ai', 'finance', 'layoffs', 'thinktanks'] },
-  intel: { labelKey: 'header.sourceRegionIntel', feedKeys: [] },
+  intel: { labelKey: 'header.sourceRegionIntel', feedKeys: ['gdelt', 'security-advisories'] },
 
   // Tech variant regions
   techNews: { labelKey: 'header.sourceRegionTechNews', feedKeys: ['tech', 'hardware'] },

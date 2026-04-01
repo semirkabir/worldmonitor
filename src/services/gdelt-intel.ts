@@ -33,13 +33,6 @@ export interface TopicIntelligence {
 
 export const INTEL_TOPICS: IntelTopic[] = [
   {
-    id: 'military',
-    name: 'Military Activity',
-    query: '(military exercise OR troop deployment OR airstrike OR "naval exercise") sourcelang:eng',
-    icon: '⚔️',
-    description: 'Military exercises, deployments, and operations',
-  },
-  {
     id: 'cyber',
     name: 'Cyber Threats',
     query: '(cyberattack OR ransomware OR hacking OR "data breach" OR APT) sourcelang:eng',
@@ -47,32 +40,25 @@ export const INTEL_TOPICS: IntelTopic[] = [
     description: 'Cyber attacks, ransomware, and digital threats',
   },
   {
-    id: 'nuclear',
-    name: 'Nuclear',
-    query: '(nuclear OR uranium enrichment OR IAEA OR "nuclear weapon" OR plutonium) sourcelang:eng',
-    icon: '☢️',
-    description: 'Nuclear programs, IAEA inspections, proliferation',
+    id: 'ukraine',
+    name: 'Ukraine',
+    query: '(Ukraine OR "Kyiv" OR "Zelensky" OR "Russian invasion" OR "Belarus") sourcelang:eng',
+    icon: '🇺🇦',
+    description: 'Ukraine war and related military activity',
   },
   {
-    id: 'sanctions',
-    name: 'Sanctions',
-    query: '(sanctions OR embargo OR "trade war" OR tariff OR "economic pressure") sourcelang:eng',
-    icon: '🚫',
-    description: 'Economic sanctions and trade restrictions',
+    id: 'iran-war',
+    name: 'Iran War',
+    query: '(Iran OR Israel OR Gaza OR "Operation Al-Aqsa Flood" OR "IDF" OR Hezbollah OR "Middle East escalation") sourcelang:eng',
+    icon: '🇮🇷',
+    description: 'Iran-Israel conflict and Middle East tensions',
   },
   {
-    id: 'intelligence',
-    name: 'Intelligence',
-    query: '(espionage OR spy OR intelligence agency OR covert OR surveillance) sourcelang:eng',
-    icon: '🕵️',
-    description: 'Espionage, intelligence operations, surveillance',
-  },
-  {
-    id: 'maritime',
-    name: 'Maritime Security',
-    query: '(naval blockade OR piracy OR "strait of hormuz" OR "south china sea" OR warship) sourcelang:eng',
-    icon: '🚢',
-    description: 'Naval operations, maritime chokepoints, sea lanes',
+    id: 'china-taiwan',
+    name: 'China, Taiwan',
+    query: '(Taiwan OR "China invasion" OR "Xi Jinping" OR "PLA" OR "Taiwan Strait" OR "US Taiwan" OR "Chinese military") sourcelang:eng',
+    icon: '🇨🇳',
+    description: 'China-Taiwan tensions and Indo-Pacific security',
   },
 ];
 
@@ -180,8 +166,19 @@ export async function fetchGdeltArticles(
 }
 
 export async function fetchHotspotContext(hotspot: Hotspot): Promise<GdeltArticle[]> {
-  const query = hotspot.keywords.slice(0, 5).join(' OR ');
-  return fetchGdeltArticles(query, 8, '48h');
+  const keywords = hotspot.keywords;
+  console.log('[GDELT] fetchHotspotContext - hotspot:', hotspot.name, 'keywords:', keywords);
+  
+  if (!keywords || keywords.length === 0) {
+    console.warn('[GDELT] No keywords for hotspot:', hotspot.name);
+    return [];
+  }
+  
+  const query = keywords.slice(0, 5).join(' OR ');
+  console.log('[GDELT] Query:', query);
+  const articles = await fetchGdeltArticles(query, 8, '48h');
+  console.log('[GDELT] Results:', articles.length, 'articles for hotspot:', hotspot.name);
+  return articles;
 }
 
 export async function fetchTopicIntelligence(topic: IntelTopic): Promise<TopicIntelligence> {

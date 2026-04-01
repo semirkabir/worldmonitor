@@ -686,6 +686,134 @@ function rssProxyPlugin(): Plugin {
   };
 }
 
+function weatherProxyPlugin(): Plugin {
+  return {
+    name: 'weather-proxy',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url?.startsWith('/api/weather')) return next();
+
+        try {
+          const response = await fetch('https://api.weather.gov/alerts/active', {
+            headers: { 'User-Agent': 'WorldMonitor/1.0', Accept: 'application/geo+json' },
+            signal: AbortSignal.timeout(15000),
+          });
+          const data = await response.text();
+          res.statusCode = response.status;
+          res.setHeader('Content-Type', response.headers.get('content-type') || 'application/json');
+          res.setHeader('Cache-Control', 'public, max-age=300');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.end(data);
+        } catch (err: any) {
+          res.statusCode = err.name === 'AbortError' ? 504 : 502;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'NWS fetch failed' }));
+        }
+      });
+    },
+  };
+}
+
+function planespottersProxyPlugin(): Plugin {
+  return {
+    name: 'planespotters-proxy',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url?.startsWith('/api/planespotters')) return next();
+
+        const url = new URL(req.url, 'http://localhost');
+        const reg = url.searchParams.get('reg');
+        const hex = url.searchParams.get('hex');
+
+        if (!reg && !hex) {
+          res.statusCode = 400;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Missing reg or hex' }));
+          return;
+        }
+
+        const lookup = reg || hex || '';
+        if (!/^[A-Za-z0-9-]{1,10}$/.test(lookup)) {
+          res.statusCode = 400;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Invalid parameter' }));
+          return;
+        }
+
+        const path = reg
+          ? `/reg/${encodeURIComponent(reg.toUpperCase())}`
+          : `/hex/${encodeURIComponent((hex || '').toLowerCase())}`;
+
+        try {
+          const response = await fetch(`https://api.planespotters.net/pub/photos${path}`, {
+            headers: { Accept: 'application/json', 'User-Agent': 'WorldMonitor/1.0' },
+            signal: AbortSignal.timeout(10000),
+          });
+          const data = await response.text();
+          res.statusCode = response.status;
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', 'public, max-age=3600');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.end(data);
+        } catch (err: any) {
+          res.statusCode = err.name === 'AbortError' ? 504 : 502;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Planespotters fetch failed' }));
+        }
+      });
+    },
+  };
+}
+
+function usaSpendingProxyPlugin(): Plugin {
+  const ALLOWED_AWARD_TYPES = new Set(['A', 'B', 'C', 'D', '02', '03', '04', '05', '06', '10', '07', '08']);
+
+  return {
+    name: 'usa-spending-proxy',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url?.startsWith('/api/usa-spending')) return next();
+
+        const url = new URL(req.url, 'http://localhost');
+        const daysBack = Math.max(1, Math.min(90, parseInt(url.searchParams.get('daysBack') || '7', 10)));
+        const limit = Math.max(1, Math.min(50, parseInt(url.searchParams.get('limit') || '15', 10)));
+        const rawTypes = (url.searchParams.get('awardTypes') || 'A,B,C,D').split(',');
+        const awardTypeCodes = rawTypes.map(t => t.trim().toUpperCase()).filter(t => ALLOWED_AWARD_TYPES.has(t));
+
+        const periodStart = new Date(Date.now() - daysBack * 86400000).toISOString().split('T')[0];
+        const periodEnd = new Date().toISOString().split('T')[0];
+
+        const body = JSON.stringify({
+          filters: { time_period: [{ start_date: periodStart, end_date: periodEnd }], award_type_codes: awardTypeCodes },
+          fields: ['Award ID', 'Recipient Name', 'Award Amount', 'Awarding Agency', 'Description', 'Start Date', 'Award Type'],
+          limit,
+          order: 'desc',
+          sort: 'Award Amount',
+        });
+
+        try {
+          const response = await fetch('https://api.usaspending.gov/api/v2/search/spending_by_award/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body,
+            signal: AbortSignal.timeout(25000),
+          });
+          const data = await response.text();
+          res.statusCode = response.status;
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', 'public, max-age=600');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.end(data);
+        } catch (err: any) {
+          res.statusCode = err.name === 'AbortError' ? 504 : 502;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'USASpending fetch failed' }));
+        }
+      });
+    },
+  };
+}
+
 function youtubeLivePlugin(): Plugin {
   return {
     name: 'youtube-live',
@@ -753,7 +881,7 @@ function youtubeLivePlugin(): Plugin {
 }
 
 export default defineConfig({
-  envPrefix: ['VITE_', 'FINNHUB_'],
+  envPrefix: ['VITE_'],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
@@ -764,6 +892,9 @@ export default defineConfig({
     telegramFeedPlugin(),
     aisSnapshotPlugin(),
     rssProxyPlugin(),
+    weatherProxyPlugin(),
+    planespottersProxyPlugin(),
+    usaSpendingProxyPlugin(),
     youtubeLivePlugin(),
     sebufApiPlugin(),
     brotliPrecompressPlugin(),
@@ -1344,11 +1475,22 @@ export default defineConfig({
         target: 'https://opensky-network.org/api',
         changeOrigin: true,
         secure: true,
-        rewrite: (path) => path.replace(/^\/api\/opensky/, ''),
+        // Must rewrite to /states/all — stripping just the prefix produces an empty
+        // path which hits the wrong endpoint and returns a 404/empty response.
+        rewrite: (path) => path.replace(/^\/api\/opensky/, '/states/all'),
         configure: (proxy) => {
           proxy.on('error', (err) => {
             console.log('OpenSky proxy error:', err.message);
           });
+          // Inject Basic auth credentials for authenticated tier (10× higher rate limit)
+          const clientId = process.env.OPENSKY_CLIENT_ID;
+          const clientSecret = process.env.OPENSKY_CLIENT_SECRET;
+          if (clientId && clientSecret) {
+            const token = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+            proxy.on('proxyReq', (proxyReq) => {
+              proxyReq.setHeader('Authorization', `Basic ${token}`);
+            });
+          }
         },
       },
       // ADS-B Exchange - Military aircraft tracking (backup/supplement)
@@ -1360,6 +1502,42 @@ export default defineConfig({
         configure: (proxy) => {
           proxy.on('error', (err) => {
             console.log('ADS-B Exchange proxy error:', err.message);
+          });
+        },
+      },
+      // Market Data (Finnhub) - dev proxy for serverless function
+      '/api/market-data': {
+        target: 'https://finnhub.io/api/v1',
+        changeOrigin: true,
+        secure: true,
+        rewrite: (path) => {
+          const url = new URL(path, 'http://localhost');
+          const endpoint = url.searchParams.get('endpoint');
+          const symbol = url.searchParams.get('symbol');
+          const from = url.searchParams.get('from');
+          const to = url.searchParams.get('to');
+          const apiKey = process.env.FINNHUB_API_KEY || '';
+
+          switch (endpoint) {
+            case 'earnings-calendar':
+              return `/calendar/earnings?symbol=${symbol || ''}&from=${from || ''}&to=${to || ''}&token=${apiKey}`;
+            case 'ipo-calendar':
+              return `/calendar/ipo?from=${from || ''}&to=${to || ''}&token=${apiKey}`;
+            case 'insider-transactions':
+              return `/stock/insider-transactions?symbol=${symbol || ''}&token=${apiKey}`;
+            case 'social-sentiment':
+              return `/stock/social-sentiment?symbol=${symbol || ''}&token=${apiKey}`;
+            case 'recommendation-trends':
+              return `/stock/recommendation?symbol=${symbol || ''}&token=${apiKey}`;
+            case 'option-chain':
+              return `/stock/option-chain?symbol=${symbol || ''}&token=${apiKey}`;
+            default:
+              return `/quote?symbol=${symbol || ''}&token=${apiKey}`;
+          }
+        },
+        configure: (proxy) => {
+          proxy.on('error', (err) => {
+            console.log('Market data proxy error:', err.message);
           });
         },
       },

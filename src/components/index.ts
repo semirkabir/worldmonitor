@@ -56,3 +56,8 @@ export * from './AlertRulesPanel';
 export * from './GeopoliticalRiskPanel';
 export * from './CorrelationMatrixPanel';
 export * from './TradeFlowPanel';
+export * from './EarningsCalendarPanel';
+export * from './IPOCalendarPanel';
+export * from './InsiderTradingPanel';
+export * from './SocialSentimentPanel';
+export * from './OptionsChainPanel';
