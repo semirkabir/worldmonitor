@@ -5,6 +5,7 @@ import {
     fetchAircraftPositions,
     fetchFlightPrices,
     fetchAviationNews,
+    fetchFlightStatus,
     isPriceExpired,
     type AirportOpsSummary,
     type FlightInstance,
@@ -53,13 +54,13 @@ function expCountdown(exp: Date | null, now: number): string {
     return `<span style="font-size:10px;color:${color}">exp ${h > 0 ? `${h}h ` : ''}${m}m</span>`;
 }
 
-const TABS = ['ops', 'flights', 'airlines', 'tracking', 'news', 'prices'] as const;
+const TABS = ['ops', 'flights', 'airlines', 'tracking', 'news', 'prices', 'search'] as const;
 type Tab = typeof TABS[number];
 const AVIATION_ICON = '🛩️';
 
 const TAB_LABELS: Record<Tab, string> = {
     ops: `${AVIATION_ICON} Ops`, flights: `${AVIATION_ICON} Flights`, airlines: '🏢 Airlines',
-    tracking: '📡 Track', news: '📰 News', prices: '💸 Prices',
+    tracking: '📡 Track', news: '📰 News', prices: '💸 Prices', search: '🔍 Search',
 };
 
 // ---- Panel class ----
@@ -78,6 +79,10 @@ export class AirlineIntelPanel extends Panel {
     private pricesDest = 'LHR';
     private pricesDep = '';
     private pricesCurrency = 'usd';
+    private searchQuery = '';
+    private searchResults: FlightInstance[] = [];
+    private searchLoading = false;
+    private searchError = '';
     private loading = false;
     private refreshTimer: ReturnType<typeof setInterval> | null = null;
     private liveIndicator!: HTMLElement;
@@ -129,6 +134,22 @@ export class AirlineIntelPanel extends Panel {
                 this.pricesDep = (this.content.querySelector('#priceDepInput') as HTMLInputElement)?.value || '';
                 this.pricesCurrency = (this.content.querySelector('#priceCurrencySelect') as HTMLSelectElement)?.value || 'usd';
                 void this.loadTab('prices');
+            }
+            if (target.id === 'flightSearchBtn' || target.closest('#flightSearchBtn')) {
+                void this.doFlightSearch();
+            }
+            if (target.id === 'flightSearchClearBtn' || target.closest('#flightSearchClearBtn')) {
+                this.searchQuery = '';
+                this.searchResults = [];
+                this.searchError = '';
+                this.renderTab();
+            }
+        });
+
+        this.content.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.target instanceof HTMLInputElement) && e.target.id === 'flightSearchInput') {
+                e.preventDefault();
+                void this.doFlightSearch();
             }
         });
 
@@ -235,7 +256,82 @@ export class AirlineIntelPanel extends Panel {
             case 'tracking': this.renderTracking(); break;
             case 'news': this.renderNews(); break;
             case 'prices': this.renderPrices(); break;
+            case 'search': this.renderSearch(); break;
         }
+    }
+
+    // ---- Search tab ----
+    private async doFlightSearch(): Promise<void> {
+        const input = this.content.querySelector('#flightSearchInput') as HTMLInputElement;
+        const query = input?.value?.trim() || '';
+        if (!query) return;
+        this.searchQuery = query;
+        this.searchLoading = true;
+        this.searchError = '';
+        this.renderTab();
+        try {
+            const cleaned = query.replace(/\s/g, '').toUpperCase();
+            const results = await fetchFlightStatus(cleaned);
+            this.searchResults = results;
+            if (!results.length) {
+                this.searchError = `No results found for "${query}"`;
+            }
+        } catch {
+            this.searchError = 'Failed to fetch flight status';
+            this.searchResults = [];
+        }
+        this.searchLoading = false;
+        this.renderTab();
+    }
+
+    private renderSearch(): void {
+        const searchForm = `
+      <div class="flight-search-form" style="display:flex;gap:8px;padding:12px 4px;align-items:center">
+        <input id="flightSearchInput" class="flight-search-input" placeholder="Flight number (e.g. TK1, AA100, EK201)" value="${escapeHtml(this.searchQuery)}" style="flex:1;padding:8px 12px;background:var(--bg-secondary,#1a1a1a);border:1px solid var(--border,#333);border-radius:6px;color:var(--text,#e0e0e0);font-size:14px;outline:none" />
+        <button id="flightSearchBtn" class="flight-search-btn" style="padding:8px 16px;background:var(--accent,#3b82f6);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap">Search</button>
+        ${this.searchResults.length ? '<button id="flightSearchClearBtn" style="padding:8px 12px;background:transparent;color:var(--text-dim,#888);border:1px solid var(--border,#333);border-radius:6px;cursor:pointer;font-size:13px">Clear</button>' : ''}
+      </div>`;
+
+        if (this.searchLoading) {
+            this.content.innerHTML = `${searchForm}<div class="panel-loading" style="padding:20px">Searching for "${escapeHtml(this.searchQuery)}"...</div>`;
+            return;
+        }
+
+        if (this.searchError) {
+            this.content.innerHTML = `${searchForm}<div class="search-error" style="padding:16px 4px;color:#ef4444;font-size:13px;text-align:center">${escapeHtml(this.searchError)}</div>`;
+            return;
+        }
+
+        if (!this.searchResults.length) {
+            this.content.innerHTML = `${searchForm}<div class="search-placeholder" style="padding:20px 4px;text-align:center;color:var(--text-dim,#888);font-size:13px">Enter a flight number to track its status, route, and schedule</div>`;
+            return;
+        }
+
+        const results = this.searchResults.map(f => {
+            const color = STATUS_BADGE[f.status] ?? '#6b7280';
+            const schedDep = f.scheduledDeparture ? f.scheduledDeparture.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+            const schedArr = f.scheduledArrival ? f.scheduledArrival.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+            return `
+        <div class="search-result-card" style="padding:12px;margin:4px 4px 8px;background:var(--bg-secondary,#1a1a1a);border:1px solid var(--border,#333);border-radius:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <span class="search-flight-num" style="font-size:16px;font-weight:700;color:var(--accent,#60a5fa)">${escapeHtml(f.flightNumber)}</span>
+            <span class="search-status" style="font-size:11px;font-weight:600;color:${color};text-transform:uppercase;padding:2px 8px;background:${color}22;border-radius:4px">${f.status}</span>
+          </div>
+          <div class="search-route" style="font-size:14px;margin-bottom:6px">${escapeHtml(f.origin.iata || f.origin.name)} → ${escapeHtml(f.destination.iata || f.destination.name)}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:12px;color:var(--text-dim,#888)">
+            <div>Departure: ${schedDep}</div>
+            <div>Arrival: ${schedArr}</div>
+            ${f.delayMinutes > 0 ? `<div style="color:#f97316">Delay: +${f.delayMinutes}m</div>` : ''}
+            ${f.gate ? `<div>Gate: ${escapeHtml(f.gate)}</div>` : ''}
+            ${f.terminal ? `<div>Terminal: ${escapeHtml(f.terminal)}</div>` : ''}
+            ${f.aircraftType ? `<div>Aircraft: ${escapeHtml(f.aircraftType)}</div>` : ''}
+          </div>
+          ${f.cancelled ? '<div style="margin-top:6px;color:#ef4444;font-weight:600;font-size:12px">⚠️ CANCELLED</div>' : ''}
+          ${f.diverted ? '<div style="margin-top:6px;color:#f59e0b;font-weight:600;font-size:12px">⚠️ DIVERTED</div>' : ''}
+        </div>`;
+        }).join('');
+
+        this.content.innerHTML = `${searchForm}<div class="search-results">${results}</div>`;
     }
 
     // ---- Ops tab ----

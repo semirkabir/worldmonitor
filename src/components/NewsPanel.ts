@@ -36,6 +36,8 @@ export class NewsPanel extends Panel {
   private renderRequestId = 0;
   private boundScrollHandler: (() => void) | null = null;
   private boundClickHandler: (() => void) | null = null;
+  private sortOrder: 'date' | 'name' = 'date';
+  private sortBtn: HTMLButtonElement | null = null;
 
   // Panel summary feature
   private summaryBtn: HTMLButtonElement | null = null;
@@ -48,9 +50,30 @@ export class NewsPanel extends Panel {
     super({ id, title, showCount: true, trackActivity: true });
     this.createDeviationIndicator();
     this.createSummarizeButton();
+    this.createSortButton();
     this.setupActivityTracking();
     this.initWindowedList();
   }
+
+  private createSortButton(): void {
+    this.sortBtn = document.createElement('button');
+    this.sortBtn.className = 'icon-btn';
+    this.sortBtn.title = 'Sort by date';
+    this.sortBtn.textContent = '⏱';
+    this.sortBtn.addEventListener('click', () => {
+      this.sortOrder = this.sortOrder === 'date' ? 'name' : 'date';
+      if (this.sortBtn) {
+        this.sortBtn.textContent = this.sortOrder === 'date' ? '⏱' : '🔤';
+        this.sortBtn.title = this.sortOrder === 'date' ? 'Sort by date' : 'Sort by name';
+      }
+      // Re-render with current items
+      const stored = this._lastItems;
+      if (stored?.length) this.renderNews(stored);
+    });
+    this.header.appendChild(this.sortBtn);
+  }
+
+  private _lastItems: NewsItem[] | null = null;
 
   private initWindowedList(): void {
     this.windowedList = new WindowedList<PreparedCluster>(
@@ -308,6 +331,7 @@ export class NewsPanel extends Panel {
       return;
     }
 
+    this._lastItems = items;
     this.setDataBadge('live');
 
     // Always show flat items immediately for instant visual feedback,
@@ -345,15 +369,22 @@ export class NewsPanel extends Panel {
   }
 
   private renderFlat(items: NewsItem[]): void {
-    this.setCount(items.length);
-    this.currentHeadlines = items
+    const sorted = [...items].sort((a, b) => {
+      if (this.sortOrder === 'name') {
+        return a.title.localeCompare(b.title);
+      }
+      return b.pubDate.getTime() - a.pubDate.getTime();
+    });
+
+    this.setCount(sorted.length);
+    this.currentHeadlines = sorted
       .slice(0, 5)
       .map(item => item.title)
       .filter((title): title is string => typeof title === 'string' && title.trim().length > 0);
 
     this.updateHeadlineSignature();
 
-    const html = items
+    const html = sorted
       .map(
         (item) => `
       <div class="item ${item.isAlert ? 'alert' : ''}" ${item.monitorColor ? `style="border-inline-start-color: ${escapeHtml(item.monitorColor)}"` : ''}>
