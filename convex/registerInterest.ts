@@ -55,6 +55,8 @@ export const register = mutation({
     source: v.optional(v.string()),
     appVersion: v.optional(v.string()),
     referredBy: v.optional(v.string()),
+    firebaseUid: v.optional(v.string()),
+    tier: v.optional(v.union(v.literal("free"), v.literal("pro"), v.literal("business"), v.literal("enterprise"))),
   },
   handler: async (ctx, args) => {
     const normalizedEmail = args.email.trim().toLowerCase();
@@ -98,6 +100,8 @@ export const register = mutation({
       referralCode,
       referredBy: args.referredBy,
       referralCount: 0,
+      firebaseUid: args.firebaseUid,
+      tier: args.tier ?? "free",
     });
 
     return {

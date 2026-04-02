@@ -95,6 +95,7 @@
     "@deck.gl/geo-layers": "^9.2.6",
     "@deck.gl/layers": "^9.2.6",
     "@deck.gl/mapbox": "^9.2.6",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@protomaps/basemaps": "^5.7.1",
     "@sentry/browser": "^10.39.0",
     "@upstash/ratelimit": "^2.0.8",

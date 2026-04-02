@@ -1,3 +1,6 @@
+// Patch global fetch to attach Firebase ID token to all /api/ requests.
+// Must be imported before any other module that makes API calls.
+import '@/services/api-auth-fetch';
 import type { Monitor, PanelConfig, MapLayers } from '@/types';
 import type { AppContext } from '@/app/app-context';
 import {
@@ -75,6 +78,7 @@ export class App {
 
     const PANEL_ORDER_KEY = 'panel-order';
     const PANEL_SPANS_KEY = 'worldmonitor-panel-spans';
+    const PANEL_COL_SPANS_KEY = 'worldmonitor-panel-col-spans';
 
     const isMobile = isMobileDevice();
     const isDesktopApp = isDesktopRuntime();
@@ -247,12 +251,14 @@ export class App {
     if (!localStorage.getItem(LAYOUT_RESET_MIGRATION_KEY)) {
       const hadSavedOrder = !!localStorage.getItem(PANEL_ORDER_KEY);
       const hadSavedSpans = !!localStorage.getItem(PANEL_SPANS_KEY);
-      if (hadSavedOrder || hadSavedSpans) {
+      const hadSavedColSpans = !!localStorage.getItem(PANEL_COL_SPANS_KEY);
+      if (hadSavedOrder || hadSavedSpans || hadSavedColSpans) {
         localStorage.removeItem(PANEL_ORDER_KEY);
         localStorage.removeItem(PANEL_ORDER_KEY + '-bottom');
         localStorage.removeItem(PANEL_ORDER_KEY + '-bottom-set');
         localStorage.removeItem(PANEL_SPANS_KEY);
-        console.log('[App] Applied layout reset migration (v2.5): cleared panel order/spans');
+        localStorage.removeItem(PANEL_COL_SPANS_KEY);
+        console.log('[App] Applied layout reset migration (v2.5): cleared panel order/spans/col-spans');
       }
       localStorage.setItem(LAYOUT_RESET_MIGRATION_KEY, 'done');
     }

@@ -15,6 +15,9 @@ const REDIS_CACHE_TTL = 3600;
 const ALLOWED_SERIES = new Set([
   'WALCL', 'FEDFUNDS', 'T10Y2Y', 'UNRATE', 'CPIAUCSL', 'DGS10', 'VIXCLS',
   'GDP', 'M2SL', 'DCOILWTICO',
+  // Expanded indicators
+  'CPILFESL', 'PCEPI', 'PCEPILFE', 'GDPC1', 'PAYEMS',
+  'JTSJOL', 'RSAFS', 'INDPRO', 'UMCSENT', 'MORTGAGE30US',
 ]);
 
 async function fetchSingleFred(seriesId: string, limit: number): Promise<FredSeries | undefined> {
@@ -74,7 +77,7 @@ export async function getFredSeriesBatch(
       .map((id) => id.trim().toUpperCase())
       .filter((id) => ALLOWED_SERIES.has(id));
     const uniqueSorted = Array.from(new Set(normalized)).sort();
-    const limitedList = uniqueSorted.slice(0, 10);
+    const limitedList = uniqueSorted.slice(0, 20);
     const limit = req.limit > 0 ? Math.min(req.limit, 1000) : 120;
 
     const results: Record<string, FredSeries> = {};

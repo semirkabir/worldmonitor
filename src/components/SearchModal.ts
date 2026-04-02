@@ -53,7 +53,7 @@ function resolveCategoryLabel(cmd: Command): string {
   return key ? t(key, { defaultValue: cmd.category }) : cmd.category;
 }
 
-export type SearchResultType = 'country' | 'news' | 'hotspot' | 'market' | 'prediction' | 'conflict' | 'base' | 'pipeline' | 'cable' | 'datacenter' | 'earthquake' | 'outage' | 'nuclear' | 'irradiator' | 'techcompany' | 'ailab' | 'startup' | 'techevent' | 'techhq' | 'accelerator' | 'exchange' | 'financialcenter' | 'centralbank' | 'commodityhub';
+export type SearchResultType = 'country' | 'news' | 'hotspot' | 'market' | 'prediction' | 'conflict' | 'base' | 'pipeline' | 'cable' | 'datacenter' | 'earthquake' | 'outage' | 'nuclear' | 'irradiator' | 'techcompany' | 'ailab' | 'startup' | 'techevent' | 'techhq' | 'accelerator' | 'exchange' | 'financialcenter' | 'centralbank' | 'commodityhub' | 'company';
 
 export interface SearchResult {
   type: SearchResultType;
@@ -336,7 +336,8 @@ export class SearchModal {
       'news', 'prediction', 'market', 'earthquake', 'outage',
       'conflict', 'hotspot', 'country',
       'base', 'pipeline', 'cable', 'datacenter', 'nuclear', 'irradiator',
-      'techcompany', 'ailab', 'startup', 'techevent', 'techhq', 'accelerator'
+      'techcompany', 'ailab', 'startup', 'techevent', 'techhq', 'accelerator',
+      'exchange', 'financialcenter', 'centralbank', 'commodityhub', 'company',
     ];
 
     const maxResults = this.isMobile ? 5 : MAX_RESULTS;
@@ -513,6 +514,7 @@ export class SearchModal {
       techhq: 'Tech HQs', accelerator: 'Accelerators', exchange: 'Exchanges',
       financialcenter: 'Financial Centers', centralbank: 'Central Banks',
       commodityhub: 'Commodity Hubs',
+      company: 'Companies & Indices',
     };
     return labels[type] || type;
   }
@@ -576,6 +578,7 @@ export class SearchModal {
       ailab: '\u{1F9E0}', startup: '\u{1F680}', techevent: '\u{1F4C5}',
       techhq: '\u{1F984}', accelerator: '\u{1F680}', exchange: '\u{1F3DB}\uFE0F',
       financialcenter: '\u{1F4B0}', centralbank: '\u{1F3E6}', commodityhub: '\u{1F4E6}',
+      company: '\u{1F4C8}',
     };
 
     const frag = document.createDocumentFragment();

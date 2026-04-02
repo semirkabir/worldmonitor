@@ -166,6 +166,28 @@ export interface GulfQuote {
   sparkline: number[];
 }
 
+export interface ListSecFilingsRequest {
+  ticker: string;
+  filingTypes?: string;
+  limit?: number;
+}
+
+export interface ListSecFilingsResponse {
+  filings: SecFiling[];
+  ticker: string;
+  companyName: string;
+}
+
+export interface SecFiling {
+  accessionNumber: string;
+  filingType: string;
+  filedAt: string;
+  title: string;
+  url: string;
+  issuerName: string;
+  issuerCik: string;
+}
+
 export interface FieldViolation {
   field: string;
   description: string;
@@ -408,6 +430,33 @@ export class MarketServiceClient {
     }
 
     return await resp.json() as ListGulfQuotesResponse;
+  }
+
+  async listSecFilings(req: ListSecFilingsRequest, options?: MarketServiceCallOptions): Promise<ListSecFilingsResponse> {
+    let path = "/api/market/v1/list-sec-filings";
+    const params = new URLSearchParams();
+    if (req.ticker != null && req.ticker !== "") params.set("ticker", String(req.ticker));
+    if (req.filingTypes != null && req.filingTypes !== "") params.set("filing_types", String(req.filingTypes));
+    if (req.limit != null && req.limit > 0) params.set("limit", String(req.limit));
+    const url = this.baseURL + path + (params.toString() ? "?" + params.toString() : "");
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...this.defaultHeaders,
+      ...options?.headers,
+    };
+
+    const resp = await this.fetchFn(url, {
+      method: "GET",
+      headers,
+      signal: options?.signal,
+    });
+
+    if (!resp.ok) {
+      return this.handleError(resp);
+    }
+
+    return await resp.json() as ListSecFilingsResponse;
   }
 
   private async handleError(resp: Response): Promise<never> {

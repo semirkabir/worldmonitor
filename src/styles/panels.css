@@ -2081,7 +2081,7 @@
   gap: 8px;
   padding: 12px;
   background: color-mix(in srgb, var(--surface) 40%, var(--bg));
-  border-top: 1px solid var(--border);
+  border-top: none;
   flex: 1;
   position: relative;
   min-height: 120px;
@@ -2127,12 +2127,6 @@
 /* Hide placeholder if there are panels */
 .map-bottom-grid:not(:empty)::after {
   opacity: 0;
-}
-
-/* Highlight zone during drag (handled by JS if possible, but let's add a hover state too) */
-.map-bottom-grid:hover {
-  background: color-mix(in srgb, var(--surface) 60%, var(--bg));
-  border-top-color: var(--accent);
 }
 
 /* Hide drop zone completely on smaller screens (overridden by media query in main.css) */

@@ -1,11 +1,22 @@
-import { isLoggedIn } from './user-auth';
+/**
+ * Feature tier management.
+ *
+ * Integrates with the user-auth system to check tier-based feature access.
+ * The tier is stored in Convex and Redis (user:{uid}:tier).
+ */
 
-export type FeatureTier = 'free' | 'logged_in' | 'premium';
+import { isLoggedIn, getUserId } from './user-auth';
+import { getIdToken } from './firebase-auth';
+
+export type FeatureTier = 'free' | 'pro' | 'business' | 'enterprise';
+export type LegacyTier = FeatureTier | 'logged_in' | 'premium';
+
+const TIER_ORDER: Record<string, number> = { free: 0, logged_in: 1, pro: 1, business: 2, enterprise: 3, premium: 2 };
 
 export interface Feature {
   key: string;
   name: string;
-  tier: FeatureTier;
+  tier: LegacyTier;
   description?: string;
 }
 
@@ -18,34 +29,44 @@ export const FEATURES: Feature[] = [
   { key: 'historical-playback', name: 'Historical Playback', tier: 'logged_in' },
   { key: 'custom-panels', name: 'Custom Panel Layouts', tier: 'logged_in' },
   { key: 'alert-rules', name: 'Alert Rules Engine', tier: 'logged_in' },
-  { key: 'export-data', name: 'Export Data', tier: 'premium' },
-  { key: 'api-access', name: 'API Access', tier: 'premium' },
+  { key: 'export-data', name: 'Export Data', tier: 'pro' },
+  { key: 'api-access', name: 'API Access', tier: 'pro' },
+  { key: 'marketplace', name: 'Data Marketplace', tier: 'pro' },
+  { key: 'mcp-access', name: 'MCP Agent API', tier: 'pro' },
 ];
+
+/** Resolve the user's current tier from the auth system. */
+export async function getUserTier(): Promise<FeatureTier> {
+  if (!isLoggedIn()) return 'free';
+  // For now, default to 'free' until we have the Convex query wired up.
+  // TODO: Query Convex or Redis to get the actual stored tier.
+  return 'free';
+}
 
 export function canAccessFeature(featureKey: string): boolean {
   const feature = FEATURES.find(f => f.key === featureKey);
-  if (!feature) return true; // Unknown features default to allowed
+  if (!feature) return true;
 
   switch (feature.tier) {
     case 'free':
       return true;
     case 'logged_in':
       return isLoggedIn();
+    case 'pro':
+    case 'business':
+    case 'enterprise':
     case 'premium':
-      // TODO: Check subscription status
-      return isLoggedIn();
+      return isLoggedIn(); // TODO: check actual subscription tier
     default:
       return true;
   }
 }
 
-export function getFeatureTier(featureKey: string): FeatureTier {
+export function getFeatureTier(featureKey: string): LegacyTier {
   const feature = FEATURES.find(f => f.key === featureKey);
   return feature?.tier ?? 'free';
 }
 
-export function requireFeature(featureKey: string): void {
-  if (!canAccessFeature(featureKey)) {
-    throw new Error(`Feature "${featureKey}" requires login`);
-  }
+export function requireFeature(featureKey: string): boolean {
+  return canAccessFeature(featureKey);
 }

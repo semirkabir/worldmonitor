@@ -4,6 +4,7 @@ import type { NewsItem, ClusteredEvent, DeviationLevel, RelatedAsset, RelatedAss
 import { THREAT_PRIORITY } from '@/services/threat-classifier';
 import { formatTime, getCSSColor } from '@/utils';
 import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
+import { linkifyTickers } from '@/utils/ticker-linkify';
 import { analysisWorker, enrichWithVelocityML, getClusterAssetContext, MAX_DISTANCE_KM, activityTracker, generateSummary, translateText } from '@/services';
 import { getSourcePropagandaRisk, getSourceTier, getSourceType } from '@/config/feeds';
 import { SITE_VARIANT } from '@/config';
@@ -36,8 +37,15 @@ export class NewsPanel extends Panel {
   private renderRequestId = 0;
   private boundScrollHandler: (() => void) | null = null;
   private boundClickHandler: (() => void) | null = null;
-  private sortOrder: 'date' | 'name' = 'date';
+  private sortOrder: 'date' | 'title' | 'source' = 'date';
+  private sortDir: 'asc' | 'desc' = 'desc';
   private sortBtn: HTMLButtonElement | null = null;
+  private sortDropdown: HTMLElement | null = null;
+  private sortOptions = [
+    { key: 'date', label: 'Date' },
+    { key: 'title', label: 'Title' },
+    { key: 'source', label: 'Source' },
+  ] as const;
 
   // Panel summary feature
   private summaryBtn: HTMLButtonElement | null = null;
@@ -56,21 +64,96 @@ export class NewsPanel extends Panel {
   }
 
   private createSortButton(): void {
-    this.sortBtn = document.createElement('button');
-    this.sortBtn.className = 'icon-btn';
-    this.sortBtn.title = 'Sort by date';
-    this.sortBtn.textContent = '⏱';
-    this.sortBtn.addEventListener('click', () => {
-      this.sortOrder = this.sortOrder === 'date' ? 'name' : 'date';
-      if (this.sortBtn) {
-        this.sortBtn.textContent = this.sortOrder === 'date' ? '⏱' : '🔤';
-        this.sortBtn.title = this.sortOrder === 'date' ? 'Sort by date' : 'Sort by name';
+    const btn = document.createElement('button');
+    btn.className = 'icon-btn';
+    btn.title = 'Sort options';
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="9" y2="18"/></svg>`;
+    this.sortBtn = btn;
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.sortDropdown) {
+        this.sortDropdown.remove();
+        this.sortDropdown = null;
+      } else {
+        this.openSortDropdown();
       }
-      // Re-render with current items
-      const stored = this._lastItems;
-      if (stored?.length) this.renderNews(stored);
     });
-    this.header.appendChild(this.sortBtn);
+
+    // Close dropdown on outside click
+    document.addEventListener('click', () => {
+      if (this.sortDropdown) {
+        this.sortDropdown.remove();
+        this.sortDropdown = null;
+      }
+    });
+
+    this.header.appendChild(btn);
+  }
+
+  private openSortDropdown(): void {
+    if (!this.sortBtn) return;
+
+    const rect = this.sortBtn.getBoundingClientRect();
+    const dropdown = document.createElement('div');
+    dropdown.className = 'panel-sort-dropdown';
+    dropdown.innerHTML = `
+      <div class="panel-sort-label">Sort by</div>
+      ${this.sortOptions.map(opt => `
+        <button class="panel-sort-option${this.sortOrder === opt.key ? ' active' : ''}" data-sort="${opt.key}">
+          ${opt.label}
+        </button>
+      `).join('')}
+      <div class="panel-sort-divider"></div>
+      <div class="panel-sort-label">Order</div>
+      <button class="panel-sort-option${this.sortDir === 'desc' ? ' active' : ''}" data-sort-dir="desc">
+        Newest first
+      </button>
+      <button class="panel-sort-option${this.sortDir === 'asc' ? ' active' : ''}" data-sort-dir="asc">
+        Oldest first
+      </button>
+    `;
+
+    // Position below the button
+    dropdown.style.position = 'fixed';
+    dropdown.style.top = `${rect.bottom + 4}px`;
+    dropdown.style.left = `${rect.left}px`;
+    dropdown.style.zIndex = '10000';
+    document.body.appendChild(dropdown);
+    this.sortDropdown = dropdown;
+
+    dropdown.addEventListener('click', (e) => e.stopPropagation());
+
+    dropdown.querySelectorAll<HTMLElement>('.panel-sort-option[data-sort]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.sort as 'date' | 'title' | 'source';
+        if (key && key !== this.sortOrder) {
+          this.sortOrder = key;
+          if (key !== 'date') this.sortDir = 'asc';
+          else this.sortDir = 'desc';
+          this.reRender();
+        }
+        dropdown.remove();
+        this.sortDropdown = null;
+      });
+    });
+
+    dropdown.querySelectorAll<HTMLElement>('.panel-sort-option[data-sort-dir]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const dir = btn.dataset.sortDir as 'asc' | 'desc';
+        if (dir) {
+          this.sortDir = dir;
+          this.reRender();
+        }
+        dropdown.remove();
+        this.sortDropdown = null;
+      });
+    });
+  }
+
+  private reRender(): void {
+    const stored = this._lastItems;
+    if (stored?.length) this.renderNews(stored);
   }
 
   private _lastItems: NewsItem[] | null = null;
@@ -370,10 +453,20 @@ export class NewsPanel extends Panel {
 
   private renderFlat(items: NewsItem[]): void {
     const sorted = [...items].sort((a, b) => {
-      if (this.sortOrder === 'name') {
-        return a.title.localeCompare(b.title);
+      let cmp = 0;
+      switch (this.sortOrder) {
+        case 'title':
+          cmp = a.title.localeCompare(b.title);
+          break;
+        case 'source':
+          cmp = a.source.localeCompare(b.source) || a.title.localeCompare(b.title);
+          break;
+        case 'date':
+        default:
+          cmp = b.pubDate.getTime() - a.pubDate.getTime();
+          break;
       }
-      return b.pubDate.getTime() - a.pubDate.getTime();
+      return this.sortDir === 'desc' ? -cmp : cmp;
     });
 
     this.setCount(sorted.length);
@@ -599,7 +692,7 @@ export class NewsPanel extends Panel {
           ${cluster.isAlert ? '<span class="alert-tag">ALERT</span>' : ''}
           ${categoryBadge}
         </div>
-        <a class="item-title" href="${sanitizeUrl(cluster.primaryLink)}" target="_blank" rel="noopener">${escapeHtml(cluster.primaryTitle)}</a>
+        <a class="item-title" href="${sanitizeUrl(cluster.primaryLink)}" target="_blank" rel="noopener">${linkifyTickers(escapeHtml(cluster.primaryTitle))}</a>
         <div class="cluster-meta">
           <span class="top-sources">${topSourcesHtml}</span>
           <span class="item-time">${formatTime(cluster.lastUpdated)}</span>

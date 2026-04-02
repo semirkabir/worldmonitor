@@ -112,4 +112,18 @@ export function isFirebaseConfigured(): boolean {
   return configured;
 }
 
+/**
+ * Get the current user's Firebase ID token for attaching to API requests.
+ * Returns null if no user is signed in.
+ */
+export async function getIdToken(): Promise<string | null> {
+  const user = getCurrentUser();
+  if (!user) return null;
+  try {
+    return await user.getIdToken();
+  } catch {
+    return null;
+  }
+}
+
 export type { User };

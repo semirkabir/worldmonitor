@@ -16,9 +16,13 @@ import { validateApiKey } from '../api/_api-key.js';
 import { mapErrorToResponse } from './error-mapper';
 import { checkRateLimit, checkEndpointRateLimit, hasEndpointRatePolicy } from './_shared/rate-limit';
 import { drainResponseHeaders } from './_shared/response-headers';
+import { verifyFirebaseJwt, getUserTier, type UserTier } from './_shared/auth-tier';
 import type { ServerOptions } from '../src/generated/server/worldmonitor/seismology/v1/service_server';
 
 export const serverOptions: ServerOptions = { onError: mapErrorToResponse };
+
+/** Firebase project ID — used to validate ID tokens. */
+const FIREBASE_PROJECT_ID = process.env.FIREBASE_PROJECT_ID ?? '';
 
 // --- Edge cache tier definitions ---
 // NOTE: This map is shared across all domain bundles (~3KB). Kept centralised for
@@ -166,19 +170,46 @@ export function createDomainGateway(
       });
     }
 
-    // IP-based rate limiting — two-phase: endpoint-specific first, then global fallback
+    // --- Auth tier detection ---
+    // Clients can send a Firebase ID token in the Authorization header or
+    // via the custom X-WorldMonitor-Token header (easier for Vercel edge
+    // functions that don't parse Authorization Bearer).
+    let userTier: UserTier = 'anonymous';
+    let userId = '';
+
+    if (FIREBASE_PROJECT_ID) {
+      const authHeader = request.headers.get('authorization') || '';
+      const customToken = request.headers.get('x-worldmonitor-token') || '';
+      const idToken = authHeader.startsWith('Bearer ')
+        ? authHeader.slice(7).trim()
+        : customToken.trim();
+
+      if (idToken) {
+        const verified = await verifyFirebaseJwt(idToken, FIREBASE_PROJECT_ID);
+        if (verified) {
+          userId = verified.uid;
+          userTier = await getUserTier(userId);
+          // Pass UID downstream so handlers and rate-limiter can use it.
+          request.headers.set('x-wm-user-id', userId);
+          request.headers.set('x-wm-user-tier', userTier);
+        }
+      }
+    }
+
+    // --- Rate limiting (tier-aware) ---
     const rawPathname = new URL(request.url).pathname;
     const pathname = rawPathname.length > 1 ? rawPathname.replace(/\/+$/, '') : rawPathname;
 
-    const endpointRlResponse = await checkEndpointRateLimit(request, pathname, corsHeaders);
+    const endpointRlResponse = await checkEndpointRateLimit(request, pathname, corsHeaders, userTier);
     if (endpointRlResponse) return endpointRlResponse;
 
     if (!hasEndpointRatePolicy(pathname)) {
-      const rateLimitResponse = await checkRateLimit(request, corsHeaders);
+      const rateLimitResponse = await checkRateLimit(request, corsHeaders, userTier);
       if (rateLimitResponse) return rateLimitResponse;
     }
 
-    // Route matching — if POST doesn't match, convert to GET for stale clients
+    // --- Route matching ---
+    // If POST doesn't match, convert to GET for stale clients
     let matchedHandler = router.match(request);
     if (!matchedHandler && request.method === 'POST') {
       const contentLen = parseInt(request.headers.get('Content-Length') ?? '0', 10);
@@ -243,11 +274,20 @@ export function createDomainGateway(
       } else {
         const rpcName = pathname.split('/').pop() ?? '';
         const envOverride = process.env[`CACHE_TIER_OVERRIDE_${rpcName.replace(/-/g, '_').toUpperCase()}`] as CacheTier | undefined;
-        const tier = (envOverride && envOverride in TIER_HEADERS ? envOverride : null) ?? RPC_CACHE_TIER[pathname] ?? 'medium';
-        mergedHeaders.set('Cache-Control', TIER_HEADERS[tier]);
-        const cdnCache = TIER_CDN_CACHE[tier];
+        let cacheTier = (envOverride && envOverride in TIER_HEADERS ? envOverride : null) ?? RPC_CACHE_TIER[pathname] ?? 'medium';
+
+        // For anonymous users, upgrade the cache aggressively to protect
+        // upstream API costs.  A 'fast' static endpoint becomes 'daily'.
+        if (userTier === 'anonymous') {
+          if (cacheTier === 'fast') cacheTier = 'daily';
+          else if (cacheTier === 'medium') cacheTier = 'static';
+          else if (cacheTier === 'slow') cacheTier = 'daily';
+        }
+
+        mergedHeaders.set('Cache-Control', TIER_HEADERS[cacheTier]);
+        const cdnCache = TIER_CDN_CACHE[cacheTier];
         if (cdnCache) mergedHeaders.set('CDN-Cache-Control', cdnCache);
-        mergedHeaders.set('X-Cache-Tier', tier);
+        mergedHeaders.set('X-Cache-Tier', cacheTier);
       }
     }
     mergedHeaders.delete('X-No-Cache');

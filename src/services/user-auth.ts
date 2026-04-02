@@ -1,16 +1,20 @@
 import { User } from 'firebase/auth';
 import { getFirebaseAuth, onAuthChange, isFirebaseConfigured, getCurrentUser, handleRedirectResult } from '@/services/firebase-auth';
 
+export type UserTier = 'free' | 'pro' | 'business' | 'enterprise';
+
 export interface AuthState {
   user: User | null;
   loading: boolean;
   isConfigured: boolean;
+  tier: UserTier;
 }
 
 let authState: AuthState = {
   user: null,
   loading: true,
   isConfigured: false,
+  tier: 'free',
 };
 
 const listeners: Set<(state: AuthState) => void> = new Set();

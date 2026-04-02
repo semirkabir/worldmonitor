@@ -91,6 +91,17 @@ const FRED_SERIES: FredConfig[] = [
   { id: 'CPIAUCSL', name: 'CPI Index', unit: '', precision: 1 },
   { id: 'DGS10', name: '10Y Treasury', unit: '%', precision: 2 },
   { id: 'VIXCLS', name: 'VIX', unit: '', precision: 2 },
+  // Expanded economic indicators
+  { id: 'CPILFESL', name: 'Core CPI', unit: '', precision: 1 },
+  { id: 'PCEPI', name: 'PCE Price Index', unit: '', precision: 1 },
+  { id: 'PCEPILFE', name: 'Core PCE', unit: '', precision: 1 },
+  { id: 'GDPC1', name: 'Real GDP', unit: '$B', precision: 0 },
+  { id: 'PAYEMS', name: 'Nonfarm Payrolls', unit: 'K', precision: 0 },
+  { id: 'JTSJOL', name: 'JOLTS Job Openings', unit: 'K', precision: 0 },
+  { id: 'RSAFS', name: 'Retail Sales', unit: '$M', precision: 0 },
+  { id: 'INDPRO', name: 'Industrial Production', unit: '', precision: 1 },
+  { id: 'UMCSENT', name: 'Consumer Sentiment', unit: '', precision: 1 },
+  { id: 'MORTGAGE30US', name: '30Y Mortgage', unit: '%', precision: 2 },
 ];
 
 export async function fetchFredData(): Promise<FredSeries[]> {

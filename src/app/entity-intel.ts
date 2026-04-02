@@ -19,7 +19,7 @@ import {
 import { TechHQRenderer } from '@/components/entity-detail/renderers/tech-hq';
 import { AircraftRenderer } from '@/components/entity-detail/renderers/aircraft';
 import { SpaceportRenderer } from '@/components/entity-detail/renderers/spaceport';
-import { HotspotRenderer } from '@/components/entity-detail/renderers/hotspot';
+import { CompanyRenderer } from '@/components/entity-detail/renderers/company';
 
 export class EntityIntelManager implements AppModule {
   private ctx: AppContext;
@@ -31,6 +31,8 @@ export class EntityIntelManager implements AppModule {
     this.hotspotRenderer = new HotspotRenderer();
   }
 
+  private tickerClickHandler: ((e: MouseEvent) => void) | null = null;
+
   init(): void {
     this.hotspotRenderer.setNewsGetter(() => this.ctx.allNews);
     this.panel = new EntityDetailPanel(this.buildRegistry());
@@ -41,10 +43,28 @@ export class EntityIntelManager implements AppModule {
       this.panel!.show(type as PopupType, data);
     });
 
+    // Global delegated handler for inline $TICKER links
+    this.tickerClickHandler = (e: MouseEvent) => {
+      const target = (e.target as HTMLElement).closest('.ticker-link') as HTMLElement | null;
+      if (!target) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const ticker = target.dataset.ticker;
+      const name = target.dataset.name || ticker;
+      if (ticker) {
+        this.panel?.show('company' as PopupType, { ticker, name });
+      }
+    };
+    document.addEventListener('click', this.tickerClickHandler);
+
     this.panel.onClose(() => {});
   }
 
   destroy(): void {
+    if (this.tickerClickHandler) {
+      document.removeEventListener('click', this.tickerClickHandler);
+      this.tickerClickHandler = null;
+    }
     this.panel?.hide();
     this.ctx.entityDetailPanel = null;
     this.panel = null;
@@ -57,7 +77,6 @@ export class EntityIntelManager implements AppModule {
       stockExchange: new StockExchangeRenderer(),
       base: new MilitaryBaseRenderer(),
       militaryVesselCluster: new MilitaryVesselClusterRenderer(),
-      hotspot: new HotspotRenderer(),
       pipeline: new PipelineRenderer(),
       nuclear: new NuclearRenderer(),
       datacenter: new DatacenterRenderer(),
@@ -68,6 +87,7 @@ export class EntityIntelManager implements AppModule {
       aircraft: new AircraftRenderer(),
       spaceport: new SpaceportRenderer(),
       hotspot: this.hotspotRenderer,
+      company: new CompanyRenderer(),
     };
   }
 }

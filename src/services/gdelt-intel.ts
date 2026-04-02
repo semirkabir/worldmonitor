@@ -5,7 +5,6 @@ import {
   type GdeltArticle as ProtoGdeltArticle,
   type SearchGdeltDocumentsResponse,
 } from '@/generated/client/worldmonitor/intelligence/v1/service_client';
-import { createCircuitBreaker } from '@/utils';
 
 export interface GdeltArticle {
   title: string;
@@ -42,21 +41,21 @@ export const INTEL_TOPICS: IntelTopic[] = [
   {
     id: 'ukraine',
     name: 'Ukraine',
-    query: '(Ukraine OR "Kyiv" OR "Zelensky" OR "Russian invasion" OR "Belarus") sourcelang:eng',
+    query: 'Ukraine OR Zelensky OR "Russian invasion"',
     icon: '🇺🇦',
     description: 'Ukraine war and related military activity',
   },
   {
     id: 'iran-war',
     name: 'Iran War',
-    query: '(Iran OR Israel OR Gaza OR "Operation Al-Aqsa Flood" OR "IDF" OR Hezbollah OR "Middle East escalation") sourcelang:eng',
+    query: 'Iran OR Israel OR Gaza OR Hezbollah',
     icon: '🇮🇷',
     description: 'Iran-Israel conflict and Middle East tensions',
   },
   {
     id: 'china-taiwan',
     name: 'China, Taiwan',
-    query: '(Taiwan OR "China invasion" OR "Xi Jinping" OR "PLA" OR "Taiwan Strait" OR "US Taiwan" OR "Chinese military") sourcelang:eng',
+    query: 'Taiwan OR "Xi Jinping" OR PLA',
     icon: '🇨🇳',
     description: 'China-Taiwan tensions and Indo-Pacific security',
   },
@@ -73,7 +72,7 @@ export const POSITIVE_GDELT_TOPICS: IntelTopic[] = [
   {
     id: 'climate-progress',
     name: 'Climate Progress',
-    query: '(renewable energy record OR "solar installation" OR "wind farm" OR "emissions decline" OR "green hydrogen") sourcelang:eng',
+    query: '(renewable energy OR "solar installation" OR "wind farm" OR "emissions decline" OR "green hydrogen") sourcelang:eng',
     icon: '',
     description: 'Renewable energy milestones and climate wins',
   },
@@ -111,11 +110,6 @@ export function getIntelTopics(): IntelTopic[] {
 // ---- Sebuf client ----
 
 const client = new IntelligenceServiceClient('', { fetch: (...args) => globalThis.fetch(...args) });
-const gdeltBreaker = createCircuitBreaker<SearchGdeltDocumentsResponse>({ name: 'GDELT Intelligence', cacheTtlMs: 10 * 60 * 1000, persistCache: true });
-const positiveGdeltBreaker = createCircuitBreaker<SearchGdeltDocumentsResponse>({ name: 'GDELT Positive', cacheTtlMs: 10 * 60 * 1000, persistCache: true });
-
-const emptyGdeltFallback: SearchGdeltDocumentsResponse = { articles: [], query: '', error: '' };
-
 const CACHE_TTL = 5 * 60 * 1000;
 const articleCache = new Map<string, { articles: GdeltArticle[]; timestamp: number }>();
 
@@ -144,25 +138,87 @@ export async function fetchGdeltArticles(
     return cached.articles;
   }
 
-  const resp = await gdeltBreaker.execute(async () => {
-    return client.searchGdeltDocuments({
-      query,
-      maxRecords: maxrecords,
-      timespan,
-      toneFilter: '',
-      sort: '',
-    });
-  }, emptyGdeltFallback);
-
-  if (resp.error) {
-    console.warn(`[GDELT-Intel] RPC error: ${resp.error}`);
-    return cached?.articles || [];
-  }
-
-  const articles: GdeltArticle[] = (resp.articles || []).map(toGdeltArticle);
-
+  console.log(`[GDELT-Intel] fetchGdeltArticles: query="${query.slice(0,80)}", maxrecords=${maxrecords}, timespan=${timespan}`);
+  const articles = await fetchGdeltDirect(query, maxrecords, timespan);
   articleCache.set(cacheKey, { articles, timestamp: Date.now() });
   return articles;
+}
+
+async function fetchGdeltDirect(
+  query: string,
+  maxRecords: number,
+  timespan: string,
+): Promise<GdeltArticle[]> {
+  // GDELT API — try multiple methods in order of preference:
+  // 1. Direct browser call (works in production, CORS supported)
+  // 2. Vite proxy (works in local dev via /api/gdelt rewrite in vite.config.ts)
+  // 3. Server RPC (fallback, currently broken in edge runtime)
+
+  const buildGdeltParams = () => {
+    const p = new URLSearchParams();
+    p.set('query', query);
+    p.set('mode', 'artlist');
+    p.set('maxrecords', String(maxRecords));
+    p.set('format', 'json');
+    p.set('sort', 'date');
+    p.set('timespan', timespan);
+    return p.toString();
+  };
+
+  const params = buildGdeltParams();
+
+  // Try 1: direct GDELT API
+  try {
+    const url = `https://api.gdeltproject.org/api/v2/doc/doc?${params}`;
+    const resp = await fetch(url, { signal: AbortSignal.timeout(20_000) });
+    if (!resp.ok) throw new Error(`GDELT returned ${resp.status}`);
+    const text = await resp.text();
+    if (!text.startsWith('{')) throw new Error(`GDELT returned non-JSON: ${text.slice(0, 80)}`);
+    const data = JSON.parse(text);
+    const articles: GdeltArticle[] = (data.articles || []).map((a: any) => toGdeltArticleRaw(a));
+    console.log(`[GDELT-Intel] Direct result: ${articles.length} articles`);
+    return articles;
+  } catch (e) {
+    console.warn(`[GDELT-Intel] Direct GDELT call failed:`, e);
+  }
+
+  // Try 2: Vite dev proxy (/api/gdelt → https://api.gdeltproject.org)
+  try {
+    const url = `/api/gdelt/api/v2/doc/doc?${params}`;  // relative URL — fetch() resolves automatically
+    const resp = await fetch(url, { signal: AbortSignal.timeout(20_000) });
+    if (!resp.ok) throw new Error(`Proxy returned ${resp.status}`);
+    const text = await resp.text();
+    if (!text.startsWith('{')) throw new Error(`Proxy returned non-JSON: ${text.slice(0, 80)}`);
+    const data = JSON.parse(text);
+    const articles: GdeltArticle[] = (data.articles || []).map((a: any) => toGdeltArticleRaw(a));
+    console.log(`[GDELT-Intel] Proxy result: ${articles.length} articles`);
+    return articles;
+  } catch (e) {
+    console.warn(`[GDELT-Intel] Vite proxy call failed:`, e);
+  }
+
+  // Try 3: server RPC
+  try {
+    const rpcResp = await client.searchGdeltDocuments({
+      query, maxRecords, timespan, toneFilter: '', sort: '',
+    });
+    if (!rpcResp.articles?.length) return [];
+    return (rpcResp.articles as ProtoGdeltArticle[]).map(toGdeltArticle);
+  } catch {
+    return [];
+  }
+}
+
+function toGdeltArticleRaw(a: any): GdeltArticle {
+  return {
+    title: a.title || '',
+    url: a.url || '',
+    source: a.domain || a.source?.domain || '',
+    date: a.seendate || '',
+    image: a.socialimage || undefined,
+    language: a.language || undefined,
+    tone: typeof a.tone === 'number' ? a.tone : undefined,
+  };
 }
 
 export async function fetchHotspotContext(hotspot: Hotspot): Promise<GdeltArticle[]> {
@@ -248,18 +304,18 @@ export async function fetchPositiveGdeltArticles(
     return cached.articles;
   }
 
-  const resp = await positiveGdeltBreaker.execute(async () => {
-    return client.searchGdeltDocuments({
+  // Call GDELT API directly — circuit breaker causes cross-topic cache pollution
+  let resp: SearchGdeltDocumentsResponse;
+  try {
+    resp = await client.searchGdeltDocuments({
       query,
       maxRecords: maxrecords,
       timespan,
       toneFilter,
       sort,
     });
-  }, emptyGdeltFallback);
-
-  if (resp.error) {
-    console.warn(`[GDELT-Intel] Positive RPC error: ${resp.error}`);
+  } catch (e) {
+    console.warn(`[GDELT-Intel] Positive RPC error:`, e);
     return cached?.articles || [];
   }
 

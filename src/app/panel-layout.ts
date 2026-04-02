@@ -1398,8 +1398,12 @@ export class PanelLayoutManager implements AppModule {
     window.addEventListener('resize', onWindowResize);
     this.panelDragCleanupHandlers.push(() => window.removeEventListener('resize', onWindowResize));
 
+    let btnDownX = 0, btnDownY = 0;
+    btn.addEventListener('mousedown', (e) => { btnDownX = e.clientX; btnDownY = e.clientY; });
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
+      // Ignore click if it was actually a drag (mouse moved > 4px — that's a resize, not a tap)
+      if (Math.abs(e.clientX - btnDownX) > 4 || Math.abs(e.clientY - btnDownY) > 4) return;
       this.panelsHidden = !this.panelsHidden;
       mainContent.classList.toggle('panels-hidden', this.panelsHidden);
       try { localStorage.setItem(this.panelsCollapsedStorageKey, String(this.panelsHidden)); } catch { /* noop */ }
@@ -1407,8 +1411,12 @@ export class PanelLayoutManager implements AppModule {
       setTimeout(() => this.ctx.map?.setIsResizing(false), 320);
     });
 
+    let bottomBtnDownX = 0, bottomBtnDownY = 0;
+    bottomBtn.addEventListener('mousedown', (e) => { bottomBtnDownX = e.clientX; bottomBtnDownY = e.clientY; });
     bottomBtn.addEventListener('click', (e) => {
       e.stopPropagation();
+      // Ignore click if it was actually a drag
+      if (Math.abs(e.clientX - bottomBtnDownX) > 4 || Math.abs(e.clientY - bottomBtnDownY) > 4) return;
       this.bottomGridHidden = !this.bottomGridHidden;
       if (mapSection) mapSection.classList.toggle('bottom-grid-hidden', this.bottomGridHidden);
       if (mainContent) mainContent.classList.toggle('bottom-grid-hidden', this.bottomGridHidden);

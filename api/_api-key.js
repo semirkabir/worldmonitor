@@ -31,22 +31,25 @@ function extractOriginFromReferer(referer) {
   }
 }
 
+/**
+ * API key validation used for:
+ *  1. Desktop app — now treated identically to browser.  Users get tier-
+ *     based access via Firebase auth (anonymous → signed-in → paid).
+ *  2. Trusted browser origins (worldmonitor.app, Vercel previews,
+ *     localhost) — no key needed at all.
+ *  3. Unknown origins — require a valid X-WorldMonitor-Key header.
+ *
+ * Per-tier rate limiting is handled by the gateway via auth-tier.ts.
+ */
 export function validateApiKey(req) {
   const key = req.headers.get('X-WorldMonitor-Key');
-  // Same-origin browser requests don't send Origin (per CORS spec).
+  // Same-origin requests don't send Origin (per CORS spec).
   // Fall back to Referer to identify trusted same-origin callers.
   const origin = req.headers.get('Origin') || extractOriginFromReferer(req.headers.get('Referer')) || '';
 
-  // Desktop app — always require API key
-  if (isDesktopOrigin(origin)) {
-    if (!key) return { valid: false, required: true, error: 'API key required for desktop access' };
-    const validKeys = (process.env.WORLDMONITOR_VALID_KEYS || '').split(',').filter(Boolean);
-    if (!validKeys.includes(key)) return { valid: false, required: true, error: 'Invalid API key' };
-    return { valid: true, required: true };
-  }
-
-  // Trusted browser origin (worldmonitor.app, Vercel previews, localhost dev) — no key needed
-  if (isTrustedBrowserOrigin(origin)) {
+  // Desktop + browser: treated the same.  The gateway's auth-tier system
+  // handles per-user rate limits via Firebase token (if present) or IP.
+  if (isTrustedBrowserOrigin(origin) || isDesktopOrigin(origin)) {
     if (key) {
       const validKeys = (process.env.WORLDMONITOR_VALID_KEYS || '').split(',').filter(Boolean);
       if (!validKeys.includes(key)) return { valid: false, required: true, error: 'Invalid API key' };

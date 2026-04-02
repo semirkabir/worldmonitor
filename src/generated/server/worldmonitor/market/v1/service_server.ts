@@ -166,6 +166,28 @@ export interface GulfQuote {
   sparkline: number[];
 }
 
+export interface ListSecFilingsRequest {
+  ticker: string;
+  filingTypes: string;
+  limit: number;
+}
+
+export interface ListSecFilingsResponse {
+  filings: SecFiling[];
+  ticker: string;
+  companyName: string;
+}
+
+export interface SecFiling {
+  accessionNumber: string;
+  filingType: string;
+  filedAt: string;
+  title: string;
+  url: string;
+  issuerName: string;
+  issuerCik: string;
+}
+
 export interface FieldViolation {
   field: string;
   description: string;
@@ -219,6 +241,7 @@ export interface MarketServiceHandler {
   listEtfFlows(ctx: ServerContext, req: ListEtfFlowsRequest): Promise<ListEtfFlowsResponse>;
   getCountryStockIndex(ctx: ServerContext, req: GetCountryStockIndexRequest): Promise<GetCountryStockIndexResponse>;
   listGulfQuotes(ctx: ServerContext, req: ListGulfQuotesRequest): Promise<ListGulfQuotesResponse>;
+  listSecFilings(ctx: ServerContext, req: ListSecFilingsRequest): Promise<ListSecFilingsResponse>;
 }
 
 export function createMarketServiceRoutes(
@@ -561,6 +584,49 @@ export function createMarketServiceRoutes(
 
           const result = await handler.listGulfQuotes(ctx, body);
           return new Response(JSON.stringify(result as ListGulfQuotesResponse), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        } catch (err: unknown) {
+          if (err instanceof ValidationError) {
+            return new Response(JSON.stringify({ violations: err.violations }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+          if (options?.onError) {
+            return options.onError(err, req);
+          }
+          const message = err instanceof Error ? err.message : String(err);
+          return new Response(JSON.stringify({ message }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      },
+    },
+    {
+      method: "GET",
+      path: "/api/market/v1/list-sec-filings",
+      handler: async (req: Request): Promise<Response> => {
+        try {
+          const pathParams: Record<string, string> = {};
+          const url = new URL(req.url, "http://localhost");
+          const params = url.searchParams;
+          const body: ListSecFilingsRequest = {
+            ticker: params.get("ticker") ?? "",
+            filingTypes: params.get("filing_types") ?? "",
+            limit: Number(params.get("limit")) || 20,
+          };
+
+          const ctx: ServerContext = {
+            request: req,
+            pathParams,
+            headers: Object.fromEntries(req.headers.entries()),
+          };
+
+          const result = await handler.listSecFilings(ctx, body);
+          return new Response(JSON.stringify(result as ListSecFilingsResponse), {
             status: 200,
             headers: { "Content-Type": "application/json" },
           });

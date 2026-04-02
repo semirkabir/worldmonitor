@@ -49,6 +49,8 @@ export async function searchGdeltDocuments(
   );
   const timespan = req.timespan || '72h';
 
+  console.log(`[searchGdeltDocuments] query="${query}", maxRecords=${maxRecords}, timespan=${timespan}, REDIS_URL=${!!process.env.UPSTASH_REDIS_REST_URL}`);
+
   try {
     const keyHash = await sha256Hex(`${query}|${timespan}|${maxRecords}`);
     const cacheKey = `${REDIS_CACHE_KEY}:${keyHash}`;
@@ -102,6 +104,7 @@ export async function searchGdeltDocuments(
     );
     return result || { articles: [], query, error: '' };
   } catch (error) {
+    console.error(`[searchGdeltDocuments] Error:`, error);
     return {
       articles: [],
       query,

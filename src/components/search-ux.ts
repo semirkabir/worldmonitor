@@ -39,6 +39,7 @@ export function getSearchResultActionLabel(type: SearchResultType): string {
     financialcenter: 'Inspect financial hub',
     centralbank: 'Inspect central bank',
     commodityhub: 'Inspect commodity hub',
+    company: 'Open company detail panel',
   };
   return labels[type];
 }

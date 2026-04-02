@@ -1,5 +1,6 @@
 import type { AppContext, AppModule } from '@/app/app-context';
 import type { SearchResult } from '@/components/SearchModal';
+import type { PopupType } from '@/components/MapPopup';
 import type { NewsItem, MapLayers } from '@/types';
 import type { MapView } from '@/components';
 import type { Command } from '@/config/commands';
@@ -19,6 +20,7 @@ import { AI_RESEARCH_LABS } from '@/config/ai-research-labs';
 import { STARTUP_ECOSYSTEMS } from '@/config/startup-ecosystems';
 import { TECH_HQS, ACCELERATORS } from '@/config/tech-geo';
 import { STOCK_EXCHANGES, FINANCIAL_CENTERS, CENTRAL_BANKS, COMMODITY_HUBS } from '@/config/finance-geo';
+import { ENTITY_REGISTRY } from '@/config/entities';
 import { trackSearchResultSelected, trackCountrySelected } from '@/services/analytics';
 import { t } from '@/services/i18n';
 import { saveToStorage, setTheme } from '@/utils';
@@ -202,6 +204,15 @@ export class SearchManager implements AppModule {
 
     this.ctx.searchModal.registerSource('country', this.buildCountrySearchItems());
 
+    this.ctx.searchModal.registerSource('company', ENTITY_REGISTRY
+      .filter(e => e.type === 'company' || e.type === 'index')
+      .map(e => ({
+        id: e.id,
+        title: e.name,
+        subtitle: [e.id, e.sector, ...(e.keywords?.slice(0, 3) ?? [])].filter(Boolean).join(' · '),
+        data: { ticker: e.id, name: e.name },
+      })));
+
     this.ctx.searchModal.setActivePanels(Object.keys(this.ctx.panels));
     this.ctx.searchModal.setQuickActionIds(getQuickActionCommandIds(SITE_VARIANT));
     this.ctx.searchModal.setOnSelect((result) => this.handleSearchResult(result));
@@ -380,6 +391,11 @@ export class SearchManager implements AppModule {
         trackCountrySelected(code, name, 'search');
         this.ctx.map?.setView('global');
         this.callbacks.openCountryBriefByCode(code, name);
+        break;
+      }
+      case 'company': {
+        const { ticker, name } = result.data as { ticker: string; name: string };
+        this.ctx.entityDetailPanel?.show('company' as PopupType, { ticker, name });
         break;
       }
     }

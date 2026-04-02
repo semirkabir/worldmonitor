@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package worldmonitor.market.v1;
+
+import "sebuf/http/annotations.proto";
+
+// ListSecFilingsRequest specifies parameters for retrieving SEC EDGAR filings.
+message ListSecFilingsRequest {
+  // Ticker symbol (e.g., "AAPL", "GOOG").
+  string ticker = 1 [(sebuf.http.query) = { name: "ticker" }];
+
+  // Optional: filter by filing types (e.g., "10-K", "10-Q", "8-K"). Empty returns all.
+  repeated string filing_types = 2 [(sebuf.http.query) = { name: "filing_types" }];
+
+  // Maximum number of filings to return. Defaults to 20.
+  int32 limit = 3 [(sebuf.http.query) = { name: "limit" }];
+}
+
+// SecFiling represents a single SEC EDGAR filing.
+message SecFiling {
+  string accession_number = 1;
+  string filing_type = 2;
+  string filed_at = 3;
+  string title = 4;
+  string url = 5;
+  string issuer_name = 6;
+  string issuer_cik = 7;
+}
+
+// ListSecFilingsResponse contains SEC EDGAR filings for a company.
+message ListSecFilingsResponse {
+  repeated SecFiling filings = 1;
+  string ticker = 2;
+  string company_name = 3;
+}

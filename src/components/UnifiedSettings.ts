@@ -136,6 +136,28 @@ export class UnifiedSettings {
         this.updateSourcesCounter();
         return;
       }
+
+      // Data section: import/export button handlers
+      if (target.closest('#profileImportBtn')) {
+        this.handleImportData();
+        return;
+      }
+
+      if (target.closest('#profileExportBtn')) {
+        this.handleExportData();
+        return;
+      }
+
+      if (target.closest('#profileDeleteBtn')) {
+        this.handleDeleteAccount();
+        return;
+      }
+
+      // Community section: referral code copy
+      if (target.closest('#copyReferralCode')) {
+        this.handleCopyReferralCode();
+        return;
+      }
     });
 
     this.overlay.addEventListener('input', (e) => {
@@ -548,11 +570,45 @@ export class UnifiedSettings {
           <h3>${user.displayName || 'User'}</h3>
           <p>${user.email || ''}</p>
         </div>
+        <span class="profile-tier-badge" id="profileTierBadge">Free</span>
         <button class="profile-logout-btn" id="profileLogoutBtn">Sign Out</button>
       </div>
-      
+
       <div class="profile-section">
-        <h4>Your Features</h4>
+        <h4>Upgrade Plan</h4>
+        <div class="profile-plan-grid">
+          <div class="profile-plan-card">
+            <h5>Pro</h5>
+            <p class="plan-price">$9/mo</p>
+            <ul class="plan-features">
+              <li>Real-time data</li>
+              <li>Export & API access</li>
+              <li>1,000 MCP API calls/mo</li>
+            </ul>
+            <button class="profile-upgrade-btn" data-tier="pro">Upgrade to Pro</button>
+          </div>
+          <div class="profile-plan-card">
+            <h5>Business</h5>
+            <p class="plan-price">$29/mo</p>
+            <ul class="plan-features">
+              <li>Everything in Pro</li>
+              <li>10,000 MCP API calls/mo</li>
+              <li>Data marketplace access</li>
+            </ul>
+            <button class="profile-upgrade-btn" data-tier="business">Upgrade to Business</button>
+          </div>
+          <div class="profile-plan-card featured">
+            <h5>Enterprise</h5>
+            <p class="plan-price">Contact us</p>
+            <ul class="plan-features">
+              <li>Unlimited API calls</li>
+              <li>Custom datasets</li>
+              <li>Dedicated support</li>
+            </ul>
+            <button class="profile-upgrade-btn" data-tier="enterprise">Contact Sales</button>
+          </div>
+        </div>
+      </div>
         <ul class="profile-feature-list">
           ${FEATURES.filter(f => f.tier !== 'premium').map(f => `<li>✓ ${f.name}</li>`).join('')}
         </ul>
@@ -618,9 +674,28 @@ export class UnifiedSettings {
       </div>
       
       <div class="profile-section">
+        <h4>Data & Community</h4>
+        <div class="profile-actions">
+          <button class="profile-action-btn" id="profileExportBtn">Export Settings</button>
+          <button class="profile-action-btn" id="profileImportBtn">Import Settings</button>
+        </div>
+        <div class="profile-community-section">
+          <h5>Invite Friends</h5>
+          <p class="profile-community-desc">Share WorldMonitor and earn bonus features when they sign up.</p>
+          <div class="profile-referral-row">
+            <code class="profile-referral-code" id="referralCodeDisplay">Loading...</code>
+            <button class="profile-action-btn small" id="copyReferralCode">Copy Code</button>
+          </div>
+          <div class="profile-referral-share">
+            <button class="profile-share-btn twitter" id="shareTwitter">Share on X</button>
+            <button class="profile-share-btn linkedin" id="shareLinkedIn">Share on LinkedIn</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-section">
         <h4>Data Management</h4>
         <div class="profile-actions">
-          <button class="profile-action-btn" id="profileExportBtn">Export My Data</button>
           <button class="profile-action-btn danger" id="profileDeleteBtn">Delete Account</button>
         </div>
       </div>
@@ -642,12 +717,140 @@ export class UnifiedSettings {
       </div>
     `;
     container.querySelector('#profileLogoutBtn')?.addEventListener('click', () => this.handleLogout());
-    container.querySelector('#profileExportBtn')?.addEventListener('click', () => this.handleExportData());
     container.querySelector('#profileDeleteBtn')?.addEventListener('click', () => this.handleDeleteAccount());
+    container.querySelectorAll('.profile-upgrade-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tier = (btn as HTMLElement).dataset.tier;
+        if (tier) this.handleUpgrade(tier);
+      });
+    });
+
+    // Social share buttons
+    container.querySelector('#shareTwitter')?.addEventListener('click', () => {
+      const text = encodeURIComponent('Check out WorldMonitor — real-time global monitoring at worldmonitor.app');
+      window.open(`https://x.com/intent/tweet?text=${text}`, '_blank');
+    });
+    container.querySelector('#shareLinkedIn')?.addEventListener('click', () => {
+      window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent('https://worldmonitor.app')}`, '_blank');
+    });
+
+    // Fetch referral code display
+    void this.populateReferralCode(user);
   }
 
   private async handleExportData(): Promise<void> {
-    alert('Export feature coming soon! This will download your preferences and settings.');
+    const data: Record<string, unknown> = {
+      exportedAt: new Date().toISOString(),
+      version: __APP_VERSION__ ?? '0.1.0',
+    };
+
+    // Gather preferences from localStorage
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('wm-') || key.startsWith('unified-settings-'))) {
+        try {
+          data[key] = JSON.parse(localStorage.getItem(key)!);
+        } catch {
+          data[key] = localStorage.getItem(key);
+        }
+      }
+    }
+
+    // Gather IndexedDB cache snapshots if available
+    try {
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const req = indexedDB.open('worldmonitor');
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      const storeNames = Array.from(db.objectStoreNames);
+      for (const store of storeNames) {
+        const tx = db.transaction(store, 'readonly');
+        const items = await new Promise<any[]>((resolve, reject) => {
+          const getAll = tx.objectStore(store).getAll();
+          getAll.onsuccess = () => resolve(getAll.result);
+          getAll.onerror = () => reject(getAll.error);
+        });
+        if (items.length > 0) data[`indexeddb:${store}`] = items;
+      }
+      db.close();
+    } catch {
+      // IndexedDB not available — skip
+    }
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `worldmonitor-export-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  private async handleImportData(): Promise<void> {
+    // Create a hidden file input for importing JSON settings
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+
+        // Validate basic structure
+        if (!data.exportedAt) {
+          alert('This does not appear to be a WorldMonitor settings export.');
+          return;
+        }
+
+        // Restore localStorage entries
+        let restored = 0;
+        for (const [key, value] of Object.entries(data)) {
+          if (key === 'exportedAt' || key === 'version' || key === 'indexeddb') continue;
+          if (key.startsWith('wm-') || key.startsWith('unified-settings-')) {
+            localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
+            restored++;
+          }
+        }
+
+        const confirmed = confirm(`Restored ${restored} settings from export dated ${data.exportedAt}.\n\nReload the page to apply changes?`);
+        if (confirmed) {
+          window.location.reload();
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        alert(`Failed to import settings: ${message}`);
+      }
+    };
+
+    input.click();
+  }
+
+  private async handleCopyReferralCode(): Promise<void> {
+    const codeEl = this.overlay.querySelector<HTMLElement>('#referralCodeDisplay');
+    if (!codeEl) return;
+    const code = codeEl.textContent?.trim() || '';
+    if (!code || code === 'Loading...') return;
+
+    try {
+      await navigator.clipboard.writeText(code);
+      codeEl.textContent = 'Copied!';
+      setTimeout(() => { codeEl.textContent = code; }, 2000);
+    } catch {
+      const range = document.createRange();
+      range.selectNodeContents(codeEl);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+      document.execCommand('copy');
+      sel?.removeAllRanges();
+    }
   }
 
   private async handleDeleteAccount(): Promise<void> {
@@ -655,5 +858,48 @@ export class UnifiedSettings {
     if (confirmed) {
       alert('Account deletion coming soon! Contact support for now.');
     }
+  }
+
+  private async populateReferralCode(user: User): Promise<void> {
+    // Try to get referral code from Convex
+    const codeEl = this.overlay.querySelector<HTMLElement>('#referralCodeDisplay');
+    try {
+      const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL || process.env.CONVEX_URL;
+      if (convexUrl) {
+        const resp = await fetch(`${convexUrl}/api/query`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            path: 'register-interest:getPosition',
+            arguments: { referralCode: user.uid.slice(0, 8) },
+          }),
+          signal: AbortSignal.timeout(3_000),
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data?.referralCount !== undefined && codeEl) {
+            codeEl.textContent = `${user.uid.slice(0, 8)} · ${data.referralCount} referrals`;
+            return;
+          }
+        }
+      }
+    } catch {
+      // Fall through to default
+    }
+
+    if (codeEl) codeEl.textContent = user.uid.slice(0, 8);
+  }
+
+  private async handleUpgrade(tier: string): Promise<void> {
+    if (tier === 'enterprise') {
+      // Open external email or contact page
+      window.open('mailto:sales@worldmonitor.app?subject=Enterprise%20Inquiry', '_blank');
+      return;
+    }
+
+    // For now, send to the checkout endpoint.
+    // TODO: Integrate Stripe checkout session.
+    const uid = this.currentUser?.uid;
+    window.location.href = `/api/checkout?tier=${tier}&uid=${uid || ''}`;
   }
 }

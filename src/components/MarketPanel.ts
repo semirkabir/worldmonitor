@@ -252,8 +252,13 @@ export class MarketPanel extends Panel {
 
     data.forEach((stock) => {
       const item = document.createElement('div');
-      item.className = 'market-item';
+      item.className = 'market-item ticker-link';
       item.dataset.symbol = stock.symbol;
+      item.dataset.ticker = stock.symbol;
+      item.dataset.name = stock.name;
+      item.setAttribute('role', 'button');
+      item.setAttribute('tabindex', '0');
+      item.style.cursor = 'pointer';
 
       const priceSpan = document.createElement('span');
       priceSpan.className = 'market-price';
