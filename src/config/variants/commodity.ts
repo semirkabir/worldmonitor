@@ -110,8 +110,8 @@ export const DEFAULT_MAP_LAYERS: MapLayers = {
   dayNight: false,
   cyberThreats: false,
   // Additional required properties
-
-  ciiChoropleth: false, aptGroups: false,
+  aptGroups: false,
+  ciiChoropleth: false,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -169,8 +169,8 @@ export const MOBILE_DEFAULT_MAP_LAYERS: MapLayers = {
   dayNight: false,
   cyberThreats: false,
   // Additional required properties
-
-  ciiChoropleth: false, aptGroups: false,
+  aptGroups: false,
+  ciiChoropleth: false,
 };
 
 export const VARIANT_CONFIG: VariantConfig = {
