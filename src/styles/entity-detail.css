@@ -125,17 +125,9 @@
 }
 
 .edp-badge-status {
-  background: linear-gradient(145deg,
-    color-mix(in srgb, var(--green) 28%, transparent),
-    color-mix(in srgb, var(--green) 14%, transparent)
-  );
-  color: var(--green);
-  border-color: color-mix(in srgb, var(--green) 45%, transparent);
-  box-shadow:
-    0 2px 6px color-mix(in srgb, var(--green) 35%, transparent),
-    0 1px 2px color-mix(in srgb, var(--green) 20%, transparent),
-    inset 0 1px 0 color-mix(in srgb, var(--green) 20%, transparent);
-  text-shadow: 0 0 8px color-mix(in srgb, var(--green) 60%, transparent);
+  background: color-mix(in srgb, var(--accent-green) 15%, transparent);
+  color: var(--accent-green);
+  border-color: color-mix(in srgb, var(--accent-green) 30%, transparent);
 }
 
 .edp-badge-tier {
@@ -255,54 +247,6 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   border-left: 3px solid var(--accent-blue);
-}
-
-/* ── Weather alert description ──────────────────────────────────────── */
-
-.edp-weather-bullets {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin: 0 0 12px 0;
-  padding: 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  border-left: 3px solid var(--accent-blue);
-}
-
-.edp-weather-bullet-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #f59e0b;
-  margin-bottom: 2px;
-}
-
-.edp-weather-bullet-text {
-  font-size: 12px;
-  color: var(--text-primary);
-  line-height: 1.6;
-}
-
-/* ── APT renderer ───────────────────────────────────────────────────── */
-
-.edp-apt-description {
-  font-size: 12px;
-  color: var(--text-primary);
-  line-height: 1.6;
-  margin: 0 0 12px 0;
-}
-
-.edp-op-link {
-  color: var(--accent-blue);
-  text-decoration: none;
-  font-size: 13px;
-}
-
-.edp-op-link:hover {
-  text-decoration: underline;
 }
 
 /* ── Tag/chip list ──────────────────────────────────────────────────── */
@@ -451,95 +395,6 @@
   text-decoration: underline;
 }
 
-/* ── Nuclear / Irradiator photo ─────────────────────────────────────── */
-
-.edp-base-photo {
-  margin-bottom: 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.edp-base-photo img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
-  background: color-mix(in srgb, var(--surface) 70%, black);
-}
-
-.edp-base-photo-credit {
-  padding: 6px 10px;
-  font-size: 10px;
-  color: var(--text-faint);
-  border-top: 1px solid var(--border);
-}
-
-.edp-base-photo-placeholder {
-  margin-bottom: 12px;
-  padding: 24px;
-  text-align: center;
-  font-size: 11px;
-  color: var(--text-muted);
-  background: color-mix(in srgb, var(--surface) 80%, black);
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-}
-
-.edp-nuclear-photo {
-  margin-bottom: 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.edp-nuclear-photo-img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
-  background: color-mix(in srgb, var(--surface) 70%, black);
-}
-
-.edp-nuclear-photo-credit {
-  padding: 6px 10px;
-  font-size: 10px;
-  color: var(--text-faint);
-  border-top: 1px solid var(--border);
-}
-
-.edp-nuclear-photo-placeholder {
-  margin-bottom: 12px;
-  padding: 24px;
-  text-align: center;
-  font-size: 11px;
-  color: var(--text-muted);
-  background: color-mix(in srgb, var(--surface) 80%, black);
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-}
-
-.edp-wiki-loading {
-  padding: 12px 0;
-  font-size: 11px;
-  color: var(--text-muted);
-  font-style: italic;
-}
-
-.edp-wiki-link {
-  display: inline-block;
-  margin-bottom: 12px;
-  font-size: 12px;
-  color: var(--accent);
-  text-decoration: none;
-}
-
-.edp-wiki-link:hover {
-  text-decoration: underline;
-}
-
 /* ── Launch schedule items ──────────────────────────────────────────── */
 
 .edp-launch-item {
@@ -591,264 +446,201 @@
   margin-top: 4px;
 }
 
-/* ── Military Vessel Cluster ───────────────────────────────────────── */
+/* ── News items ────────────────────────────────────────────────────── */
 
-.edp-vessel-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.edp-news-item {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
 }
 
-.edp-vessel-item {
-  padding: 8px 10px;
-  background: color-mix(in srgb, var(--bg) 40%, transparent);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+.edp-news-item:last-child {
+  border-bottom: none;
 }
 
-.edp-vessel-name-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 3px;
-}
-
-.edp-vessel-name {
+.edp-news-title {
+  display: block;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary);
-}
-
-.edp-vessel-hull {
-  font-size: 11px;
-  color: var(--text-secondary);
-  font-family: var(--font-mono, monospace);
-}
-
-.edp-vessel-status {
-  font-size: 10px;
-  padding: 1px 5px;
-}
-
-.edp-vessel-meta {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.edp-vessel-type,
-.edp-vessel-operator,
-.edp-vessel-speed {
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.edp-vessel-type::after {
-  content: '·';
-  margin-left: 8px;
-}
-
-.edp-vessel-operator::after {
-  content: '·';
-  margin-left: 8px;
-}
-
-.edp-vessel-speed:last-child::after {
-  content: none;
-}
-
-.edp-vessel-note {
-  font-size: 11px;
-  color: var(--text-faint);
-  margin-top: 4px;
+  color: var(--accent-blue, #60a5fa);
+  text-decoration: none;
+  margin-bottom: 4px;
   line-height: 1.4;
 }
 
-
-/* ── Military Vessel Cluster ───────────────────────────────────────── */
-
-.edp-vessel-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.edp-news-title:hover {
+  text-decoration: underline;
 }
 
-.edp-vessel-item {
-  padding: 8px 10px;
-  background: color-mix(in srgb, var(--bg) 40%, transparent);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-}
-
-.edp-vessel-name-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 3px;
-}
-
-.edp-vessel-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.edp-vessel-hull {
-  font-size: 11px;
-  color: var(--text-secondary);
-  font-family: var(--font-mono, monospace);
-}
-
-.edp-vessel-status {
-  font-size: 10px;
-  padding: 1px 5px;
-}
-
-.edp-vessel-meta {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.edp-vessel-type,
-.edp-vessel-operator,
-.edp-vessel-speed {
+.edp-news-meta {
   font-size: 11px;
   color: var(--text-secondary);
 }
 
-.edp-vessel-type::after {
-  content: '·';
-  margin-left: 8px;
-}
-
-.edp-vessel-operator::after {
-  content: '·';
-  margin-left: 8px;
-}
-
-.edp-vessel-speed:last-child::after {
-  content: none;
-}
-
-.edp-vessel-note {
-  font-size: 11px;
-  color: var(--text-faint);
-  margin-top: 4px;
-  line-height: 1.4;
-}
-
-<<<<<<< HEAD
-=======
-/* Clickable vessel rows */
-.edp-vessel-item--clickable {
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-}
-.edp-vessel-item--clickable:hover {
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
-}
-.edp-vessel-chevron {
-  margin-left: auto;
-  font-size: 16px;
-  color: var(--text-faint);
-  transition: color 0.15s;
-}
-.edp-vessel-item--clickable:hover .edp-vessel-chevron {
-  color: var(--accent);
-}
-
-/* Back button (injected by navigate()) */
-.edp-back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin: 0 0 12px 0;
-  padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 600;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-  font-family: inherit;
-}
-.edp-back-btn:hover {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
-}
-
-/* Wikipedia image in vessel detail */
-.edp-vessel-wiki {
-  margin: 0 0 4px 0;
-}
-.edp-vessel-wiki-img {
-  display: none;
+.edp-news-image {
+  margin-top: 8px;
   width: 100%;
-  max-height: 200px;
+  max-height: 120px;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+/* ── Escalation display ──────────────────────────────────────────── */
+
+.edp-escalation-score {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 8px;
 }
-.edp-vessel-wiki-extract {
+
+.edp-score-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--semantic-elevated, #eab308);
+  color: var(--bg);
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+
+.edp-score-label {
   font-size: 12px;
-  line-height: 1.5;
+  font-weight: 600;
   color: var(--text-secondary);
-  margin: 0 0 4px 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 5;
-  -webkit-box-orient: vertical;
+  text-transform: uppercase;
+}
+
+.edp-escalation-trend {
+  font-size: 13px;
+  color: var(--semantic-elevated, #eab308);
+  margin-bottom: 12px;
+}
+
+.edp-trend-icon {
+  font-size: 16px;
+  margin-right: 4px;
+}
+
+.edp-component-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.edp-component-label {
+  font-size: 10px;
+  color: var(--text-secondary);
+  width: 70px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.edp-component-bar-bg {
+  flex: 1;
+  height: 6px;
+  background: var(--surface);
+  border-radius: 3px;
   overflow: hidden;
 }
-.edp-vessel-wiki-extract--expanded {
-  display: block;
-  overflow: visible;
-  -webkit-line-clamp: unset;
+
+.edp-component-bar {
+  height: 100%;
+  background: var(--semantic-elevated, #eab308);
+  border-radius: 3px;
+  transition: width 0.3s ease;
 }
-.edp-vessel-wiki-toggle {
-  display: block;
-  background: none;
-  border: none;
-  padding: 0;
-  margin: 0 0 6px 0;
+
+.edp-component-bar.news { background: #3b82f6; }
+.edp-component-bar.cii { background: #f59e0b; }
+.edp-component-bar.geo { background: #22c55e; }
+.edp-component-bar.military { background: #ef4444; }
+
+.edp-component-value {
   font-size: 11px;
-  font-weight: 600;
-  color: var(--text-faint);
-  cursor: pointer;
-  font-family: inherit;
-  letter-spacing: 0.02em;
-  transition: color 0.15s;
+  color: var(--text-secondary);
+  width: 30px;
+  text-align: right;
+  flex-shrink: 0;
 }
-.edp-vessel-wiki-toggle:hover {
+
+
+/* ── Military Vessel Cluster ───────────────────────────────────────── */
+
+.edp-vessel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edp-vessel-item {
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--bg) 40%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.edp-vessel-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 3px;
+}
+
+.edp-vessel-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.edp-vessel-hull {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono, monospace);
+}
+
+.edp-vessel-status {
+  font-size: 10px;
+  padding: 1px 5px;
+}
+
+.edp-vessel-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.edp-vessel-type,
+.edp-vessel-operator,
+.edp-vessel-speed {
+  font-size: 11px;
   color: var(--text-secondary);
 }
-.edp-vessel-wiki-link {
+
+.edp-vessel-type::after {
+  content: '·';
+  margin-left: 8px;
+}
+
+.edp-vessel-operator::after {
+  content: '·';
+  margin-left: 8px;
+}
+
+.edp-vessel-speed:last-child::after {
+  content: none;
+}
+
+.edp-vessel-note {
   font-size: 11px;
-  color: var(--accent);
-  text-decoration: none;
-  display: block;
+  color: var(--text-faint);
   margin-top: 4px;
+  line-height: 1.4;
 }
-.edp-vessel-wiki-link:hover { text-decoration: underline; }
 
-/* External article link */
-.edp-vessel-article-wrap {
-  padding: 8px 0 4px;
-}
-.edp-external-link {
-  font-size: 12px;
-  color: var(--accent);
-  text-decoration: none;
-}
-.edp-external-link:hover { text-decoration: underline; }
-
->>>>>>> a7f7efde (feat(vessels): clickable vessel rows with detail sub-panel, Wikipedia image, and green deployed badge)
 /* ── Responsive ────────────────────────────────────────────────────── */
 
 @media (max-width: 600px) {
@@ -1036,556 +828,3 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-
-/* ── Prediction Market Cards ── */
-.edp-trade-btn {
-  display: block;
-  margin: 12px 16px;
-  padding: 12px;
-  text-align: center;
-  background: linear-gradient(135deg, #8B5CF6, #6D28D9);
-  color: #fff;
-  font-weight: 700;
-  font-size: 14px;
-  border-radius: 8px;
-  text-decoration: none;
-  transition: opacity 0.2s;
-}
-
-.edp-trade-btn:hover {
-  opacity: 0.9;
-}
-
-/* Accordion */
-.edp-poly-accordion {
-  border: 1px solid var(--border-subtle);
-  border-radius: 6px;
-  margin-bottom: 6px;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--surface) 82%, transparent);
-}
-
-.edp-poly-accordion-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 10px 12px;
-  background: none;
-  border: none;
-  color: var(--text);
-  font-size: 12px;
-  cursor: pointer;
-  text-align: left;
-}
-
-.edp-poly-accordion-header:hover {
-  background: color-mix(in srgb, var(--surface) 60%, var(--border-subtle));
-}
-
-.edp-poly-accordion-title {
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-weight: 500;
-}
-
-.edp-poly-price {
-  font-size: 13px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-variant-numeric: tabular-nums;
-}
-
-.edp-poly-price--active {
-  background: rgba(139, 92, 246, 0.15);
-  color: #A78BFA;
-}
-
-.edp-poly-price--closed {
-  background: var(--border-subtle);
-  color: var(--text-faint);
-}
-
-.edp-poly-chevron {
-  font-size: 10px;
-  color: var(--text-faint);
-  transition: transform 0.15s;
-  flex-shrink: 0;
-}
-
-.edp-poly-accordion-body {
-  padding: 0 12px 12px;
-}
-
-.edp-poly-chart {
-  margin-bottom: 12px;
-}
-
-.edp-poly-chart-svg {
-  width: 100%;
-  height: 100px;
-  display: block;
-}
-
-.edp-poly-chart-placeholder {
-  color: var(--text-faint);
-  font-size: 12px;
-  padding: 20px 0;
-  text-align: center;
-}
-
-/* Yes/No bar */
-.edp-poly-bar-track {
-  display: flex;
-  height: 8px;
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 4px;
-}
-
-.edp-poly-bar-yes {
-  background: #22C55E;
-  transition: width 0.3s;
-}
-
-.edp-poly-bar-no {
-  background: #EF4444;
-  transition: width 0.3s;
-}
-
-.edp-poly-bar-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  margin-bottom: 8px;
-}
-
-.edp-poly-bar-label--yes {
-  color: #22C55E;
-  font-weight: 600;
-}
-
-.edp-poly-bar-label--no {
-  color: #EF4444;
-  font-weight: 600;
-}
-
-/* Stats */
-.edp-poly-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 8px;
-}
-
-.edp-poly-stat {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-}
-
-.edp-poly-stat-label {
-  color: var(--text-muted);
-}
-
-.edp-poly-stat-value {
-  color: var(--text);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Trade link inside accordion */
-.edp-poly-trade-link {
-  display: block;
-  text-align: center;
-  padding: 8px;
-  background: rgba(139, 92, 246, 0.1);
-  color: #A78BFA;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: 6px;
-  text-decoration: none;
-  margin-top: 4px;
-}
-
-.edp-poly-trade-link:hover {
-  background: rgba(139, 92, 246, 0.2);
-}
-
-.edp-poly-closed {
-  text-align: center;
-  padding: 8px;
-  font-size: 11px;
-  color: var(--text-faint);
-  font-style: italic;
-}
-
-/* Polymarket collapsible sections (holders, comments) */
-.edp-poly-section {
-  margin-top: 8px;
-}
-
-.edp-poly-section-header {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  width: 100% !important;
-  padding: 8px 0 !important;
-  background: none !important;
-  border: none !important;
-  border-bottom: 1px solid var(--border-subtle) !important;
-  color: var(--text-secondary) !important;
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.05em !important;
-  cursor: pointer !important;
-  text-align: left !important;
-  outline: none !important;
-  font-family: inherit !important;
-  line-height: inherit !important;
-  box-shadow: none !important;
-}
-
-.edp-poly-section-header:hover {
-  color: var(--text);
-}
-
-.edp-poly-section-toggle {
-  cursor: pointer;
-}
-
-.edp-poly-section-toggle .edp-poly-chevron {
-  font-size: 10px;
-  color: var(--text-faint);
-  transition: transform 0.15s;
-}
-
-.edp-poly-section-body {
-  padding-top: 8px;
-}
-
-/* Holders */
-.edp-poly-holder {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.edp-poly-holder:last-child {
-  border-bottom: none;
-}
-
-.edp-poly-holder-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.edp-poly-holder-avatar--yes {
-  background: rgba(34, 197, 94, 0.15);
-  color: #22C55E;
-}
-
-.edp-poly-holder-avatar--no {
-  background: rgba(239, 68, 68, 0.15);
-  color: #EF4444;
-}
-
-.edp-poly-holder-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.edp-poly-holder-address {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.edp-poly-holder-shares {
-  font-size: 10px;
-  color: var(--text-faint);
-}
-
-.edp-poly-holder-side {
-  font-size: 9px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 3px;
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-
-.edp-poly-holder-side--yes {
-  background: rgba(34, 197, 94, 0.12);
-  color: #22C55E;
-}
-
-.edp-poly-holder-side--no {
-  background: rgba(239, 68, 68, 0.12);
-  color: #EF4444;
-}
-
-/* Comments */
-.edp-poly-comment {
-  display: flex;
-  gap: 8px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.edp-poly-comment:last-child {
-  border-bottom: none;
-}
-
-.edp-poly-comment-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--border-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.edp-poly-comment-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.edp-poly-comment-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 2px;
-}
-
-.edp-poly-comment-author {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.edp-poly-comment-time {
-  font-size: 9px;
-  color: var(--text-faint);
-}
-
-.edp-poly-comment-text {
-  font-size: 11px;
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-
-.edp-poly-comment-likes {
-  font-size: 10px;
-  color: var(--text-faint);
-  margin-top: 4px;
-}
-
-
-/* ── Prediction Market Cards ── */
-.edp-trade-btn {
-  display: block;
-  margin: 12px 16px;
-  padding: 12px;
-  text-align: center;
-  background: linear-gradient(135deg, #8B5CF6, #6D28D9);
-  color: #fff;
-  font-weight: 700;
-  font-size: 14px;
-  border-radius: 8px;
-  text-decoration: none;
-  transition: opacity 0.2s;
-}
-
-.edp-trade-btn:hover {
-  opacity: 0.9;
-}
-
-/* Accordion */
-.edp-poly-accordion {
-  border: 1px solid var(--border-subtle);
-  border-radius: 6px;
-  margin-bottom: 6px;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--surface) 82%, transparent);
-}
-
-.edp-poly-accordion-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 10px 12px;
-  background: none;
-  border: none;
-  color: var(--text);
-  font-size: 12px;
-  cursor: pointer;
-  text-align: left;
-}
-
-.edp-poly-accordion-header:hover {
-  background: color-mix(in srgb, var(--surface) 60%, var(--border-subtle));
-}
-
-.edp-poly-accordion-title {
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-weight: 500;
-}
-
-.edp-poly-price {
-  font-size: 13px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-variant-numeric: tabular-nums;
-}
-
-.edp-poly-price--active {
-  background: rgba(139, 92, 246, 0.15);
-  color: #A78BFA;
-}
-
-.edp-poly-price--closed {
-  background: var(--border-subtle);
-  color: var(--text-faint);
-}
-
-.edp-poly-chevron {
-  font-size: 10px;
-  color: var(--text-faint);
-  transition: transform 0.15s;
-  flex-shrink: 0;
-}
-
-.edp-poly-accordion-body {
-  padding: 0 12px 12px;
-}
-
-.edp-poly-chart {
-  margin-bottom: 12px;
-}
-
-.edp-poly-chart-svg {
-  width: 100%;
-  height: 100px;
-  display: block;
-}
-
-.edp-poly-chart-placeholder {
-  color: var(--text-faint);
-  font-size: 12px;
-  padding: 20px 0;
-  text-align: center;
-}
-
-/* Yes/No bar */
-.edp-poly-bar-track {
-  display: flex;
-  height: 8px;
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 4px;
-}
-
-.edp-poly-bar-yes {
-  background: #22C55E;
-  transition: width 0.3s;
-}
-
-.edp-poly-bar-no {
-  background: #EF4444;
-  transition: width 0.3s;
-}
-
-.edp-poly-bar-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 10px;
-  margin-bottom: 8px;
-}
-
-.edp-poly-bar-label--yes {
-  color: #22C55E;
-  font-weight: 600;
-}
-
-.edp-poly-bar-label--no {
-  color: #EF4444;
-  font-weight: 600;
-}
-
-/* Stats */
-.edp-poly-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 8px;
-}
-
-.edp-poly-stat {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-}
-
-.edp-poly-stat-label {
-  color: var(--text-muted);
-}
-
-.edp-poly-stat-value {
-  color: var(--text);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Trade link inside accordion */
-.edp-poly-trade-link {
-  display: block;
-  text-align: center;
-  padding: 8px;
-  background: rgba(139, 92, 246, 0.1);
-  color: #A78BFA;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: 6px;
-  text-decoration: none;
-  margin-top: 4px;
-}
-
-.edp-poly-trade-link:hover {
-  background: rgba(139, 92, 246, 0.2);
-}
-
-.edp-poly-closed {
-  text-align: center;
-  padding: 8px;
-  font-size: 11px;
-  color: var(--text-faint);
-  font-style: italic;
-}
-

@@ -1380,17 +1380,18 @@ canvas,
   height: 3px;
   background: var(--text-dim);
   border-radius: 2px;
-  opacity: 0.5;
+  opacity: 0;
   transition: opacity 0.2s;
 }
 
 .map-resize-handle:hover::after {
+  background: #fff !important;
   opacity: 1;
 }
 
 .bottom-grid-resize-handle {
   flex-shrink: 0;
-  height: 10px;
+  height: 8px;
   cursor: ns-resize;
   background: transparent;
   display: flex;
@@ -1407,11 +1408,12 @@ canvas,
   height: 3px;
   background: var(--text-dim);
   border-radius: 2px;
-  opacity: 0.5;
+  opacity: 0;
   transition: opacity 0.2s;
 }
 
 .bottom-grid-resize-handle:hover::after {
+  background: #fff !important;
   opacity: 1;
 }
 
@@ -1738,6 +1740,11 @@ body.panel-resize-active iframe {
 }
 
 /* Keep Live News header controls right-aligned even when the remove button is hidden. */
+.panel[data-panel="live-news"] {
+  background: transparent;
+  border: none;
+}
+
 .panel[data-panel="live-news"] .panel-header {
   justify-content: flex-start;
 }
@@ -1798,12 +1805,9 @@ body.panel-resize-active iframe {
   padding: 2px 5px;
   border-radius: 2px;
   cursor: pointer;
-  opacity: 0;
+  opacity: 0.55;
   transition: opacity 0.15s, color 0.15s;
   line-height: 1;
-}
-.panel-header:hover .panel-copy-btn {
-  opacity: 0.55;
 }
 .panel-copy-btn:hover {
   opacity: 1 !important;
@@ -1814,11 +1818,8 @@ body.panel-resize-active iframe {
 .panel-sparkline {
   display: flex;
   align-items: center;
-  opacity: 0.5;
-  transition: opacity 0.2s;
-}
-.panel-header:hover .panel-sparkline {
   opacity: 1;
+  transition: opacity 0.2s;
 }
 
 @keyframes count-bump {
@@ -2916,6 +2917,11 @@ body.live-news-fullscreen-active .panels-grid > *:not(.live-news-fullscreen) {
 }
 
 /* Live Webcams Panel */
+.panel[data-panel="live-webcams"] {
+  background: transparent;
+  border: none;
+}
+
 .panel[data-panel="live-webcams"] .panel-content {
   padding: 0;
   flex: 1;
@@ -15513,8 +15519,8 @@ body.urgency-mode #header {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--bg);
-  border: 1px solid var(--border);
+  background: transparent;
+  border: none;
   border-radius: 4px;
   padding: 5px 12px;
 }
@@ -16658,6 +16664,133 @@ body.urgency-mode #header {
   background: rgba(239, 68, 68, 0.1);
 }
 
+.profile-action-btn.small {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* Community/referral section */
+.profile-community-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.profile-community-section h5 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.profile-community-desc {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.profile-referral-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.profile-referral-code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: monospace;
+  flex: 1;
+}
+
+.profile-referral-share {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.profile-share-btn {
+  flex: 1;
+  padding: 6px 0;
+  border-radius: 6px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.03);
+  transition: background 0.15s;
+}
+
+.profile-share-btn.twitter:hover {
+  background: rgba(29, 155, 240, 0.1);
+  border-color: rgba(29, 155, 240, 0.3);
+}
+
+.profile-share-btn.linkedin:hover {
+  background: rgba(0, 119, 181, 0.1);
+  border-color: rgba(0, 119, 181, 0.3);
+}
+
+/* Plan grid responsive */
+@media (max-width: 900px) {
+  .profile-plan-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Panel sort dropdown */
+.panel-sort-dropdown {
+  background: var(--bg-elevated, #1a1a2e);
+  border: 1px solid var(--border, rgba(255,255,255,0.1));
+  border-radius: 8px;
+  padding: 8px 0;
+  min-width: 160px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  font-size: 13px;
+}
+
+.panel-sort-label {
+  padding: 4px 12px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim, #888);
+}
+
+.panel-sort-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  color: var(--text, #fff);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.panel-sort-option:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.panel-sort-option.active {
+  color: var(--accent, #6c63ff);
+  font-weight: 500;
+}
+
+.panel-sort-option.active::before {
+  content: '✓';
+  margin-right: 6px;
+}
+
+.panel-sort-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.08);
+  margin: 6px 0;
+}
+
 .profile-info-row {
   display: flex;
   justify-content: space-between;
@@ -16673,6 +16806,85 @@ body.urgency-mode #header {
 .profile-info-value {
   color: var(--text);
   font-family: monospace;
+}
+
+/* Tier badge */
+.profile-tier-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+}
+
+/* Plan upgrade grid */
+.profile-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.profile-plan-card {
+  padding: 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+}
+
+.profile-plan-card.featured {
+  border-color: rgba(59, 130, 246, 0.5);
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.profile-plan-card h5 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.plan-price {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.plan-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+}
+
+.plan-features li {
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.plan-features li::before {
+  content: '\2713 ';
+  color: var(--accent);
+}
+
+.profile-upgrade-btn {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--accent);
+  border: none;
+  color: #fff;
+  transition: background 0.15s;
+}
+
+.profile-upgrade-btn:hover {
+  background: color-mix(in srgb, var(--accent) 85%, white);
 }
 
 /* ============ Auth Modal ============ */
@@ -16751,8 +16963,8 @@ body.urgency-mode #header {
 .auth-modal-btn {
   width: 100%;
   padding: 14px;
-  background: var(--accent);
-  color: white;
+  background: #FFD700;
+  color: #000000;
   border: none;
   border-radius: 8px;
   font-size: 15px;
@@ -20089,7 +20301,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
 
 /* ── Panel remove (−) button ──────────────────────────── */
 .panel-remove-btn {
-  display: none;
+  display: inline-flex;
   background: none;
   border: none;
   color: var(--text-muted);
@@ -20103,7 +20315,6 @@ body:has(.tauri-titlebar) .breaking-news-container {
   align-items: center;
   justify-content: center;
 }
-.panel:hover .panel-remove-btn { display: inline-flex; }
 .panel-remove-btn:hover { opacity: 1; color: #ff4444; }
 
 /* ── Add Widget ghost card ────────────────────────────── */

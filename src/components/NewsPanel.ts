@@ -1,7 +1,7 @@
 import { Panel } from './Panel';
 import { WindowedList } from './VirtualList';
-import { ArticleViewer } from './ArticleViewer';
 import type { NewsItem, ClusteredEvent, DeviationLevel, RelatedAsset, RelatedAssetContext } from '@/types';
+import { THREAT_PRIORITY } from '@/services/threat-classifier';
 import { formatTime, getCSSColor } from '@/utils';
 import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
 import { linkifyTickers } from '@/utils/ticker-linkify';
@@ -36,12 +36,16 @@ export class NewsPanel extends Panel {
   private useVirtualScroll = true;
   private renderRequestId = 0;
   private boundScrollHandler: (() => void) | null = null;
-  private boundClickHandler: ((e: MouseEvent) => void) | null = null;
-
-  // Article viewer state
-  private articleViewer: ArticleViewer | null = null;
-  private savedContentHtml: string | null = null;
-  private savedTitle: string | null = null;
+  private boundClickHandler: (() => void) | null = null;
+  private sortOrder: 'date' | 'title' | 'source' = 'date';
+  private sortDir: 'asc' | 'desc' = 'desc';
+  private sortBtn: HTMLButtonElement | null = null;
+  private sortDropdown: HTMLElement | null = null;
+  private sortOptions = [
+    { key: 'date', label: 'Date' },
+    { key: 'title', label: 'Title' },
+    { key: 'source', label: 'Source' },
+  ] as const;
 
   // Panel summary feature
   private summaryBtn: HTMLButtonElement | null = null;
@@ -54,10 +58,105 @@ export class NewsPanel extends Panel {
     super({ id, title, showCount: true, trackActivity: true });
     this.createDeviationIndicator();
     this.createSummarizeButton();
+    this.createSortButton();
     this.setupActivityTracking();
-    this.setupContentDelegation();
     this.initWindowedList();
   }
+
+  private createSortButton(): void {
+    const btn = document.createElement('button');
+    btn.className = 'icon-btn';
+    btn.title = 'Sort options';
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="9" y2="18"/></svg>`;
+    this.sortBtn = btn;
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (this.sortDropdown) {
+        this.sortDropdown.remove();
+        this.sortDropdown = null;
+      } else {
+        this.openSortDropdown();
+      }
+    });
+
+    // Close dropdown on outside click
+    document.addEventListener('click', () => {
+      if (this.sortDropdown) {
+        this.sortDropdown.remove();
+        this.sortDropdown = null;
+      }
+    });
+
+    this.header.appendChild(btn);
+  }
+
+  private openSortDropdown(): void {
+    if (!this.sortBtn) return;
+
+    const rect = this.sortBtn.getBoundingClientRect();
+    const dropdown = document.createElement('div');
+    dropdown.className = 'panel-sort-dropdown';
+    dropdown.innerHTML = `
+      <div class="panel-sort-label">Sort by</div>
+      ${this.sortOptions.map(opt => `
+        <button class="panel-sort-option${this.sortOrder === opt.key ? ' active' : ''}" data-sort="${opt.key}">
+          ${opt.label}
+        </button>
+      `).join('')}
+      <div class="panel-sort-divider"></div>
+      <div class="panel-sort-label">Order</div>
+      <button class="panel-sort-option${this.sortDir === 'desc' ? ' active' : ''}" data-sort-dir="desc">
+        Newest first
+      </button>
+      <button class="panel-sort-option${this.sortDir === 'asc' ? ' active' : ''}" data-sort-dir="asc">
+        Oldest first
+      </button>
+    `;
+
+    // Position below the button
+    dropdown.style.position = 'fixed';
+    dropdown.style.top = `${rect.bottom + 4}px`;
+    dropdown.style.left = `${rect.left}px`;
+    dropdown.style.zIndex = '10000';
+    document.body.appendChild(dropdown);
+    this.sortDropdown = dropdown;
+
+    dropdown.addEventListener('click', (e) => e.stopPropagation());
+
+    dropdown.querySelectorAll<HTMLElement>('.panel-sort-option[data-sort]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.sort as 'date' | 'title' | 'source';
+        if (key && key !== this.sortOrder) {
+          this.sortOrder = key;
+          if (key !== 'date') this.sortDir = 'asc';
+          else this.sortDir = 'desc';
+          this.reRender();
+        }
+        dropdown.remove();
+        this.sortDropdown = null;
+      });
+    });
+
+    dropdown.querySelectorAll<HTMLElement>('.panel-sort-option[data-sort-dir]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const dir = btn.dataset.sortDir as 'asc' | 'desc';
+        if (dir) {
+          this.sortDir = dir;
+          this.reRender();
+        }
+        dropdown.remove();
+        this.sortDropdown = null;
+      });
+    });
+  }
+
+  private reRender(): void {
+    const stored = this._lastItems;
+    if (stored?.length) this.renderNews(stored);
+  }
+
+  private _lastItems: NewsItem[] | null = null;
 
   private initWindowedList(): void {
     this.windowedList = new WindowedList<PreparedCluster>(
@@ -99,53 +198,6 @@ export class NewsPanel extends Panel {
     this.element.addEventListener('click', this.boundClickHandler);
   }
 
-  private setupContentDelegation(): void {
-    this.content.addEventListener('click', (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-
-      // Article title links — intercept clicks for inline reader
-      const titleLink = target.closest('.item-title') as HTMLAnchorElement | null;
-      if (titleLink) {
-        const articleUrl = titleLink.dataset.articleUrl;
-        const articleTitle = titleLink.dataset.articleTitle;
-        if (articleUrl) {
-          e.preventDefault();
-          e.stopPropagation();
-          this.openArticle(articleUrl, articleTitle || titleLink.textContent || '');
-          return;
-        }
-      }
-
-      // Translate buttons
-      const translateBtn = target.closest('.item-translate-btn') as HTMLElement | null;
-      if (translateBtn) {
-        e.preventDefault();
-        e.stopPropagation();
-        const text = translateBtn.dataset.text;
-        if (text) this.handleTranslate(translateBtn, text);
-        return;
-      }
-
-      // Related asset buttons
-      const relatedAsset = target.closest('.related-asset') as HTMLButtonElement | null;
-      if (relatedAsset) {
-        e.preventDefault();
-        e.stopPropagation();
-        const clusterId = relatedAsset.dataset.clusterId;
-        const assetId = relatedAsset.dataset.assetId;
-        const assetType = relatedAsset.dataset.assetType as RelatedAsset['type'] | undefined;
-        if (clusterId && assetId && assetType) {
-          const context = this.relatedAssetContext.get(clusterId);
-          const asset = context?.assets.find(item => item.id === assetId && item.type === assetType);
-          if (asset) {
-            this.onRelatedAssetClick?.(asset);
-          }
-        }
-        return;
-      }
-    });
-  }
-
   public setRelatedAssetHandlers(options: {
     onRelatedAssetClick?: (asset: RelatedAsset) => void;
     onRelatedAssetsFocus?: (assets: RelatedAsset[], originLabel: string) => void;
@@ -154,48 +206,6 @@ export class NewsPanel extends Panel {
     this.onRelatedAssetClick = options.onRelatedAssetClick;
     this.onRelatedAssetsFocus = options.onRelatedAssetsFocus;
     this.onRelatedAssetsClear = options.onRelatedAssetsClear;
-  }
-
-  private openArticle(url: string, title: string): void {
-    if (this.articleViewer) return;
-
-    const contentEl = this.content;
-    if (!contentEl) return;
-
-    this.savedContentHtml = contentEl.innerHTML;
-    const headerLeft = this.getElement().querySelector('.panel-header-left');
-    const titleEl = headerLeft?.querySelector('.panel-title');
-    if (titleEl) {
-      this.savedTitle = titleEl.textContent || '';
-    }
-
-    this.articleViewer = new ArticleViewer({
-      panel: this,
-      articleUrl: url,
-      articleTitle: title,
-      onBack: () => this.closeArticleViewer(),
-    });
-  }
-
-  private closeArticleViewer(): void {
-    this.articleViewer = null;
-
-    if (this.savedContentHtml !== null) {
-      this.content.innerHTML = this.savedContentHtml;
-      this.savedContentHtml = null;
-    }
-
-    if (this.savedTitle !== null) {
-      const headerLeft = this.getElement().querySelector('.panel-header-left');
-      const titleEl = headerLeft?.querySelector('.panel-title');
-      if (titleEl) {
-        titleEl.textContent = this.savedTitle;
-      }
-      this.savedTitle = null;
-    }
-
-    // Re-bind events on restored content
-    this.bindRelatedAssetEvents();
   }
 
   private createDeviationIndicator(): void {
@@ -404,6 +414,7 @@ export class NewsPanel extends Panel {
       return;
     }
 
+    this._lastItems = items;
     this.setDataBadge('live');
 
     // Always show flat items immediately for instant visual feedback,
@@ -441,7 +452,22 @@ export class NewsPanel extends Panel {
   }
 
   private renderFlat(items: NewsItem[]): void {
-    const sorted = [...items].sort((a, b) => b.pubDate.getTime() - a.pubDate.getTime());
+    const sorted = [...items].sort((a, b) => {
+      let cmp = 0;
+      switch (this.sortOrder) {
+        case 'title':
+          cmp = a.title.localeCompare(b.title);
+          break;
+        case 'source':
+          cmp = a.source.localeCompare(b.source) || a.title.localeCompare(b.title);
+          break;
+        case 'date':
+        default:
+          cmp = b.pubDate.getTime() - a.pubDate.getTime();
+          break;
+      }
+      return this.sortDir === 'desc' ? -cmp : cmp;
+    });
 
     this.setCount(sorted.length);
     this.currentHeadlines = sorted
@@ -460,7 +486,7 @@ export class NewsPanel extends Panel {
           ${item.lang && item.lang !== getCurrentLanguage() ? `<span class="lang-badge">${item.lang.toUpperCase()}</span>` : ''}
           ${item.isAlert ? '<span class="alert-tag">ALERT</span>' : ''}
         </div>
-        <a class="item-title" href="${sanitizeUrl(item.link)}" target="_blank" rel="noopener" data-article-url="${escapeHtml(item.link)}" data-article-title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</a>
+        <a class="item-title" href="${sanitizeUrl(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a>
         <div class="item-time">
           ${formatTime(item.pubDate)}
           ${getCurrentLanguage() !== 'en' ? `<button class="item-translate-btn" title="Translate" data-text="${escapeHtml(item.title)}">文</button>` : ''}
@@ -474,12 +500,19 @@ export class NewsPanel extends Panel {
   }
 
   private renderClusters(clusters: ClusteredEvent[]): void {
-    const sorted = [...clusters].sort((a, b) => b.lastUpdated.getTime() - a.lastUpdated.getTime());
+    // Sort by threat priority, then by time within same level
+    const sorted = [...clusters].sort((a, b) => {
+      const pa = THREAT_PRIORITY[a.threat?.level ?? 'info'];
+      const pb = THREAT_PRIORITY[b.threat?.level ?? 'info'];
+      if (pb !== pa) return pb - pa;
+      return b.lastUpdated.getTime() - a.lastUpdated.getTime();
+    });
 
     const totalItems = sorted.reduce((sum, c) => sum + c.sourceCount, 0);
     this.setCount(totalItems);
     this.relatedAssetContext.clear();
 
+    // Store headlines for summarization (cap at 5 to reduce entity conflation in small models)
     this.currentHeadlines = sorted.slice(0, 5).map(c => c.primaryTitle);
 
     this.updateHeadlineSignature();
@@ -488,15 +521,18 @@ export class NewsPanel extends Panel {
     let newItemIds: Set<string>;
 
     if (this.isFirstRender) {
+      // First render: mark all items as seen
       activityTracker.updateItems(this.panelId, clusterIds);
       activityTracker.markAsSeen(this.panelId);
       newItemIds = new Set();
       this.isFirstRender = false;
     } else {
+      // Subsequent renders: track new items
       const newIds = activityTracker.updateItems(this.panelId, clusterIds);
       newItemIds = new Set(newIds);
     }
 
+    // Prepare all clusters with their rendering data (defer HTML creation)
     const prepared: PreparedCluster[] = sorted.map(cluster => {
       const isNew = newItemIds.has(cluster.id);
       const shouldHighlight = activityTracker.shouldHighlight(this.panelId, cluster.id);
@@ -510,9 +546,11 @@ export class NewsPanel extends Panel {
       };
     });
 
+    // Use windowed rendering for large lists, direct render for small
     if (this.useVirtualScroll && sorted.length > VIRTUAL_SCROLL_THRESHOLD && this.windowedList) {
       this.windowedList.setItems(prepared);
     } else {
+      // Direct render for small lists
       const html = prepared
         .map(p => this.renderClusterHtmlSafely(p.cluster, p.isNew, p.shouldHighlight, p.showNewTag))
         .join('');
@@ -654,7 +692,7 @@ export class NewsPanel extends Panel {
           ${cluster.isAlert ? '<span class="alert-tag">ALERT</span>' : ''}
           ${categoryBadge}
         </div>
-        <a class="item-title" href="${sanitizeUrl(cluster.primaryLink)}" target="_blank" rel="noopener" data-article-url="${escapeHtml(cluster.primaryLink)}" data-article-title="${escapeHtml(cluster.primaryTitle)}">${linkifyTickers(escapeHtml(cluster.primaryTitle))}</a>
+        <a class="item-title" href="${sanitizeUrl(cluster.primaryLink)}" target="_blank" rel="noopener">${linkifyTickers(escapeHtml(cluster.primaryTitle))}</a>
         <div class="cluster-meta">
           <span class="top-sources">${topSourcesHtml}</span>
           <span class="item-time">${formatTime(cluster.lastUpdated)}</span>
@@ -679,6 +717,32 @@ export class NewsPanel extends Panel {
 
       container.addEventListener('mouseleave', () => {
         this.onRelatedAssetsClear?.();
+      });
+    });
+
+    const assetButtons = this.content.querySelectorAll<HTMLButtonElement>('.related-asset');
+    assetButtons.forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const clusterId = button.dataset.clusterId;
+        const assetId = button.dataset.assetId;
+        const assetType = button.dataset.assetType as RelatedAsset['type'] | undefined;
+        if (!clusterId || !assetId || !assetType) return;
+        const context = this.relatedAssetContext.get(clusterId);
+        const asset = context?.assets.find(item => item.id === assetId && item.type === assetType);
+        if (asset) {
+          this.onRelatedAssetClick?.(asset);
+        }
+      });
+    });
+
+    // Translation buttons
+    const translateBtns = this.content.querySelectorAll<HTMLElement>('.item-translate-btn');
+    translateBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const text = btn.dataset.text;
+        if (text) this.handleTranslate(btn, text);
       });
     });
   }
