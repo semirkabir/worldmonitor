@@ -74,6 +74,7 @@ export const DEFAULT_MAP_LAYERS: MapLayers = {
   miningSites: false,
   processingPlants: false,
   commodityPorts: false,
+  aptGroups: false,
 };
 
 // Mobile defaults — same as desktop for happy variant
@@ -132,6 +133,7 @@ export const MOBILE_DEFAULT_MAP_LAYERS: MapLayers = {
   miningSites: false,
   processingPlants: false,
   commodityPorts: false,
+  aptGroups: false,
 };
 
 export const VARIANT_CONFIG: VariantConfig = {

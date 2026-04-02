@@ -1268,6 +1268,7 @@ export class PanelLayoutManager implements AppModule {
     this.mountAddWidgetBtn(panelsGrid);
     this.setupPanelCollapseHandle();
     this.setupLayoutToggle();
+    this.setupScrollToTopButtons();
   }
 
   private layoutMode: 'bottom' | 'side' = 'bottom';
@@ -1298,6 +1299,38 @@ export class PanelLayoutManager implements AppModule {
     }
     svg.appendChild(line);
     return svg;
+  }
+
+  private setupScrollToTopButtons(): void {
+    const createScrollBtn = (container: HTMLElement, scrollTarget: HTMLElement): void => {
+      const btn = document.createElement('button');
+      btn.className = 'scroll-to-top-btn';
+      btn.setAttribute('aria-label', 'Scroll to top');
+      btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>`;
+
+      container.style.position = 'relative';
+      container.appendChild(btn);
+
+      const updateVisibility = () => {
+        const scrolled = scrollTarget.scrollTop > 60;
+        btn.classList.toggle('visible', scrolled);
+      };
+
+      scrollTarget.addEventListener('scroll', updateVisibility, { passive: true });
+
+      btn.addEventListener('click', () => {
+        scrollTarget.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    };
+
+    // Right panel: button in panels-grid, scroll on main-content
+    const panelsGrid = document.getElementById('panelsGrid');
+    const mainContent = document.querySelector('.main-content') as HTMLElement | null;
+    if (panelsGrid && mainContent) createScrollBtn(panelsGrid, mainContent);
+
+    // Bottom grid: button and scroll on the same element
+    const bottomGrid = document.getElementById('mapBottomGrid');
+    if (bottomGrid) createScrollBtn(bottomGrid, bottomGrid);
   }
 
   private setupLayoutToggle(): void {
@@ -1426,9 +1459,17 @@ export class PanelLayoutManager implements AppModule {
         if (mapContainer) { mapContainer.style.height = ''; mapContainer.style.flex = ''; }
         if (mapSection) mapSection.style.height = '';
         try { localStorage.removeItem('map-height'); } catch { /* noop */ }
+      } else {
+        // When expanding, reset map height to trigger layout recalculation
+        if (mapSection) mapSection.style.height = '';
+        const mapContainer = document.getElementById('mapContainer') as HTMLElement | null;
+        if (mapContainer) { mapContainer.style.height = ''; }
+        try { localStorage.removeItem('map-height'); } catch { /* noop */ }
       }
       updateBottomIcon();
-      setTimeout(() => window.dispatchEvent(new Event('resize')), 0);
+      // Force immediate resize dispatch for seamless expansion
+      window.dispatchEvent(new Event('resize'));
+      requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
     });
 
     updateIcon();

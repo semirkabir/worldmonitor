@@ -139,7 +139,7 @@ export class MarketPanel extends Panel {
           <button class="wl-remove-btn" aria-label="Remove ${escapeHtml(entry.symbol)}" title="Remove from watchlist" style="background:rgba(255,255,255,0.1);border:none;border-radius:3px;color:var(--text-faint);cursor:pointer;padding:2px 6px;margin-left:4px;font-size:13px;line-height:1;transition:all 0.15s;display:flex;align-items:center;justify-content:center;min-width:20px;height:20px">×</button>
         `;
         
-        const removeBtn = chip.querySelector('.wl-remove-btn');
+        const removeBtn = chip.querySelector<HTMLElement>('.wl-remove-btn');
         if (removeBtn) {
           removeBtn.addEventListener('mouseenter', () => {
             removeBtn.style.background = 'rgba(248,113,113,0.3)';

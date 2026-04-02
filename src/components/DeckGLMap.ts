@@ -503,6 +503,7 @@ export class DeckGLMap {
 
     this.maplibreMap?.on('load', () => {
       localizeMapLabels(this.maplibreMap);
+      this.applyCanvasFilter();
       this.applyThemeLayerOverrides();
       this.rebuildTechHQSupercluster();
       this.rebuildDatacenterSupercluster();
@@ -1684,9 +1685,6 @@ export class DeckGLMap {
 
   private createBasesLayer(): IconLayer {
     const highlightedBases = this.highlightedAssets.base;
-    const zoom = this.maplibreMap?.getZoom() || 3;
-    const alphaScale = Math.min(1, (zoom - 2.5) / 2.5);
-    const a = Math.round(160 * Math.max(0.3, alphaScale));
     const data = this.getBasesData();
 
     return new IconLayer({
@@ -2385,7 +2383,7 @@ export class DeckGLMap {
   }
 
   private createAPTGroupsLayer(): IconLayer {
-    // APT Groups - cyber threat actor markers (geopolitical variant only)
+    // APT Groups - anonymous figure icon for threat actors
     return new IconLayer({
       id: 'apt-groups-layer',
       data: APT_GROUPS,
@@ -2393,9 +2391,9 @@ export class DeckGLMap {
       getIcon: () => 'marker',
       iconAtlas: getSharedLayerIconAtlas('aptGroups'),
       iconMapping: SHARED_LAYER_ICON_MAPPING,
-      getSize: 13,
-      sizeMinPixels: 8,
-      sizeMaxPixels: 20,
+      getSize: 14,
+      sizeMinPixels: 10,
+      sizeMaxPixels: 24,
       pickable: true,
       billboard: true,
     });
@@ -4167,100 +4165,6 @@ export class DeckGLMap {
     });
   }
 
-  /** Open the custom category creation modal */
-  private openCustomCategoryModal(
-    layerConfig: Array<{ key: string; label: string; icon: string; premium?: string }>,
-    list: HTMLElement,
-    status: HTMLElement,
-    layersPanel: HTMLElement,
-  ): void {
-    // Remove any existing modal
-    document.querySelector('.custom-category-modal-overlay')?.remove();
-
-    const overlay = document.createElement('div');
-    overlay.className = 'custom-category-modal-overlay';
-
-    const modal = document.createElement('div');
-    modal.className = 'custom-category-modal';
-
-    const title = document.createElement('div');
-    title.className = 'custom-category-modal-title';
-    title.textContent = 'New Custom Category';
-    modal.appendChild(title);
-
-    const nameLabel = document.createElement('label');
-    nameLabel.className = 'custom-category-modal-label';
-    nameLabel.textContent = 'Category name';
-    const nameInput = document.createElement('input');
-    nameInput.type = 'text';
-    nameInput.className = 'custom-category-modal-input';
-    nameInput.placeholder = 'e.g. My Watch List';
-    nameInput.maxLength = 40;
-    nameLabel.appendChild(nameInput);
-    modal.appendChild(nameLabel);
-
-    const sourcesLabel = document.createElement('div');
-    sourcesLabel.className = 'custom-category-modal-label';
-    sourcesLabel.textContent = 'Select sources';
-    modal.appendChild(sourcesLabel);
-
-    const sourcesList = document.createElement('div');
-    sourcesList.className = 'custom-category-modal-sources';
-    modal.appendChild(sourcesList);
-
-    // All available layers for this variant
-    const allLayers = getLayersForVariant((SITE_VARIANT || 'full') as MapVariant, 'flat');
-    allLayers.forEach(def => {
-      const row = document.createElement('label');
-      row.className = 'custom-category-source-row';
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.value = def.key;
-      const iconEl = document.createElement('span');
-      iconEl.className = 'toggle-icon';
-      iconEl.style.color = resolveLayerAccentColor(def.key, getCurrentTheme());
-      iconEl.innerHTML = def.icon;
-      const lbl = document.createElement('span');
-      lbl.textContent = resolveLayerLabel(def, t);
-      row.append(cb, iconEl, lbl);
-      sourcesList.appendChild(row);
-    });
-
-    const actions = document.createElement('div');
-    actions.className = 'custom-category-modal-actions';
-
-    const cancelBtn = document.createElement('button');
-    cancelBtn.className = 'custom-category-modal-btn cancel';
-    cancelBtn.textContent = 'Cancel';
-    cancelBtn.addEventListener('click', () => overlay.remove());
-
-    const createBtn = document.createElement('button');
-    createBtn.className = 'custom-category-modal-btn create';
-    createBtn.textContent = 'Create';
-    createBtn.addEventListener('click', () => {
-      const name = nameInput.value.trim();
-      const selectedLayers = Array.from(sourcesList.querySelectorAll<HTMLInputElement>('input:checked'))
-        .map(cb => cb.value as keyof MapLayers);
-      if (!name) { nameInput.focus(); return; }
-      if (selectedLayers.length === 0) return;
-
-      const newCat: CustomCategory = { id: Date.now().toString(), name, layers: selectedLayers };
-      this.customCategories = [...this.customCategories, newCat];
-      saveCustomCategories(this.customCategories);
-      this.renderCustomCategories(list, status, layersPanel, layerConfig);
-      overlay.remove();
-    });
-
-    actions.append(cancelBtn, createBtn);
-    modal.appendChild(actions);
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-
-    // Close on overlay click
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-    nameInput.focus();
-  }
-
   /** Clear all active layers */
   private clearAllLayers(): void {
     const layerDefs = getLayersForVariant((SITE_VARIANT || 'full') as MapVariant, 'flat');
@@ -5729,7 +5633,17 @@ export class DeckGLMap {
   private applyCanvasFilter(): void {
     if (!this.maplibreMap) return;
     const canvas = this.maplibreMap.getCanvas();
-    canvas.style.filter = CUSTOM_THEME_FILTERS[getUnifiedTheme()] ?? '';
+    const filter = CUSTOM_THEME_FILTERS[getUnifiedTheme()] ?? '';
+    canvas.style.filter = filter;
+    // Re-apply after a short delay in case MapLibre replaces the canvas during style transitions
+    if (filter) {
+      requestAnimationFrame(() => {
+        if (this.maplibreMap) {
+          const c = this.maplibreMap.getCanvas();
+          if (c && c.style.filter !== filter) c.style.filter = filter;
+        }
+      });
+    }
   }
 
   private applyThemeLayerOverrides(): void {

@@ -110,7 +110,7 @@ export const DEFAULT_MAP_LAYERS: MapLayers = {
   dayNight: false,
   cyberThreats: false,
   // Additional required properties
-
+  aptGroups: false,
   ciiChoropleth: false,
 };
 
@@ -169,7 +169,7 @@ export const MOBILE_DEFAULT_MAP_LAYERS: MapLayers = {
   dayNight: false,
   cyberThreats: false,
   // Additional required properties
-
+  aptGroups: false,
   ciiChoropleth: false,
 };
 

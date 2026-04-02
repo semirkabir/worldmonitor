@@ -10,7 +10,7 @@ type Option<T extends string> = {
 export type PmtilesTheme = 'black' | 'dark' | 'grayscale' | 'light' | 'white';
 export type OpenFreeMapTheme = 'dark' | 'positron';
 export type CartoTheme = 'dark-matter' | 'voyager' | 'positron';
-export type CustomTheme = 'smooth_dark' | 'toner' | 'smooth_light' | 'toner_lite' | 'outdoors_approx' | 'watercolor_approx' | 'dark';
+export type CustomTheme = 'smooth_dark' | 'toner' | 'smooth_light' | 'toner_lite' | 'dark';
 export type MapTheme = PmtilesTheme | OpenFreeMapTheme | CartoTheme | CustomTheme;
 export type MapProvider = 'pmtiles' | 'auto' | 'openfreemap' | 'carto' | 'custom';
 
@@ -52,9 +52,6 @@ function buildUnifiedOptions(): UnifiedThemeOption[] {
     { value: 'openfreemap:positron',       label: 'Positron',          group: 'Light',     provider: 'openfreemap', theme: 'positron' },
     { value: 'custom:smooth_light',        label: 'Smooth Light',      group: 'Light',     provider: 'custom',      theme: 'smooth_light' },
     { value: 'custom:toner_lite',          label: 'Toner Lite',        group: 'Light',     provider: 'custom',      theme: 'toner_lite' },
-    // ── Nature ──
-    { value: 'custom:outdoors_approx',     label: 'Outdoors',          group: 'Nature',    provider: 'custom',      theme: 'outdoors_approx' },
-    { value: 'custom:watercolor_approx',   label: 'Watercolor',        group: 'Nature',    provider: 'custom',      theme: 'watercolor_approx' },
     // ── Custom ──
     { value: 'custom:matrix',              label: 'Matrix',            group: 'Dark',      provider: 'custom',      theme: 'matrix' },
   ];
@@ -184,8 +181,6 @@ export const MAP_THEME_OPTIONS: Record<MapProvider, Option<MapTheme>[]> = {
     { value: 'toner', label: 'Toner B&W' },
     { value: 'smooth_light', label: 'Smooth Light' },
     { value: 'toner_lite', label: 'Toner Lite' },
-    { value: 'outdoors_approx', label: 'Outdoors' },
-    { value: 'watercolor_approx', label: 'Watercolor' },
     { value: 'dark', label: 'Matrix' },
   ],
 };
@@ -200,7 +195,7 @@ const DEFAULT_MAP_THEME: Record<MapProvider, MapTheme> = {
 
 const LIGHT_MAP_THEMES = new Set<string>([
   'light', 'white', 'positron', 'voyager',
-  'smooth_light', 'toner_lite', 'outdoors_approx', 'watercolor_approx',
+  'smooth_light', 'toner_lite',
 ]);
 
 const CARTO_DARK_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
@@ -310,11 +305,10 @@ export function isLightMapTheme(theme: string): boolean {
 export const CUSTOM_THEME_FILTERS: Partial<Record<string, string>> = {
   'custom:matrix': 'saturate(0) sepia(1) hue-rotate(80deg) saturate(4) brightness(0.55)',
   'custom:smooth_dark': 'brightness(0.85) contrast(1.05) saturate(0.7)',
-  'custom:toner': 'contrast(1.3) brightness(0.9)',
+  'custom:toner': 'saturate(0) contrast(1.4) brightness(0.92)',
   'custom:toner_lite': 'grayscale(1) contrast(1.15) brightness(1.05)',
   'custom:smooth_light': 'brightness(1.05) saturate(0.85) contrast(0.95)',
-  'custom:outdoors_approx': 'saturate(1.2) hue-rotate(10deg) brightness(1.02)',
-  'custom:watercolor_approx': 'saturate(1.4) contrast(0.9) brightness(1.05)',
+
 };
 
 const CUSTOM_THEME_BASE: Partial<Record<string, { provider: MapProvider; theme: string }>> = {
@@ -322,8 +316,7 @@ const CUSTOM_THEME_BASE: Partial<Record<string, { provider: MapProvider; theme: 
   'custom:toner': { provider: 'carto', theme: 'dark-matter' },
   'custom:toner_lite': { provider: 'carto', theme: 'positron' },
   'custom:smooth_light': { provider: 'openfreemap', theme: 'positron' },
-  'custom:outdoors_approx': { provider: 'carto', theme: 'voyager' },
-  'custom:watercolor_approx': { provider: 'carto', theme: 'voyager' },
+
 };
 
 export function getStyleForProvider(provider: MapProvider, mapTheme: string): string | StyleSpecification {

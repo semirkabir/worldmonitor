@@ -24,12 +24,6 @@ import type { ParsedMapUrlState } from '@/utils';
 import { SignalModal, IntelligenceGapBadge, PredictionBriefPage } from '@/components';
 import { IntelligenceFindingPanel } from '@/components/IntelligenceFindingPanel';
 import { initBreakingNewsAlerts, destroyBreakingNewsAlerts } from '@/services/breaking-news-alerts';
-import type { ServiceStatusPanel } from '@/components/ServiceStatusPanel';
-import type { StablecoinPanel } from '@/components/StablecoinPanel';
-import type { ETFFlowsPanel } from '@/components/ETFFlowsPanel';
-import type { MacroSignalsPanel } from '@/components/MacroSignalsPanel';
-import type { StrategicPosturePanel } from '@/components/StrategicPosturePanel';
-import type { StrategicRiskPanel } from '@/components/StrategicRiskPanel';
 import { isDesktopRuntime, waitForSidecarReady } from '@/services/runtime';
 import { BETA_MODE } from '@/config/beta';
 import { trackEvent, trackDeeplinkOpened } from '@/services/analytics';
@@ -540,6 +534,7 @@ export class App {
     this.state.signalModal.setLocationClickHandler((lat, lon) => {
       this.state.map?.setCenter(lat, lon, 4);
     });
+    this.state.signalModal.setNewsProvider(() => this.state.allNews);
     this.state.findingPanel = new IntelligenceFindingPanel();
     this.state.findingPanel.setLocationClickHandler((lat, lon) => {
       this.state.map?.setCenter(lat, lon, 4);

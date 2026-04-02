@@ -1,5 +1,6 @@
 import type { CorrelationSignal } from '@/services/correlation';
 import type { UnifiedAlert } from '@/services/cross-module-integration';
+import type { NewsItem } from '@/types';
 import { suppressTrendingTerm } from '@/services/trending-keywords';
 import { escapeHtml } from '@/utils/sanitize';
 import { getCSSColor } from '@/utils';
@@ -12,6 +13,7 @@ export class SignalModal {
   private audioEnabled = true;
   private audio: HTMLAudioElement | null = null;
   private onLocationClick?: (lat: number, lon: number) => void;
+  private getNews: () => NewsItem[] = () => [];
   private escHandler = (e: KeyboardEvent) => { if (e.key === 'Escape') this.hide(); };
 
   constructor() {
@@ -100,6 +102,10 @@ export class SignalModal {
     this.onLocationClick = handler;
   }
 
+  public setNewsProvider(getNews: () => NewsItem[]): void {
+    this.getNews = getNews;
+  }
+
   private activateEsc(): void {
     document.addEventListener('keydown', this.escHandler);
   }
@@ -140,6 +146,9 @@ export class SignalModal {
 
     const icon = typeIcons[alert.type] || '⚠️';
     const color = priorityColors[alert.priority] || '#ff9944';
+
+    // Get featured image from news items
+    const alertArticleImage = this.getNews().find(n => n.imageUrl?.trim())?.imageUrl ?? null;
 
     let detailsHtml = '';
 
@@ -207,6 +216,12 @@ export class SignalModal {
 
     content.innerHTML = `
       <div class="signal-item" style="border-left-color: ${color}">
+        <!-- Featured image from related headlines -->
+        ${alertArticleImage ? `
+          <div class="signal-featured-image">
+            <img src="${escapeHtml(alertArticleImage)}" alt="" loading="lazy" onerror="this.closest('.signal-featured-image').remove()" />
+          </div>
+        ` : ''}
         <div class="signal-type">${icon} ${alert.type.toUpperCase().replace('_', ' ')}</div>
         <div class="signal-title">${escapeHtml(alert.title)}</div>
         <div class="signal-description">${escapeHtml(alert.summary)}</div>
@@ -268,8 +283,20 @@ export class SignalModal {
       const focalPoints = data?.focalPointContext as string[] | null;
       const locationData = { lat: data?.lat as number | undefined, lon: data?.lon as number | undefined, regionName: data?.regionName as string | undefined };
 
+      // Get featured image from signal data or news items
+      const relatedArticles = data?.relatedArticles as Array<{ title: string; source: string; link: string; imageUrl?: string }> | undefined;
+      const featuredImage = relatedArticles?.find(a => a.imageUrl?.trim())?.imageUrl
+        ?? this.getNews().find(n => n.imageUrl?.trim())?.imageUrl
+        ?? null;
+
       return `
         <div class="signal-item ${escapeHtml(signal.type)}">
+          <!-- Featured image from related headlines -->
+          ${featuredImage ? `
+            <div class="signal-featured-image">
+              <img src="${escapeHtml(featuredImage)}" alt="" loading="lazy" onerror="this.closest('.signal-featured-image').remove()" />
+            </div>
+          ` : ''}
           <div class="signal-type">${signalTypeLabels[signal.type] || escapeHtml(signal.type)}</div>
           <div class="signal-title">${escapeHtml(signal.title)}</div>
           <div class="signal-description">${escapeHtml(signal.description)}</div>

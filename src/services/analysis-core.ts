@@ -136,6 +136,7 @@ export interface CorrelationSignalCore {
     marketChange?: number;
     predictionShift?: number;
     relatedTopics?: string[];
+    relatedArticles?: Array<{ title: string; source: string; link: string; imageUrl?: string }>;
     correlatedEntities?: string[];
     correlatedNews?: string[];
     explanation?: string;

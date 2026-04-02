@@ -5,13 +5,10 @@
  * The tier is stored in Convex and Redis (user:{uid}:tier).
  */
 
-import { isLoggedIn, getUserId } from './user-auth';
-import { getIdToken } from './firebase-auth';
+import { isLoggedIn } from './user-auth';
 
 export type FeatureTier = 'free' | 'pro' | 'business' | 'enterprise';
 export type LegacyTier = FeatureTier | 'logged_in' | 'premium';
-
-const TIER_ORDER: Record<string, number> = { free: 0, logged_in: 1, pro: 1, business: 2, enterprise: 3, premium: 2 };
 
 export interface Feature {
   key: string;
