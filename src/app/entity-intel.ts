@@ -35,6 +35,8 @@ export class EntityIntelManager implements AppModule {
     this.hotspotRenderer = new HotspotRenderer();
   }
 
+  private tickerClickHandler: ((e: MouseEvent) => void) | null = null;
+
   init(): void {
     this.panel = new EntityDetailPanel(this.buildRegistry());
     this.ctx.entityDetailPanel = this.panel;
