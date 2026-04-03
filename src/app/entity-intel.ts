@@ -6,12 +6,10 @@ import { CableRenderer } from '@/components/entity-detail/renderers/cable';
 import { PortRenderer } from '@/components/entity-detail/renderers/port';
 import { StockExchangeRenderer } from '@/components/entity-detail/renderers/stock-exchange';
 import { MilitaryBaseRenderer } from '@/components/entity-detail/renderers/military-base';
-import { MilitaryVesselRenderer } from '@/components/entity-detail/renderers/military-vessel';
 import { MilitaryVesselClusterRenderer } from '@/components/entity-detail/renderers/military-vessel-cluster';
 import { HotspotRenderer } from '@/components/entity-detail/renderers/hotspot';
 import { PipelineRenderer } from '@/components/entity-detail/renderers/pipeline';
 import { NuclearRenderer } from '@/components/entity-detail/renderers/nuclear';
-import { IrradiatorRenderer } from '@/components/entity-detail/renderers/irradiator';
 import { DatacenterRenderer } from '@/components/entity-detail/renderers/datacenter';
 import {
   FinancialCenterRenderer,
@@ -24,7 +22,6 @@ import { SpaceportRenderer } from '@/components/entity-detail/renderers/spacepor
 import { CompanyRenderer } from '@/components/entity-detail/renderers/company';
 import { WeatherAlertRenderer } from '@/components/entity-detail/renderers/weather';
 import { APTGroupRenderer } from '@/components/entity-detail/renderers/apt';
-import { PredictionMarketRenderer } from '@/components/entity-detail/renderers/prediction-market';
 
 export class EntityIntelManager implements AppModule {
   private ctx: AppContext;
@@ -81,12 +78,9 @@ export class EntityIntelManager implements AppModule {
       port: new PortRenderer(),
       stockExchange: new StockExchangeRenderer(),
       base: new MilitaryBaseRenderer(),
-      militaryVessel: new MilitaryVesselRenderer(),
       militaryVesselCluster: new MilitaryVesselClusterRenderer(),
-      hotspot: this.hotspotRenderer,
       pipeline: new PipelineRenderer(),
       nuclear: new NuclearRenderer(),
-      irradiator: new IrradiatorRenderer(),
       datacenter: new DatacenterRenderer(),
       financialCenter: new FinancialCenterRenderer(),
       centralBank: new CentralBankRenderer(),
@@ -94,10 +88,10 @@ export class EntityIntelManager implements AppModule {
       techHQ: new TechHQRenderer(),
       aircraft: new AircraftRenderer(),
       spaceport: new SpaceportRenderer(),
-      company: new CompanyRenderer(),
       weather: new WeatherAlertRenderer(),
       apt: new APTGroupRenderer(),
-      predictionMarket: new PredictionMarketRenderer(),
+      hotspot: this.hotspotRenderer,
+      company: new CompanyRenderer(),
     };
   }
 }
