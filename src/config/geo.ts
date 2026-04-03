@@ -510,10 +510,60 @@ export const STRATEGIC_WATERWAYS: StrategicWaterway[] = [
 ];
 
 export const APT_GROUPS: APTGroup[] = [
-  { id: 'apt28', name: 'APT28/29', aka: 'Fancy Bear/Cozy Bear', sponsor: 'Russia (GRU/FSB)', lat: 55.0, lon: 40.0 },
-  { id: 'apt41', name: 'APT41', aka: 'Double Dragon', sponsor: 'China (MSS)', lat: 38.0, lon: 118.0 },
-  { id: 'lazarus', name: 'Lazarus', aka: 'Hidden Cobra', sponsor: 'North Korea (RGB)', lat: 38.5, lon: 127.0 },
-  { id: 'apt33', name: 'APT33/35', aka: 'Elfin/Charming Kitten', sponsor: 'Iran (IRGC)', lat: 34.0, lon: 53.0 },
+  {
+    id: 'apt28', name: 'APT28/29', aka: 'Fancy Bear/Cozy Bear', sponsor: 'Russia (GRU/FSB)', lat: 55.0, lon: 40.0,
+    threatLevel: 'critical', active: 'Since 2004',
+    description: 'Two of Russia\'s most prolific state-sponsored hacking groups. APT28 (GRU Unit 26165) focuses on military intelligence, while APT29 (SVR) conducts long-term espionage campaigns. Together responsible for the 2016 DNC hack, SolarWinds supply chain attack, and widespread NATO/EU infiltration.',
+    targets: ['Government', 'Defense', 'Political parties', 'NATO/EU institutions', 'Think tanks', 'Media'],
+    techniques: ['Spear phishing', 'Zero-day exploits', 'Supply chain compromise', 'Credential harvesting', 'Living-off-the-land'],
+    knownOps: [
+      { name: 'SolarWinds (SUNBURST)', url: 'https://en.wikipedia.org/wiki/2020_United_States_federal_government_data_breach' },
+      { name: 'DNC Hack (2016)', url: 'https://en.wikipedia.org/wiki/2016_Democratic_National_Committee_email_leak' },
+      { name: 'Operation Pawn Storm', url: 'https://en.wikipedia.org/wiki/Fancy_Bear' },
+      { name: 'Cloud Hopper', url: 'https://en.wikipedia.org/wiki/APT10' },
+      { name: 'CozyDuke', url: 'https://en.wikipedia.org/wiki/Cozy_Bear' },
+    ],
+  },
+  {
+    id: 'apt41', name: 'APT41', aka: 'Double Dragon', sponsor: 'China (MSS)', lat: 38.0, lon: 118.0,
+    threatLevel: 'critical', active: 'Since 2012',
+    description: 'A uniquely versatile Chinese threat actor conducting both state-sponsored espionage and financially motivated cybercrime. Operates under Ministry of State Security direction and has targeted organizations in healthcare, telecoms, technology, and gaming across dozens of countries.',
+    targets: ['Healthcare', 'Telecommunications', 'Technology', 'Gaming', 'Financial services', 'Government'],
+    techniques: ['Supply chain attacks', 'SQL injection', 'Rootkits', 'Ransomware', 'Backdoors (POISONPLUG)'],
+    knownOps: [
+      { name: 'CCleaner supply chain', url: 'https://en.wikipedia.org/wiki/CCleaner' },
+      { name: 'ASUS LiveUpdate attack', url: 'https://en.wikipedia.org/wiki/Operation_ShadowHammer' },
+      { name: 'COVID-19 research theft' },
+      { name: 'US state network breaches (2020)' },
+    ],
+  },
+  {
+    id: 'lazarus', name: 'Lazarus', aka: 'Hidden Cobra', sponsor: 'North Korea (RGB)', lat: 38.5, lon: 127.0,
+    threatLevel: 'critical', active: 'Since 2009',
+    description: 'North Korea\'s premier cyber warfare unit operating under the Reconnaissance General Bureau. Primary mission is generating hard currency through financial theft while conducting destructive attacks on adversaries. Responsible for over $3B in cryptocurrency theft since 2016.',
+    targets: ['Cryptocurrency exchanges', 'Banks (SWIFT network)', 'Defense contractors', 'Media', 'Critical infrastructure'],
+    techniques: ['Watering hole attacks', 'SWIFT fraud', 'Crypto heists', 'Destructive wiper malware', 'Job-themed phishing'],
+    knownOps: [
+      { name: 'Sony Pictures hack (2014)', url: 'https://en.wikipedia.org/wiki/Sony_Pictures_hack' },
+      { name: 'Bangladesh Bank heist ($81M)', url: 'https://en.wikipedia.org/wiki/Bangladesh_Bank_robbery' },
+      { name: 'WannaCry ransomware', url: 'https://en.wikipedia.org/wiki/WannaCry_ransomware_attack' },
+      { name: 'Ronin Network ($625M)', url: 'https://en.wikipedia.org/wiki/Ronin_Network' },
+      { name: 'Operation AppleJeus', url: 'https://en.wikipedia.org/wiki/Lazarus_Group' },
+    ],
+  },
+  {
+    id: 'apt33', name: 'APT33/35', aka: 'Elfin/Charming Kitten', sponsor: 'Iran (IRGC)', lat: 34.0, lon: 53.0,
+    threatLevel: 'high', active: 'Since 2013',
+    description: 'Two distinct Iranian threat groups. APT33 (Elfin) focuses on sabotage of aviation, energy, and petrochemical sectors. APT35 (Charming Kitten) is an IRGC intelligence unit specializing in social engineering campaigns against journalists, researchers, and dissidents.',
+    targets: ['Energy & petrochemicals', 'Aviation', 'Journalists & dissidents', 'Defense', 'Academic institutions'],
+    techniques: ['Password spraying', 'Social engineering', 'Destructive malware (SHAMOON)', 'Fake persona campaigns', 'Mobile spyware'],
+    knownOps: [
+      { name: 'Operation StoneDrill', url: 'https://en.wikipedia.org/wiki/Shamoon' },
+      { name: 'Shamoon attacks (Saudi Aramco)', url: 'https://en.wikipedia.org/wiki/Shamoon' },
+      { name: 'PhishLabs journalist targeting' },
+      { name: 'Operation Phosphorus', url: 'https://en.wikipedia.org/wiki/Charming_Kitten' },
+    ],
+  },
 ];
 
 export const CONFLICT_ZONES: ConflictZone[] = [

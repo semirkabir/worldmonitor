@@ -1,4 +1,5 @@
 import type { MapLayers } from '@/types';
+import type { WeatherCategory } from '@/services/weather';
 import { isDesktopRuntime } from '@/services/runtime';
 
 export type MapRenderer = 'flat' | 'globe';
@@ -62,6 +63,11 @@ const ICONS = {
   factory: svgIcon('<path d="M3 20h18"/>', '<path d="M5 20V9l5 3V9l5 3V7l4 2v11"/>', '<path d="M8 15h2M13 15h2"/>'),
   anchor: svgIcon('<path d="M12 4v10"/>', '<circle cx="12" cy="4" r="1.5"/>', '<path d="M7 12a5 5 0 0 0 10 0"/>', '<path d="M5 14a7 7 0 0 0 14 0"/>'),
   warship: '<img src="https://cdn-icons-png.flaticon.com/512/6175/6175141.png" width="16" height="16" style="display:block;object-fit:contain" />',
+  tornado:   svgIcon('<path d="M18 5H6a1 1 0 0 0 0 2h8.5"/>', '<path d="M16 10H8a1 1 0 0 0 0 2h6"/>', '<path d="M14 15h-4a1 1 0 0 0 0 2h2"/>', '<path d="M13 19h-1a1 1 0 0 0 0 2h.5"/>'),
+  snowflake: svgIcon('<path d="M12 2v20M4.9 5.4l4.2 4.2M14.9 14.4l4.2 4.2M2 12h20M5.4 19.1l4.2-4.2M14.4 9.1l4.2-4.2"/>', '<circle cx="12" cy="12" r="1.5"/>'),
+  sunHeat:   svgIcon('<circle cx="12" cy="12" r="4"/>', '<path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>'),
+  hurricane: svgIcon('<path d="M5 12a7 7 0 1 0 14 0 7 7 0 0 0-14 0"/>', '<path d="M12 9a3 3 0 1 0 0 6"/>', '<path d="M12 2v2M12 20v2M2 12h2M20 12h2"/>'),
+  windLines: svgIcon('<path d="M5 8h10a3 3 0 0 0 0-6 3 3 0 0 0-2.8 2"/>', '<path d="M5 12h12a3 3 0 0 1 0 6 3 3 0 0 1-2.8-2"/>', '<path d="M5 16h7"/>'),
 } as const;
 
 const def = (
@@ -123,6 +129,44 @@ export const LAYER_REGISTRY: Record<keyof MapLayers, LayerDefinition> = {
   processingPlants:         def('processingPlants',         ICONS.factory,   'processingPlants',       'Processing Plants'),
   commodityPorts:           def('commodityPorts',           ICONS.anchor,    'commodityPorts',         'Commodity Ports'),
   aptGroups:                def('aptGroups',                ICONS.shield,    'aptGroups',              'APT Groups'),
+};
+
+// ── Weather category icon/color/label maps ───────────────────────────────────
+
+export const WEATHER_CATEGORY_ICONS: Record<WeatherCategory, string> = {
+  tornado:      ICONS.tornado,
+  flood:        ICONS.waves,
+  thunderstorm: ICONS.bolt,
+  snow:         ICONS.snowflake,
+  heat:         ICONS.sunHeat,
+  hurricane:    ICONS.hurricane,
+  fire:         ICONS.flame,
+  wind:         ICONS.windLines,
+  default:      ICONS.cloud,
+};
+
+export const WEATHER_CATEGORY_COLORS: Record<WeatherCategory, { light: string; dark: string }> = {
+  tornado:      { light: '#dc2626', dark: '#f87171' },
+  flood:        { light: '#2563eb', dark: '#60a5fa' },
+  thunderstorm: { light: '#d97706', dark: '#fbbf24' },
+  snow:         { light: '#0891b2', dark: '#67e8f9' },
+  heat:         { light: '#ea580c', dark: '#fb923c' },
+  hurricane:    { light: '#7c3aed', dark: '#a78bfa' },
+  fire:         { light: '#c2410c', dark: '#fb923c' },
+  wind:         { light: '#64748b', dark: '#94a3b8' },
+  default:      { light: '#2563eb', dark: '#93c5fd' },
+};
+
+export const WEATHER_CATEGORY_LABELS: Record<WeatherCategory, string> = {
+  tornado:      'Tornado',
+  flood:        'Flood',
+  thunderstorm: 'Thunderstorm',
+  snow:         'Winter Storm',
+  heat:         'Heat',
+  hurricane:    'Hurricane / Tropical',
+  fire:         'Fire Weather',
+  wind:         'High Wind',
+  default:      'Weather Alert',
 };
 
 export function resolveLayerAccentColor(key: keyof MapLayers, theme: 'light' | 'dark' = 'dark'): string {

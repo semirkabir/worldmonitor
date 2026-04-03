@@ -99,6 +99,23 @@ function calculateCentroid(coords: [number, number][]): [number, number] | undef
   return [sum[0] / coords.length, sum[1] / coords.length];
 }
 
+export type WeatherCategory =
+  'tornado' | 'flood' | 'thunderstorm' | 'snow' | 'heat' |
+  'hurricane' | 'fire' | 'wind' | 'default';
+
+export function getWeatherEventCategory(event: string): WeatherCategory {
+  const e = event.toLowerCase();
+  if (/tornado|waterspout/.test(e)) return 'tornado';
+  if (/flood|surge/.test(e)) return 'flood';
+  if (/thunderstorm|lightning/.test(e)) return 'thunderstorm';
+  if (/snow|blizzard|ice storm|winter storm|winter weather|freezing/.test(e)) return 'snow';
+  if (/excessive heat|heat wave/.test(e)) return 'heat';
+  if (/hurricane|typhoon|tropical storm|cyclone/.test(e)) return 'hurricane';
+  if (/fire|red flag/.test(e)) return 'fire';
+  if (/\bwind\b|gale|dust storm/.test(e)) return 'wind';
+  return 'default';
+}
+
 export function getSeverityColor(severity: WeatherAlert['severity']): string {
   switch (severity) {
     case 'Extreme': return getCSSColor('--semantic-critical');

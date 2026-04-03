@@ -207,6 +207,12 @@ export interface APTGroup {
   sponsor: string;
   lat: number;
   lon: number;
+  description?: string;
+  targets?: string[];
+  techniques?: string[];
+  knownOps?: Array<{ name: string; url?: string }>;
+  active?: string;
+  threatLevel?: 'critical' | 'high' | 'medium';
 }
 
 export type CyberThreatType = 'c2_server' | 'malware_host' | 'phishing' | 'malicious_url';

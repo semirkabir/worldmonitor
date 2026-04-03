@@ -20,6 +20,8 @@ import { TechHQRenderer } from '@/components/entity-detail/renderers/tech-hq';
 import { AircraftRenderer } from '@/components/entity-detail/renderers/aircraft';
 import { SpaceportRenderer } from '@/components/entity-detail/renderers/spaceport';
 import { CompanyRenderer } from '@/components/entity-detail/renderers/company';
+import { WeatherAlertRenderer } from '@/components/entity-detail/renderers/weather';
+import { APTGroupRenderer } from '@/components/entity-detail/renderers/apt';
 
 export class EntityIntelManager implements AppModule {
   private ctx: AppContext;
@@ -86,6 +88,8 @@ export class EntityIntelManager implements AppModule {
       techHQ: new TechHQRenderer(),
       aircraft: new AircraftRenderer(),
       spaceport: new SpaceportRenderer(),
+      weather: new WeatherAlertRenderer(),
+      apt: new APTGroupRenderer(),
       hotspot: this.hotspotRenderer,
       company: new CompanyRenderer(),
     };

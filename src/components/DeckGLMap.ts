@@ -48,7 +48,8 @@ import type { ClimateAnomaly } from '@/services/climate';
 import { ArcLayer } from '@deck.gl/layers';
 import { HeatmapLayer } from '@deck.gl/aggregation-layers';
 import { H3HexagonLayer } from '@deck.gl/geo-layers';
-import type { WeatherAlert } from '@/services/weather';
+import type { WeatherAlert, WeatherCategory } from '@/services/weather';
+import { getWeatherEventCategory } from '@/services/weather';
 import { escapeHtml } from '@/utils/sanitize';
 import { tokenizeForMatch, matchKeyword, matchesAnyKeyword, findMatchingKeywords } from '@/utils/keyword-match';
 import { t } from '@/services/i18n';
@@ -88,7 +89,7 @@ import {
 } from '@/config';
 import type { GulfInvestment } from '@/types';
 import { resolveTradeRouteSegments, TRADE_ROUTES as TRADE_ROUTES_LIST, type TradeRouteSegment } from '@/config/trade-routes';
-import { getLayersForVariant, resolveLayerLabel, resolveLayerAccentColor, resolveLayerIcon, type MapVariant } from '@/config/map-layer-definitions';
+import { getLayersForVariant, resolveLayerLabel, resolveLayerAccentColor, resolveLayerIcon, WEATHER_CATEGORY_ICONS, WEATHER_CATEGORY_COLORS, WEATHER_CATEGORY_LABELS, type MapVariant } from '@/config/map-layer-definitions';
 import { getSecretState } from '@/services/runtime-config';
 import { MapPopup, type PopupType } from './MapPopup';
 import {
@@ -266,6 +267,10 @@ function refreshColorsIfThemeChanged(): void {
 }
 
 const SHARED_LAYER_ICON_MAPPING = { marker: { x: 0, y: 0, width: 32, height: 32, mask: false } };
+const WEATHER_PNG_ICON_MAPPING = { marker: { x: 0, y: 0, width: 512, height: 512, mask: false } };
+const WEATHER_THUNDERSTORM_ICON_ATLAS = 'https://cdn-icons-png.flaticon.com/512/3104/3104612.png';
+const WEATHER_FLOOD_ICON_ATLAS = '/icons/Flood.png';
+const WEATHER_DEFAULT_ICON_ATLAS = 'https://cdn-icons-png.flaticon.com/512/6257/6257646.png';
 const SHARED_LAYER_ICON_ATLAS_CACHE = new Map<string, string>();
 
 // AIS vessel icon — ship silhouette (white, for mask-mode tinting by ship type)
@@ -288,6 +293,24 @@ const AVIATION_PLANE_ICON_ATLAS = '/icons/plane.png';
 
 function getThemeMode(): 'light' | 'dark' {
   return getCurrentTheme() === 'light' ? 'light' : 'dark';
+}
+
+const WEATHER_CATEGORY_ATLAS_CACHE = new Map<string, string>();
+
+function getWeatherCategoryAtlas(category: WeatherCategory, theme: 'light' | 'dark' = getThemeMode()): string {
+  const cacheKey = `weather:${category}:${theme}`;
+  const cached = WEATHER_CATEGORY_ATLAS_CACHE.get(cacheKey);
+  if (cached) return cached;
+  const colors = WEATHER_CATEGORY_COLORS[category];
+  const color = theme === 'light' ? colors.light : colors.dark;
+  const markup = WEATHER_CATEGORY_ICONS[category];
+  const svg = markup.replace(
+    '<svg ',
+    `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" style="color:${color}" `,
+  );
+  const atlas = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  WEATHER_CATEGORY_ATLAS_CACHE.set(cacheKey, atlas);
+  return atlas;
 }
 
 function getSharedLayerIconAtlas(layer: keyof MapLayers, theme: 'light' | 'dark' = getThemeMode()): string {
@@ -332,6 +355,7 @@ export class DeckGLMap {
   private hotspots: HotspotWithBreaking[];
   private earthquakes: Earthquake[] = [];
   private weatherAlerts: WeatherAlert[] = [];
+  private activeWeatherCategories: WeatherCategory[] = [];
   private outages: InternetOutage[] = [];
   private cyberThreats: CyberThreat[] = [];
   private iranEvents: IranEvent[] = [];
@@ -1246,7 +1270,7 @@ export class DeckGLMap {
     const { layers: mapLayers } = this.state;
     const filteredEarthquakes = mapLayers.natural ? this.filterByTime(this.earthquakes, (eq) => eq.occurredAt) : [];
     const filteredNaturalEvents = mapLayers.natural ? this.filterByTime(this.naturalEvents, (event) => event.date) : [];
-    const filteredWeatherAlerts = mapLayers.weather ? this.filterByTime(this.weatherAlerts, (alert) => alert.onset) : [];
+    const filteredWeatherAlerts = mapLayers.weather ? this.weatherAlerts.filter(a => a.expires > new Date()) : [];
     const filteredOutages = mapLayers.outages ? this.filterByTime(this.outages, (outage) => outage.pubDate) : [];
     const filteredCableAdvisories = mapLayers.cables ? this.filterByTime(this.cableAdvisories, (advisory) => advisory.reported) : [];
     const filteredFlightDelays = mapLayers.flights ? this.filterByTime(this.flightDelays, (delay) => delay.updatedAt) : [];
@@ -1352,7 +1376,7 @@ export class DeckGLMap {
 
     // Weather alerts layer
     if (mapLayers.weather && filteredWeatherAlerts.length > 0) {
-      layers.push(this.createWeatherLayer(filteredWeatherAlerts));
+      layers.push(...this.createWeatherLayers(filteredWeatherAlerts));
     }
 
     // Internet outages layer
@@ -2039,22 +2063,40 @@ export class DeckGLMap {
     });
   }
 
-  private createWeatherLayer(alerts: WeatherAlert[]): IconLayer {
-    // Filter weather alerts that have centroid coordinates
+  private createWeatherLayers(alerts: WeatherAlert[]): IconLayer[] {
     const alertsWithCoords = alerts.filter(a => a.centroid && a.centroid.length === 2);
 
-    return new IconLayer({
-      id: 'weather-layer',
-      data: alertsWithCoords,
-      getPosition: (d) => d.centroid as [number, number],
-      getIcon: () => 'marker',
-      iconAtlas: getSharedLayerIconAtlas('weather'),
-      iconMapping: SHARED_LAYER_ICON_MAPPING,
-      getSize: (d) => d.severity === 'Extreme' ? 18 : d.severity === 'Severe' ? 16 : 14,
-      sizeMinPixels: 8,
-      sizeMaxPixels: 20,
-      pickable: true,
-      billboard: true,
+    // Group alerts by weather category
+    const byCategory = new Map<WeatherCategory, WeatherAlert[]>();
+    for (const alert of alertsWithCoords) {
+      const cat = getWeatherEventCategory(alert.event);
+      if (!byCategory.has(cat)) byCategory.set(cat, []);
+      byCategory.get(cat)!.push(alert);
+    }
+
+    const newCategories = Array.from(byCategory.keys());
+    const categoriesChanged = newCategories.join(',') !== this.activeWeatherCategories.join(',');
+    this.activeWeatherCategories = newCategories;
+    if (categoriesChanged) requestAnimationFrame(() => this.refreshLegend());
+
+    return Array.from(byCategory.entries()).map(([category, catAlerts]) => {
+      const pngAtlas = category === 'thunderstorm' ? WEATHER_THUNDERSTORM_ICON_ATLAS
+        : category === 'flood' ? WEATHER_FLOOD_ICON_ATLAS
+        : category === 'default' ? WEATHER_DEFAULT_ICON_ATLAS
+        : null;
+      return new IconLayer({
+        id: `weather-${category}-layer`,
+        data: catAlerts,
+        getPosition: (d) => d.centroid as [number, number],
+        getIcon: () => 'marker',
+        iconAtlas: pngAtlas ?? getWeatherCategoryAtlas(category),
+        iconMapping: pngAtlas ? WEATHER_PNG_ICON_MAPPING : SHARED_LAYER_ICON_MAPPING,
+        getSize: (d) => d.severity === 'Extreme' ? 28 : d.severity === 'Severe' ? 24 : 20,
+        sizeMinPixels: 14,
+        sizeMaxPixels: 32,
+        pickable: true,
+        billboard: true,
+      });
     });
   }
 
@@ -2389,11 +2431,11 @@ export class DeckGLMap {
       data: APT_GROUPS,
       getPosition: (d) => [d.lon, d.lat],
       getIcon: () => 'marker',
-      iconAtlas: getSharedLayerIconAtlas('aptGroups'),
-      iconMapping: SHARED_LAYER_ICON_MAPPING,
-      getSize: 14,
-      sizeMinPixels: 10,
-      sizeMaxPixels: 24,
+      iconAtlas: '/icons/Badguy.png',
+      iconMapping: WEATHER_PNG_ICON_MAPPING,
+      getSize: 20,
+      sizeMinPixels: 16,
+      sizeMaxPixels: 32,
       pickable: true,
       billboard: true,
     });
@@ -3288,7 +3330,16 @@ export class DeckGLMap {
       }
       case 'repair-ships-layer':
         return { html: `<div class="deckgl-tooltip"><strong>${text(obj.name || t('components.deckgl.tooltip.repairShip'))}</strong><br/>${text(obj.status)}</div>` };
-      case 'weather-layer': {
+      // All weather sub-layers share the same tooltip
+      case 'weather-tornado-layer':
+      case 'weather-flood-layer':
+      case 'weather-thunderstorm-layer':
+      case 'weather-snow-layer':
+      case 'weather-heat-layer':
+      case 'weather-hurricane-layer':
+      case 'weather-fire-layer':
+      case 'weather-wind-layer':
+      case 'weather-default-layer': {
         const areaDesc = typeof obj.areaDesc === 'string' ? obj.areaDesc : '';
         const area = areaDesc ? `<br/><small>${text(areaDesc.slice(0, 50))}${areaDesc.length > 50 ? '...' : ''}</small>` : '';
         return { html: `<div class="deckgl-tooltip"><strong>${text(obj.event || t('components.deckgl.layers.weatherAlerts'))}</strong><br/>${text(obj.severity)}${area}</div>` };
@@ -3543,7 +3594,15 @@ export class DeckGLMap {
       'cables-layer': 'cable',
       'pipelines-layer': 'pipeline',
       'earthquakes-layer': 'earthquake',
-      'weather-layer': 'weather',
+      'weather-tornado-layer': 'weather',
+      'weather-flood-layer': 'weather',
+      'weather-thunderstorm-layer': 'weather',
+      'weather-snow-layer': 'weather',
+      'weather-heat-layer': 'weather',
+      'weather-hurricane-layer': 'weather',
+      'weather-fire-layer': 'weather',
+      'weather-wind-layer': 'weather',
+      'weather-default-layer': 'weather',
       'outages-layer': 'outage',
       'cyber-threats-layer': 'cyberThreat',
       'iran-events-layer': 'iranEvent',
@@ -3671,7 +3730,15 @@ export class DeckGLMap {
       'cables-layer': 'cable',
       'pipelines-layer': 'pipeline',
       'earthquakes-layer': 'earthquake',
-      'weather-layer': 'weather',
+      'weather-tornado-layer': 'weather',
+      'weather-flood-layer': 'weather',
+      'weather-thunderstorm-layer': 'weather',
+      'weather-snow-layer': 'weather',
+      'weather-heat-layer': 'weather',
+      'weather-hurricane-layer': 'weather',
+      'weather-fire-layer': 'weather',
+      'weather-wind-layer': 'weather',
+      'weather-default-layer': 'weather',
       'outages-layer': 'outage',
       'cyber-threats-layer': 'cyberThreat',
       'iran-events-layer': 'iranEvent',
@@ -4464,10 +4531,27 @@ export class DeckGLMap {
       itemsRoot.innerHTML = '<span class="legend-item"><span class="legend-label">No active layers</span></span>';
     } else {
       itemsRoot.innerHTML = activeLayerDefs
-        .map((def) => {
+        .flatMap((def) => {
+          // Expand weather layer into per-category entries based on active alerts
+          if (def.key === 'weather' && this.activeWeatherCategories.length > 0) {
+            return this.activeWeatherCategories.map((cat) => {
+              const catLabel = WEATHER_CATEGORY_LABELS[cat];
+              const pngUrl = cat === 'thunderstorm' ? WEATHER_THUNDERSTORM_ICON_ATLAS
+                : cat === 'flood' ? WEATHER_FLOOD_ICON_ATLAS
+                : cat === 'default' ? WEATHER_DEFAULT_ICON_ATLAS
+                : null;
+              const iconHtml = pngUrl
+                ? `<img src="${pngUrl}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;" />`
+                : `<span class="legend-icon" style="color:${WEATHER_CATEGORY_COLORS[cat][theme]}">${WEATHER_CATEGORY_ICONS[cat]}</span>`;
+              return `<span class="legend-item">${iconHtml}<span class="legend-label">${catLabel}</span></span>`;
+            });
+          }
           const color = resolveLayerAccentColor(def.key, theme);
           const label = resolveLayerLabel(def, t);
-          return `<span class="legend-item"><span class="legend-icon" style="color:${color}">${def.icon}</span><span class="legend-label">${label}</span></span>`;
+          const iconHtml = def.key === 'aptGroups'
+            ? `<img src="/icons/Badguy.png" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;" />`
+            : `<span class="legend-icon" style="color:${color}">${def.icon}</span>`;
+          return [`<span class="legend-item">${iconHtml}<span class="legend-label">${label}</span></span>`];
         })
         .join('');
     }
