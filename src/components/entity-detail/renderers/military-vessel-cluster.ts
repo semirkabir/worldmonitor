@@ -78,21 +78,48 @@ function renderVesselDetail(vessel: MilitaryVessel, ctx: EntityRenderContext): H
       if (data.extract) {
         const desc = ctx.el('p', 'edp-description edp-vessel-wiki-extract', data.extract);
         wikiCaption.append(desc);
+
+        // View more / View less toggle
+        const toggle = ctx.el('button', 'edp-vessel-wiki-toggle', 'View more');
+        let expanded = false;
+        toggle.addEventListener('click', () => {
+          expanded = !expanded;
+          desc.classList.toggle('edp-vessel-wiki-extract--expanded', expanded);
+          toggle.textContent = expanded ? 'View less' : 'View more';
+          if (wikiLink) wikiLink.style.display = expanded ? 'inline' : 'none';
+        });
+        wikiCaption.append(toggle);
       }
+
+      let wikiLink: HTMLAnchorElement | null = null;
       if (data.content_urls?.desktop?.page) {
-        const link = ctx.el('a', 'edp-vessel-wiki-link') as HTMLAnchorElement;
-        link.href = data.content_urls.desktop.page;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.textContent = 'Wikipedia →';
-        wikiCaption.append(link);
+        wikiLink = ctx.el('a', 'edp-vessel-wiki-link') as HTMLAnchorElement;
+        wikiLink.href = data.content_urls.desktop.page;
+        wikiLink.target = '_blank';
+        wikiLink.rel = 'noopener noreferrer';
+        wikiLink.textContent = 'Wikipedia →';
+        wikiLink.style.display = 'none'; // hidden until expanded
+        wikiCaption.append(wikiLink);
       }
     })
     .catch(() => { /* no wiki data — section stays empty */ });
 
   // Current location card
   const [locCard, locBody] = ctx.sectionCard('Current Location');
-  if (vessel.note) locBody.append(row(ctx, 'Position', vessel.note));
+  if (vessel.note) {
+    let noteText = vessel.note;
+    if (vessel.lastAisUpdate) {
+      const diffMs = Date.now() - vessel.lastAisUpdate.getTime();
+      const diffMins = Math.round(diffMs / 60000);
+      let timeStr: string;
+      if (diffMins < 1) timeStr = 'just now';
+      else if (diffMins < 60) timeStr = `${diffMins}m ago`;
+      else if (diffMins < 1440) timeStr = `${Math.round(diffMins / 60)}h ago`;
+      else timeStr = `${Math.round(diffMins / 1440)}d ago`;
+      noteText = vessel.note.replace(/\(approximate\)/i, `(updated ${timeStr})`);
+    }
+    locBody.append(row(ctx, 'Position', noteText));
+  }
   locBody.append(row(ctx, 'Coordinates', `${vessel.lat.toFixed(4)}°, ${vessel.lon.toFixed(4)}°`));
   if (vessel.usniRegion) locBody.append(row(ctx, 'Region', vessel.usniRegion));
   if (vessel.nearChokepoint) locBody.append(row(ctx, 'Near Chokepoint', vessel.nearChokepoint));
@@ -168,7 +195,18 @@ function renderVesselRow(vessel: MilitaryVessel, ctx: EntityRenderContext): HTML
   item.append(metaRow);
 
   if (vessel.note) {
-    item.append(ctx.el('div', 'edp-vessel-note', vessel.note));
+    let noteText = vessel.note;
+    if (vessel.lastAisUpdate) {
+      const diffMs = Date.now() - vessel.lastAisUpdate.getTime();
+      const diffMins = Math.round(diffMs / 60000);
+      let timeStr: string;
+      if (diffMins < 1) timeStr = 'just now';
+      else if (diffMins < 60) timeStr = `${diffMins}m ago`;
+      else if (diffMins < 1440) timeStr = `${Math.round(diffMins / 60)}h ago`;
+      else timeStr = `${Math.round(diffMins / 1440)}d ago`;
+      noteText = vessel.note.replace(/\(approximate\)/i, `(updated ${timeStr})`);
+    }
+    item.append(ctx.el('div', 'edp-vessel-note', noteText));
   }
 
   // Click → drill into vessel detail
