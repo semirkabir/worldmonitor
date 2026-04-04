@@ -4464,6 +4464,18 @@ export class DeckGLMap {
     header.append(title, status);
     layersPanel.appendChild(header);
 
+    // Search input
+    const searchWrap = document.createElement('div');
+    searchWrap.className = 'layer-search-wrap';
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.className = 'layer-search-input';
+    searchInput.placeholder = 'Search layers…';
+    searchInput.autocomplete = 'off';
+    searchInput.spellcheck = false;
+    searchWrap.appendChild(searchInput);
+    layersPanel.appendChild(searchWrap);
+
     // Build layer list
     const list = document.createElement('div');
     list.className = 'toggle-list map-tray-body';
@@ -4542,6 +4554,17 @@ export class DeckGLMap {
     this.renderCustomCategories(list, status, layersPanel, layerConfig);
 
     layersPanel.appendChild(list);
+
+    // Wire up search filter
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim().toLowerCase();
+      list.querySelectorAll<HTMLElement>('.layer-toggle').forEach(el => {
+        const labelText = el.querySelector('.toggle-label')?.textContent?.toLowerCase() ?? '';
+        el.style.display = !q || labelText.includes(q) ? '' : 'none';
+      });
+    });
+    // Stop wheel events on search input from scrolling the map
+    searchInput.addEventListener('wheel', e => e.stopPropagation(), { passive: true });
 
     // Keep reference for event binding below
     const toggles = layersPanel;
