@@ -132,6 +132,5 @@ export {
   COMMODITY_PORTS,
 } from './commodity-geo';
 
-// COMMODITY_MINERS: 30+ mining company HQs — not yet rendered on map.
-// Uncomment when a miners layer is added to DeckGLMap.ts.
+// COMMODITY_MINERS (30+ mining company HQs) — uncomment when a miners layer is added to DeckGLMap.
 // export { COMMODITY_MINERS, type CommodityMiner } from './commodity-miners';

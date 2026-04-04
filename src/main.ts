@@ -333,11 +333,13 @@ if (urlParams.get('settings') === '1') {
     .catch(console.error);
 }
 
-// Debug helpers for geo-convergence testing (remove in production)
-(window as unknown as Record<string, unknown>).geoDebug = {
-  cells: debugGetCells,
-  count: getCellCount,
-};
+// Debug helpers for geo-convergence testing (development only)
+if (import.meta.env.DEV) {
+  (window as unknown as Record<string, unknown>).geoDebug = {
+    cells: debugGetCells,
+    count: getCellCount,
+  };
+}
 
 // Beta mode toggle: type `beta=true` / `beta=false` in console
 Object.defineProperty(window, 'beta', {
