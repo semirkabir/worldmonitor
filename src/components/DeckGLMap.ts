@@ -47,7 +47,7 @@ import type { Earthquake } from '@/services/earthquakes';
 import type { ClimateAnomaly } from '@/services/climate';
 import { ArcLayer } from '@deck.gl/layers';
 import { HeatmapLayer } from '@deck.gl/aggregation-layers';
-import { H3HexagonLayer } from '@deck.gl/geo-layers';
+import { H3HexagonLayer, TripsLayer } from '@deck.gl/geo-layers';
 import type { WeatherAlert } from '@/services/weather';
 import { getWeatherAlertIconUrl } from '@/services/weather';
 import { getNaturalEventIconUrl } from '@/services/eonet';
@@ -444,6 +444,12 @@ export class DeckGLMap {
   private protestSuperclusterSource: SocialUnrestEvent[] = [];
   private newsPulseIntervalId: ReturnType<typeof setInterval> | null = null;
   private dayNightIntervalId: ReturnType<typeof setInterval> | null = null;
+  // Flow animation for cables, pipelines, trade routes
+  private flowTime = 0;
+  private flowRafId: number | null = null;
+  private cableFlowTrips: { path: [number, number][]; timestamps: number[]; color: [number, number, number, number] }[] = [];
+  private pipelineFlowTrips: { path: [number, number][]; timestamps: number[]; color: [number, number, number, number] }[] = [];
+  private tradeFlowTrips: { path: [number, number][]; timestamps: number[]; color: [number, number, number, number] }[] = [];
   private cachedNightPolygon: [number, number][] | null = null;
   private readonly startupTime = Date.now();
   private lastCableHighlightSignature = '';
@@ -479,6 +485,7 @@ export class DeckGLMap {
       this.maplibreMap?.triggerRepaint();
     });
 
+    this.buildAllFlowTrips();
     this.setupDOM();
     this.popup = new MapPopup(container);
 
@@ -1270,6 +1277,7 @@ export class DeckGLMap {
     // Undersea cables layer
     if (mapLayers.cables) {
       layers.push(this.createCablesLayer());
+      layers.push(this.createCablesFlowLayer());
     } else {
       this.layerCache.delete('cables-layer');
     }
@@ -1277,6 +1285,7 @@ export class DeckGLMap {
     // Pipelines layer
     if (mapLayers.pipelines) {
       layers.push(this.createPipelinesLayer());
+      layers.push(this.createPipelinesFlowLayer());
     } else {
       this.layerCache.delete('pipelines-layer');
     }
@@ -1505,6 +1514,7 @@ export class DeckGLMap {
     if (mapLayers.tradeRoutes) {
       layers.push(this.createTradeRoutesLayer());
       layers.push(this.createTradeChokepointsLayer());
+      layers.push(this.createTradeFlowLayer());
     } else {
       this.layerCache.delete('trade-routes-layer');
       this.layerCache.delete('trade-chokepoints-layer');
@@ -1577,6 +1587,175 @@ export class DeckGLMap {
   }
 
   // Layer creation methods
+  // ─── Flow animation ───────────────────────────────────────────────────────
+
+  /** Slerp two [lon, lat] points along a great circle at fraction t */
+  private static interpGreatCircle(a: [number, number], b: [number, number], t: number): [number, number] {
+    const R = Math.PI / 180;
+    const lon1 = a[0] * R, lat1 = a[1] * R;
+    const lon2 = b[0] * R, lat2 = b[1] * R;
+    const d = 2 * Math.asin(Math.sqrt(
+      Math.sin((lat2 - lat1) / 2) ** 2 +
+      Math.cos(lat1) * Math.cos(lat2) * Math.sin((lon2 - lon1) / 2) ** 2
+    ));
+    if (d < 1e-9) return a;
+    const A = Math.sin((1 - t) * d) / Math.sin(d);
+    const B = Math.sin(t * d) / Math.sin(d);
+    const x = A * Math.cos(lat1) * Math.cos(lon1) + B * Math.cos(lat2) * Math.cos(lon2);
+    const y = A * Math.cos(lat1) * Math.sin(lon1) + B * Math.cos(lat2) * Math.sin(lon2);
+    const z = A * Math.sin(lat1) + B * Math.sin(lat2);
+    return [(Math.atan2(y, x)) / R, (Math.atan2(z, Math.sqrt(x * x + y * y))) / R];
+  }
+
+  /** Build TripsLayer trip entries for a set of paths, creating N packets per path. */
+  private buildPathFlowTrips(
+    paths: [number, number][][],
+    color: [number, number, number, number],
+    loopMs: number,
+    nPackets: number,
+  ): { path: [number, number][]; timestamps: number[]; color: [number, number, number, number] }[] {
+    const legMs = loopMs / nPackets;
+    const trips: typeof this.cableFlowTrips = [];
+    for (const path of paths) {
+      if (path.length < 2) continue;
+      for (let p = 0; p < nPackets; p++) {
+        const t0 = legMs * p;
+        const t1 = legMs * (p + 1);
+        const n = path.length;
+        trips.push({
+          path,
+          timestamps: path.map((_, i) => t0 + (t1 - t0) * (i / (n - 1))),
+          color,
+        });
+      }
+    }
+    return trips;
+  }
+
+  private buildAllFlowTrips(): void {
+    const CABLE_LOOP = 3000;
+    const PIPE_LOOP = 4500;
+    const TRADE_LOOP = 8000;
+
+    this.cableFlowTrips = this.buildPathFlowTrips(
+      UNDERSEA_CABLES.map(c => c.points as [number, number][]),
+      [30, 210, 255, 230],
+      CABLE_LOOP,
+      3,
+    );
+
+    this.pipelineFlowTrips = PIPELINES.flatMap(pipe => {
+      const hex = PIPELINE_COLORS[pipe.type as keyof typeof PIPELINE_COLORS] || '#ffaa33';
+      const rgba = this.hexToRgba(hex, 255);
+      const color: [number, number, number, number] = [rgba[0]!, rgba[1]!, rgba[2]!, 240];
+      return this.buildPathFlowTrips(
+        [pipe.points as [number, number][]],
+        color,
+        PIPE_LOOP,
+        3,
+      );
+    });
+
+    // Trade routes: sample great-circle arcs into polylines for TripsLayer
+    const N_SAMPLE = 24;
+    this.tradeFlowTrips = this.tradeRouteSegments.flatMap(seg => {
+      const path: [number, number][] = [];
+      for (let i = 0; i <= N_SAMPLE; i++) {
+        path.push(DeckGLMap.interpGreatCircle(
+          seg.sourcePosition as [number, number],
+          seg.targetPosition as [number, number],
+          i / N_SAMPLE,
+        ));
+      }
+      const color: [number, number, number, number] =
+        seg.status === 'disrupted' ? [255, 90, 90, 230] :
+        seg.status === 'high_risk'  ? [255, 190, 50, 220] :
+        [100, 225, 255, 200];
+      return this.buildPathFlowTrips([path], color, TRADE_LOOP, 2);
+    });
+  }
+
+  private startFlowAnimation(): void {
+    if (this.flowRafId !== null) return;
+    const tick = () => {
+      this.flowTime = Date.now();
+      this.rafUpdateLayers();
+      this.flowRafId = requestAnimationFrame(tick);
+    };
+    this.flowRafId = requestAnimationFrame(tick);
+  }
+
+  private stopFlowAnimation(): void {
+    if (this.flowRafId !== null) {
+      cancelAnimationFrame(this.flowRafId);
+      this.flowRafId = null;
+    }
+  }
+
+  private syncFlowAnimation(): void {
+    if (this.renderPaused) { this.stopFlowAnimation(); return; }
+    const { layers } = this.state;
+    const needsFlow = layers.cables || layers.pipelines || layers.tradeRoutes;
+    if (needsFlow && this.flowRafId === null) this.startFlowAnimation();
+    else if (!needsFlow && this.flowRafId !== null) this.stopFlowAnimation();
+  }
+
+  private createCablesFlowLayer(): TripsLayer {
+    const CABLE_LOOP = 3000;
+    return new TripsLayer({
+      id: 'cables-flow-layer',
+      data: this.cableFlowTrips,
+      getPath: (d: typeof this.cableFlowTrips[0]) => d.path,
+      getTimestamps: (d: typeof this.cableFlowTrips[0]) => d.timestamps,
+      getColor: (d: typeof this.cableFlowTrips[0]) => d.color,
+      currentTime: this.flowTime % CABLE_LOOP,
+      trailLength: 520,
+      widthMinPixels: 1.5,
+      widthMaxPixels: 3,
+      capRounded: true,
+      jointRounded: true,
+      updateTriggers: { currentTime: this.flowTime },
+    });
+  }
+
+  private createPipelinesFlowLayer(): TripsLayer {
+    const PIPE_LOOP = 4500;
+    return new TripsLayer({
+      id: 'pipelines-flow-layer',
+      data: this.pipelineFlowTrips,
+      getPath: (d: typeof this.pipelineFlowTrips[0]) => d.path,
+      getTimestamps: (d: typeof this.pipelineFlowTrips[0]) => d.timestamps,
+      getColor: (d: typeof this.pipelineFlowTrips[0]) => d.color,
+      currentTime: this.flowTime % PIPE_LOOP,
+      trailLength: 700,
+      widthMinPixels: 2,
+      widthMaxPixels: 4,
+      capRounded: true,
+      jointRounded: true,
+      updateTriggers: { currentTime: this.flowTime },
+    });
+  }
+
+  private createTradeFlowLayer(): TripsLayer {
+    const TRADE_LOOP = 8000;
+    return new TripsLayer({
+      id: 'trade-flow-layer',
+      data: this.tradeFlowTrips,
+      getPath: (d: typeof this.tradeFlowTrips[0]) => d.path,
+      getTimestamps: (d: typeof this.tradeFlowTrips[0]) => d.timestamps,
+      getColor: (d: typeof this.tradeFlowTrips[0]) => d.color,
+      currentTime: this.flowTime % TRADE_LOOP,
+      trailLength: 1400,
+      widthMinPixels: 2,
+      widthMaxPixels: 5,
+      capRounded: true,
+      jointRounded: true,
+      updateTriggers: { currentTime: this.flowTime },
+    });
+  }
+
+  // ─── / Flow animation ─────────────────────────────────────────────────────
+
   private createCablesLayer(): PathLayer {
     const highlightedCables = this.highlightedAssets.cable;
     const cacheKey = 'cables-layer';
@@ -4704,11 +4883,13 @@ export class DeckGLMap {
     this.renderPaused = paused;
     if (paused) {
       this.stopPulseAnimation();
+      this.stopFlowAnimation();
       this.stopDayNightTimer();
       return;
     }
 
     this.syncPulseAnimation();
+    this.syncFlowAnimation();
     if (this.state.layers.dayNight) this.startDayNightTimer();
     if (!paused && this.renderPending) {
       this.renderPending = false;
@@ -4734,6 +4915,7 @@ export class DeckGLMap {
       console.warn(`[DeckGLMap] updateLayers took ${elapsed.toFixed(2)}ms (>16ms budget)`);
     }
     this.updateZoomHints();
+    this.syncFlowAnimation();
   }
 
   private updateZoomHints(): void {
@@ -6201,6 +6383,7 @@ export class DeckGLMap {
       this.styleLoadTimeoutId = null;
     }
     this.stopPulseAnimation();
+    this.stopFlowAnimation();
     this.stopDayNightTimer();
     if (this.aircraftFetchTimer) {
       clearInterval(this.aircraftFetchTimer);
