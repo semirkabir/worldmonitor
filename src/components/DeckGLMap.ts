@@ -2512,11 +2512,13 @@ export class DeckGLMap {
 
     for (let i = 0; i < result.length; i++) {
       if (used.has(i)) continue;
+      const ri = result[i]!;
       const group: number[] = [i];
       for (let j = i + 1; j < result.length; j++) {
         if (used.has(j)) continue;
-        if (Math.abs(result[i].lat - result[j].lat) < threshold &&
-            Math.abs(result[i].lon - result[j].lon) < threshold) {
+        const rj = result[j]!;
+        if (Math.abs(ri.lat - rj.lat) < threshold &&
+            Math.abs(ri.lon - rj.lon) < threshold) {
           group.push(j);
           used.add(j);
         }
@@ -2524,12 +2526,13 @@ export class DeckGLMap {
       used.add(i);
       if (group.length < 2) continue;
 
-      const cLat = group.reduce((s, k) => s + result[k].lat, 0) / group.length;
-      const cLon = group.reduce((s, k) => s + result[k].lon, 0) / group.length;
+      const cLat = group.reduce((s, k) => s + result[k]!.lat, 0) / group.length;
+      const cLon = group.reduce((s, k) => s + result[k]!.lon, 0) / group.length;
       group.forEach((k, pos) => {
         const angle = (pos / group.length) * Math.PI * 2 - Math.PI / 2;
-        result[k]._sLat = cLat + spread * Math.cos(angle);
-        result[k]._sLon = cLon + spread * Math.sin(angle);
+        const rk = result[k]!;
+        rk._sLat = cLat + spread * Math.cos(angle);
+        rk._sLon = cLon + spread * Math.sin(angle);
       });
     }
     return result;
