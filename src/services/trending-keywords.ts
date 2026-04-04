@@ -561,12 +561,11 @@ async function handleSpike(spike: TrendingSpike, config: TrendingConfig): Promis
       data: {
         term: spike.term,
         newsVelocity: spike.count,
-        relatedTopics: [spike.term],
+        relatedTopics: [spike.term, ...relatedArticles.map(a => a.title)],
         baseline: spike.baseline,
         multiplier: spike.baseline > 0 ? spike.multiplier : undefined,
         sourceCount: spike.uniqueSources,
         explanation: `${spike.term}: ${spike.count} mentions across ${spike.uniqueSources} sources (${multiplierText})`,
-        relatedArticles,
       },
     });
   } catch (error) {

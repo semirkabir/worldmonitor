@@ -111,7 +111,7 @@ export const DEFAULT_MAP_LAYERS: MapLayers = {
   cyberThreats: false,
   // Additional required properties
 
-  ciiChoropleth: false,
+  ciiChoropleth: false, aptGroups: false,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -170,7 +170,7 @@ export const MOBILE_DEFAULT_MAP_LAYERS: MapLayers = {
   cyberThreats: false,
   // Additional required properties
 
-  ciiChoropleth: false,
+  ciiChoropleth: false, aptGroups: false,
 };
 
 export const VARIANT_CONFIG: VariantConfig = {

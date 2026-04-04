@@ -19,7 +19,6 @@ import {
 import { TechHQRenderer } from '@/components/entity-detail/renderers/tech-hq';
 import { AircraftRenderer } from '@/components/entity-detail/renderers/aircraft';
 import { SpaceportRenderer } from '@/components/entity-detail/renderers/spaceport';
-import { HotspotRenderer } from '@/components/entity-detail/renderers/hotspot';
 
 export class EntityIntelManager implements AppModule {
   private ctx: AppContext;
@@ -57,7 +56,7 @@ export class EntityIntelManager implements AppModule {
       stockExchange: new StockExchangeRenderer(),
       base: new MilitaryBaseRenderer(),
       militaryVesselCluster: new MilitaryVesselClusterRenderer(),
-      hotspot: new HotspotRenderer(),
+      hotspot: this.hotspotRenderer,
       pipeline: new PipelineRenderer(),
       nuclear: new NuclearRenderer(),
       datacenter: new DatacenterRenderer(),
@@ -67,7 +66,6 @@ export class EntityIntelManager implements AppModule {
       techHQ: new TechHQRenderer(),
       aircraft: new AircraftRenderer(),
       spaceport: new SpaceportRenderer(),
-      hotspot: this.hotspotRenderer,
     };
   }
 }

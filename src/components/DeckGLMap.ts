@@ -1688,7 +1688,7 @@ export class DeckGLMap {
     const highlightedBases = this.highlightedAssets.base;
     const zoom = this.maplibreMap?.getZoom() || 3;
     const alphaScale = Math.min(1, (zoom - 2.5) / 2.5);
-    const a = Math.round(160 * Math.max(0.3, alphaScale));
+    void alphaScale; // alpha scaling reserved for future use
     const data = this.getBasesData();
 
     return new IconLayer({
@@ -4255,7 +4255,7 @@ export class DeckGLMap {
   }
 
   /** Open the custom category creation modal */
-  private openCustomCategoryModal(
+  protected _openCustomCategoryModal(
     layerConfig: Array<{ key: string; label: string; icon: string; premium?: string }>,
     list: HTMLElement,
     status: HTMLElement,
