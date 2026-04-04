@@ -4787,6 +4787,43 @@ body.playback-mode .status-dot {
   filter: drop-shadow(0 0 4px #ffa500);
 }
 
+/* Animated flow overlays for cables and pipelines */
+.cable-flow-path {
+  fill: none;
+  stroke: #00d4ff;
+  stroke-width: 2;
+  stroke-opacity: 0.75;
+  stroke-dasharray: 5 20;
+  stroke-linecap: round;
+  animation: cable-data-flow 2s linear infinite;
+  filter: drop-shadow(0 0 3px #00d4ff);
+}
+
+@keyframes cable-data-flow {
+  to { stroke-dashoffset: -25; }
+}
+
+.pipeline-flow-path {
+  stroke-width: 3.5;
+  stroke-opacity: 0.72;
+  stroke-dasharray: 10 14;
+  stroke-linecap: round;
+  animation: pipeline-bulk-flow 3.5s linear infinite;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+.pipeline-flow-path.pipeline-flow-oil {
+  filter: drop-shadow(0 0 4px #f97316);
+}
+
+.pipeline-flow-path.pipeline-flow-gas {
+  filter: drop-shadow(0 0 4px #06b6d4);
+}
+
+@keyframes pipeline-bulk-flow {
+  to { stroke-dashoffset: -24; }
+}
+
 @keyframes cable-health-fault-pulse {
 
   0%,
