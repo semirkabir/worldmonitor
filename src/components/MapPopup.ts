@@ -919,14 +919,30 @@ export class MapPopup {
       'us-nato': t('popups.base.types.us-nato'),
       'china': t('popups.base.types.china'),
       'russia': t('popups.base.types.russia'),
+      'uk': 'UK Military',
+      'france': 'French Military',
+      'india': 'Indian Military',
+      'italy': 'Italian Military',
+      'uae': 'UAE Military',
+      'turkey': 'Turkish Military',
+      'japan': 'Japan SDF',
+      'other': 'Other',
     };
     const typeColors: Record<string, string> = {
       'us-nato': 'elevated',
       'china': 'high',
       'russia': 'high',
+      'uk': 'elevated',
+      'france': 'elevated',
+      'india': 'moderate',
+      'italy': 'elevated',
+      'uae': 'moderate',
+      'turkey': 'moderate',
+      'japan': 'elevated',
+      'other': 'low',
     };
 
-    const enriched = base as MilitaryBase & { kind?: string; catAirforce?: boolean; catNaval?: boolean; catNuclear?: boolean; catSpace?: boolean; catTraining?: boolean };
+    const enriched = base as MilitaryBase & { kind?: string; catAirforce?: boolean; catNaval?: boolean; catNuclear?: boolean; catSpace?: boolean; catTraining?: boolean; tier?: number };
     const categories: string[] = [];
     if (enriched.catAirforce) categories.push('Air Force');
     if (enriched.catNaval) categories.push('Naval');
@@ -934,10 +950,19 @@ export class MapPopup {
     if (enriched.catSpace) categories.push('Space');
     if (enriched.catTraining) categories.push('Training');
 
+    const statusBadge = base.status
+      ? `<span class="popup-badge ${base.status === 'active' ? 'verified' : base.status === 'controversial' ? 'high' : base.status === 'planned' ? 'elevated' : 'low'}">${escapeHtml(base.status.toUpperCase())}</span>`
+      : '';
+
+    const tierSection = enriched.tier != null
+      ? `<div class="popup-stat"><span class="stat-label">Tier</span><span class="stat-value">T${enriched.tier}</span></div>`
+      : '';
+
     return `
       <div class="popup-header base">
         <span class="popup-title">${escapeHtml(base.name.toUpperCase())}</span>
         <span class="popup-badge ${typeColors[base.type] || 'low'}">${escapeHtml(typeLabels[base.type] || base.type.toUpperCase())}</span>
+        ${statusBadge}
         <button class="popup-close" aria-label="Close">×</button>
       </div>
       <div class="popup-body">
@@ -950,7 +975,8 @@ export class MapPopup {
           </div>
           ${base.arm ? `<div class="popup-stat"><span class="stat-label">Branch</span><span class="stat-value">${escapeHtml(base.arm)}</span></div>` : ''}
           ${base.country ? `<div class="popup-stat"><span class="stat-label">Country</span><span class="stat-value">${escapeHtml(base.country)}</span></div>` : ''}
-          ${categories.length > 0 ? `<div class="popup-stat"><span class="stat-label">Categories</span><span class="stat-value">${escapeHtml(categories.join(', '))}</span></div>` : ''}
+          ${categories.length > 0 ? `<div class="popup-stat"><span class="stat-label">Capabilities</span><span class="stat-value">${escapeHtml(categories.join(', '))}</span></div>` : ''}
+          ${tierSection}
           <div class="popup-stat">
             <span class="stat-label">${t('popups.coordinates')}</span>
             <span class="stat-value">${base.lat.toFixed(2)}°, ${base.lon.toFixed(2)}°</span>
