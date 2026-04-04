@@ -1806,6 +1806,13 @@ export class DeckGLMap {
   }
 
   private createBasesLayer(): IconLayer {
+<<<<<<< HEAD
+=======
+    const highlightedBases = this.highlightedAssets.base;
+    const zoom = this.maplibreMap?.getZoom() || 3;
+    const alphaScale = Math.min(1, (zoom - 2.5) / 2.5);
+    void alphaScale; // alpha scaling reserved for future use
+>>>>>>> 0cb63b6e (fix(types): resolve pre-existing TypeScript errors to unblock CI)
     const data = this.getBasesData();
 
     return new IconLayer({
@@ -4670,6 +4677,103 @@ export class DeckGLMap {
     });
   }
 
+<<<<<<< HEAD
+=======
+  /** Open the custom category creation modal */
+  protected _openCustomCategoryModal(
+    layerConfig: Array<{ key: string; label: string; icon: string; premium?: string }>,
+    list: HTMLElement,
+    status: HTMLElement,
+    layersPanel: HTMLElement,
+  ): void {
+    // Remove any existing modal
+    document.querySelector('.custom-category-modal-overlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'custom-category-modal-overlay';
+
+    const modal = document.createElement('div');
+    modal.className = 'custom-category-modal';
+
+    const title = document.createElement('div');
+    title.className = 'custom-category-modal-title';
+    title.textContent = 'New Custom Category';
+    modal.appendChild(title);
+
+    const nameLabel = document.createElement('label');
+    nameLabel.className = 'custom-category-modal-label';
+    nameLabel.textContent = 'Category name';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'custom-category-modal-input';
+    nameInput.placeholder = 'e.g. My Watch List';
+    nameInput.maxLength = 40;
+    nameLabel.appendChild(nameInput);
+    modal.appendChild(nameLabel);
+
+    const sourcesLabel = document.createElement('div');
+    sourcesLabel.className = 'custom-category-modal-label';
+    sourcesLabel.textContent = 'Select sources';
+    modal.appendChild(sourcesLabel);
+
+    const sourcesList = document.createElement('div');
+    sourcesList.className = 'custom-category-modal-sources';
+    modal.appendChild(sourcesList);
+
+    // All available layers for this variant
+    const allLayers = getLayersForVariant((SITE_VARIANT || 'full') as MapVariant, 'flat');
+    allLayers.forEach(def => {
+      const row = document.createElement('label');
+      row.className = 'custom-category-source-row';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = def.key;
+      const iconEl = document.createElement('span');
+      iconEl.className = 'toggle-icon';
+      iconEl.style.color = resolveLayerAccentColor(def.key, getCurrentTheme());
+      iconEl.innerHTML = def.icon;
+      const lbl = document.createElement('span');
+      lbl.textContent = resolveLayerLabel(def, t);
+      row.append(cb, iconEl, lbl);
+      sourcesList.appendChild(row);
+    });
+
+    const actions = document.createElement('div');
+    actions.className = 'custom-category-modal-actions';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'custom-category-modal-btn cancel';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.addEventListener('click', () => overlay.remove());
+
+    const createBtn = document.createElement('button');
+    createBtn.className = 'custom-category-modal-btn create';
+    createBtn.textContent = 'Create';
+    createBtn.addEventListener('click', () => {
+      const name = nameInput.value.trim();
+      const selectedLayers = Array.from(sourcesList.querySelectorAll<HTMLInputElement>('input:checked'))
+        .map(cb => cb.value as keyof MapLayers);
+      if (!name) { nameInput.focus(); return; }
+      if (selectedLayers.length === 0) return;
+
+      const newCat: CustomCategory = { id: Date.now().toString(), name, layers: selectedLayers };
+      this.customCategories = [...this.customCategories, newCat];
+      saveCustomCategories(this.customCategories);
+      this.renderCustomCategories(list, status, layersPanel, layerConfig);
+      overlay.remove();
+    });
+
+    actions.append(cancelBtn, createBtn);
+    modal.appendChild(actions);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Close on overlay click
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    nameInput.focus();
+  }
+
+>>>>>>> 0cb63b6e (fix(types): resolve pre-existing TypeScript errors to unblock CI)
   /** Clear all active layers */
   private clearAllLayers(): void {
     const layerDefs = getLayersForVariant((SITE_VARIANT || 'full') as MapVariant, 'flat');

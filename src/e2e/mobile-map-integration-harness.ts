@@ -129,7 +129,7 @@ const layers = {
   tradeRoutes: false,
   iranAttacks: false,
 
-  ciiChoropleth: false,
+  ciiChoropleth: false, aptGroups: false,
   dayNight: false,
   miningSites: false,
   processingPlants: false,
