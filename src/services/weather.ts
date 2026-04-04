@@ -40,14 +40,12 @@ export function getWeatherAlertIconUrl(event: string): string | null {
   return null;
 }
 
-const NWS_API = 'https://api.weather.gov/alerts/active';
+const NWS_API = '/api/weather';
 const breaker = createCircuitBreaker<WeatherAlert[]>({ name: 'NWS Weather', cacheTtlMs: 30 * 60 * 1000, persistCache: true });
 
 export async function fetchWeatherAlerts(): Promise<WeatherAlert[]> {
   return breaker.execute(async () => {
-    const response = await fetch(NWS_API, {
-      headers: { 'User-Agent': 'WorldMonitor/1.0' }
-    });
+    const response = await fetch(NWS_API);
 
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 

@@ -136,7 +136,6 @@ export class MapComponent {
   private protests: SocialUnrestEvent[] = [];
   private flightDelays: AirportDelayAlert[] = [];
   private aircraftPositions: PositionSample[] = [];
-  private aircraftDensity = 100;
   private militaryFlights: MilitaryFlight[] = [];
   private militaryFlightClusters: MilitaryFlightCluster[] = [];
   private militaryVessels: MilitaryVessel[] = [];
@@ -484,26 +483,7 @@ export class MapComponent {
       applyCollapsedState(!body.classList.contains('collapsed'));
     });
     header.append(title, status, collapseBtn);
-
-    // Search input
-    const searchWrap = document.createElement('div');
-    searchWrap.className = 'layer-search-wrap';
-    const searchInput = document.createElement('input');
-    searchInput.type = 'text';
-    searchInput.className = 'layer-search-input';
-    searchInput.placeholder = 'Search layers…';
-    searchInput.autocomplete = 'off';
-    searchInput.spellcheck = false;
-    searchInput.addEventListener('input', () => {
-      const q = searchInput.value.trim().toLowerCase();
-      body.querySelectorAll<HTMLElement>('.layer-toggle').forEach(el => {
-        const labelText = el.querySelector('.layer-toggle-label')?.textContent?.toLowerCase() ?? '';
-        el.style.display = !q || labelText.includes(q) ? '' : 'none';
-      });
-    });
-    searchWrap.appendChild(searchInput);
-
-    toggles.append(header, searchWrap, body);
+    toggles.append(header, body);
     const layers = this.getVariantLayerKeys();
 
     const MAX_SVG_LAYERS = 9;
@@ -1277,12 +1257,6 @@ export class MapComponent {
 
       path.append('title').text(cable.name);
 
-      // Animated data-flow overlay
-      cableGroup.append('path')
-        .attr('class', 'cable-flow-path')
-        .attr('d', lineGenerator(cable.points))
-        .attr('pointer-events', 'none');
-
       path.on('click', (event: MouseEvent) => {
         event.stopPropagation();
         const rect = this.container.getBoundingClientRect();
@@ -1328,14 +1302,6 @@ export class MapComponent {
       }
 
       path.append('title').text(`${pipeline.name} (${pipeline.type.toUpperCase()})`);
-
-      // Animated flow overlay (staggered per pipeline index for visual variety)
-      pipelineGroup.append('path')
-        .attr('class', `pipeline-flow-path pipeline-flow-${pipeline.type}`)
-        .attr('d', lineGenerator(pipeline.points))
-        .attr('fill', 'none')
-        .attr('stroke', color)
-        .attr('pointer-events', 'none');
 
       path.on('click', (event: MouseEvent) => {
         event.stopPropagation();
@@ -2544,11 +2510,9 @@ export class MapComponent {
       });
     }
 
-    // Aircraft positions (simplified dots in SVG fallback, limited by density slider)
+    // Aircraft positions (simplified dots in SVG fallback, limited to 200)
     if (this.state.layers.flights) {
-      const density = this.aircraftDensity / 100;
-      const maxCount = Math.max(1, Math.floor(this.aircraftPositions.length * density));
-      this.aircraftPositions.slice(0, Math.min(maxCount, 200)).forEach((ac) => {
+      this.aircraftPositions.slice(0, 200).forEach((ac) => {
         const pt = projection([ac.lon, ac.lat]);
         if (!pt) return;
 
@@ -2692,24 +2656,21 @@ export class MapComponent {
         const used = new Set<number>();
         for (let i = 0; i < res.length; i++) {
           if (used.has(i)) continue;
-          const ri = res[i]!;
           const grp: number[] = [i];
           for (let j = i + 1; j < res.length; j++) {
             if (used.has(j)) continue;
-            const rj = res[j]!;
-            if (Math.abs(ri.v.lat - rj.v.lat) < THRESHOLD && Math.abs(ri.v.lon - rj.v.lon) < THRESHOLD) {
+            if (Math.abs(res[i].v.lat - res[j].v.lat) < THRESHOLD && Math.abs(res[i].v.lon - res[j].v.lon) < THRESHOLD) {
               grp.push(j); used.add(j);
             }
           }
           used.add(i);
           if (grp.length < 2) continue;
-          const cLat = grp.reduce((s, k) => s + res[k]!.v.lat, 0) / grp.length;
-          const cLon = grp.reduce((s, k) => s + res[k]!.v.lon, 0) / grp.length;
+          const cLat = grp.reduce((s, k) => s + res[k].v.lat, 0) / grp.length;
+          const cLon = grp.reduce((s, k) => s + res[k].v.lon, 0) / grp.length;
           grp.forEach((k, pos) => {
             const angle = (pos / grp.length) * Math.PI * 2 - Math.PI / 2;
-            const rk = res[k]!;
-            rk.sLat = cLat + SPREAD * Math.cos(angle);
-            rk.sLon = cLon + SPREAD * Math.sin(angle);
+            res[k].sLat = cLat + SPREAD * Math.cos(angle);
+            res[k].sLon = cLon + SPREAD * Math.sin(angle);
           });
         }
         return res;
