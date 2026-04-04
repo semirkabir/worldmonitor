@@ -1258,12 +1258,6 @@ export class MapComponent {
 
       path.append('title').text(cable.name);
 
-      // Animated data-flow overlay
-      cableGroup.append('path')
-        .attr('class', 'cable-flow-path')
-        .attr('d', lineGenerator(cable.points))
-        .attr('pointer-events', 'none');
-
       path.on('click', (event: MouseEvent) => {
         event.stopPropagation();
         const rect = this.container.getBoundingClientRect();
@@ -1309,14 +1303,6 @@ export class MapComponent {
       }
 
       path.append('title').text(`${pipeline.name} (${pipeline.type.toUpperCase()})`);
-
-      // Animated flow overlay (staggered per pipeline index for visual variety)
-      pipelineGroup.append('path')
-        .attr('class', `pipeline-flow-path pipeline-flow-${pipeline.type}`)
-        .attr('d', lineGenerator(pipeline.points))
-        .attr('fill', 'none')
-        .attr('stroke', color)
-        .attr('pointer-events', 'none');
 
       path.on('click', (event: MouseEvent) => {
         event.stopPropagation();

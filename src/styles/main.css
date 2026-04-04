@@ -7002,7 +7002,6 @@ a.prediction-link:hover {
   background: rgba(0, 209, 255, 0.12);
 }
 
-<<<<<<< HEAD
 .popup-header.iranEvent.high {
   border-left: 3px solid #ff3232;
 }
@@ -20209,6 +20208,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
   align-items: center;
   justify-content: center;
 <<<<<<< HEAD
+<<<<<<< HEAD
   background: transparent;
 }
 /* Show resize bar under button */
@@ -20220,6 +20220,8 @@ body:has(.tauri-titlebar) .breaking-news-container {
 
 /* panels-collapse-btn: pill centered on the resize bar — side layout */
 =======
+=======
+>>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
   height: 14px;
 }
 
@@ -20229,7 +20231,10 @@ body:has(.tauri-titlebar) .breaking-news-container {
 }
 
 /* panels-collapse-btn: seamless within the bar */
+<<<<<<< HEAD
 >>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
+=======
+>>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
 .map-resize-handle .panels-collapse-btn {
   position: absolute;
   top: 50%;
@@ -20239,6 +20244,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
   align-items: center;
   justify-content: center;
 <<<<<<< HEAD
+<<<<<<< HEAD
   width: 22px;
   height: 40px;
   border-radius: 100px;
@@ -20246,17 +20252,23 @@ body:has(.tauri-titlebar) .breaking-news-container {
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #fff;
 =======
+=======
+>>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
   width: 40px;
   height: 100%;
   background: transparent;
   border: none;
   color: var(--text-dim);
   opacity: 0.5;
+<<<<<<< HEAD
 >>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
+=======
+>>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
   cursor: pointer;
   z-index: 30;
   padding: 0;
   flex-shrink: 0;
+<<<<<<< HEAD
 <<<<<<< HEAD
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
@@ -20273,6 +20285,8 @@ body:has(.tauri-titlebar) .breaking-news-container {
 
 /* panels-collapse-btn: pill centered on the resize bar — stacked/bottom layout */
 =======
+=======
+>>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
   transition: opacity 0.15s, color 0.15s;
 }
 .map-resize-handle .panels-collapse-btn:hover,
@@ -20282,16 +20296,23 @@ body:has(.tauri-titlebar) .breaking-news-container {
 }
 
 /* panels-collapse-btn: horizontal orientation for bottom/stacked layout */
+<<<<<<< HEAD
 >>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
+=======
+>>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
 @media (max-width: 1599px) {
   .main-content:not(.layout-side) .map-resize-handle.has-collapse-btns {
     flex-direction: row;
   }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
   .main-content:not(.layout-side) .map-resize-handle {
     cursor: ns-resize;
   }
   .main-content:not(.layout-side) .map-resize-handle .panels-collapse-btn {
+<<<<<<< HEAD
     width: 40px;
     height: 22px;
     border-radius: 100px;
@@ -20307,6 +20328,10 @@ body:has(.tauri-titlebar) .breaking-news-container {
   }
 =======
 >>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
+=======
+    cursor: pointer;
+  }
+>>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
 }
 
 /* Horizontal map↔bottom-grid handle: button centered on the resize bar */
@@ -20342,22 +20367,29 @@ body:has(.tauri-titlebar) .breaking-news-container {
   justify-content: center;
   width: 40px;
 <<<<<<< HEAD
+<<<<<<< HEAD
   height: 22px;
   border-radius: 100px;
   background: var(--surface);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #fff;
 =======
+=======
+>>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
   height: 100%;
   background: transparent;
   border: none;
   color: var(--text-dim);
   opacity: 0.5;
+<<<<<<< HEAD
 >>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
+=======
+>>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
   cursor: pointer;
   z-index: 30;
   padding: 0;
   flex-shrink: 0;
+<<<<<<< HEAD
 <<<<<<< HEAD
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
@@ -20371,13 +20403,18 @@ body:has(.tauri-titlebar) .breaking-news-container {
   border-color: var(--accent);
   color: var(--bg);
 =======
+=======
+>>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
   transition: opacity 0.15s, color 0.15s;
 }
 .bottom-grid-resize-handle .bottom-grid-collapse-btn:hover,
 .bottom-grid-resize-handle:hover .bottom-grid-collapse-btn {
   opacity: 1;
   color: var(--accent);
+<<<<<<< HEAD
 >>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
+=======
+>>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
 }
 
 #layoutToggleBtn.active {
