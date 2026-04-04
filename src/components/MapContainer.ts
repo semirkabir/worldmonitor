@@ -484,6 +484,8 @@ export class MapContainer {
     this.cachedUcdpEvents = events;
     if (this.useDeckGL) {
       this.deckGLMap?.setUcdpEvents(events);
+    } else {
+      this.svgMap?.setUcdpEvents(events);
     }
   }
 
