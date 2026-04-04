@@ -20777,6 +20777,37 @@ body:has(.tauri-titlebar) .breaking-news-container {
   background: var(--bg-secondary);
 }
 
+.layer-search-wrap {
+  padding: 5px 8px 4px;
+  border-bottom: 1px solid var(--border);
+}
+
+.layer-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 10px;
+  font-family: inherit;
+  letter-spacing: 0.03em;
+  padding: 4px 8px 4px 24px;
+  outline: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.35)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 6px center;
+  transition: border-color 0.15s;
+}
+
+.layer-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.layer-search-input:focus {
+  border-color: var(--green);
+}
+
 .map-tray-title {
   color: var(--text);
   font-size: 10px;

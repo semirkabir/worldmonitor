@@ -483,7 +483,26 @@ export class MapComponent {
       applyCollapsedState(!body.classList.contains('collapsed'));
     });
     header.append(title, status, collapseBtn);
-    toggles.append(header, body);
+
+    // Search input
+    const searchWrap = document.createElement('div');
+    searchWrap.className = 'layer-search-wrap';
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.className = 'layer-search-input';
+    searchInput.placeholder = 'Search layers…';
+    searchInput.autocomplete = 'off';
+    searchInput.spellcheck = false;
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim().toLowerCase();
+      body.querySelectorAll<HTMLElement>('.layer-toggle').forEach(el => {
+        const labelText = el.querySelector('.layer-toggle-label')?.textContent?.toLowerCase() ?? '';
+        el.style.display = !q || labelText.includes(q) ? '' : 'none';
+      });
+    });
+    searchWrap.appendChild(searchInput);
+
+    toggles.append(header, searchWrap, body);
     const layers = this.getVariantLayerKeys();
 
     const MAX_SVG_LAYERS = 9;
