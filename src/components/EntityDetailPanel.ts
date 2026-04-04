@@ -16,6 +16,7 @@ export class EntityDetailPanel {
   private abortController: AbortController = new AbortController();
   private lastFocusedElement: HTMLElement | null = null;
   private onCloseCallback?: () => void;
+  private navStack: HTMLElement[][] = [];
 
   private readonly registry: EntityRendererRegistry;
   private readonly generic: GenericEntityRenderer = new GenericEntityRenderer();
@@ -63,6 +64,7 @@ export class EntityDetailPanel {
   // ---- Public API ----
 
   public show(type: PopupType, data: unknown): void {
+    this.navStack = [];
     this.abortController.abort();
     this.abortController = new AbortController();
     this.currentType = type;
@@ -174,6 +176,19 @@ export class EntityDetailPanel {
     return panel;
   }
 
+  private navigateTo(el: HTMLElement): void {
+    this.navStack.push(Array.from(this.content.children) as HTMLElement[]);
+    const backBtn = this.el('button', 'edp-back-btn', '← Back');
+    backBtn.addEventListener('click', () => this.navBack());
+    el.prepend(backBtn);
+    this.content.replaceChildren(el);
+  }
+
+  private navBack(): void {
+    const prev = this.navStack.pop();
+    if (prev) this.content.replaceChildren(...prev);
+  }
+
   private buildContext(): EntityRenderContext {
     return {
       el: this.el.bind(this),
@@ -182,6 +197,7 @@ export class EntityDetailPanel {
       makeLoading: this.makeLoading.bind(this),
       makeEmpty: this.makeEmpty.bind(this),
       signal: this.abortController.signal,
+      navigate: (el) => this.navigateTo(el),
     };
   }
 
