@@ -355,73 +355,6 @@
   border-color: color-mix(in srgb, var(--text-faint) 20%, transparent);
 }
 
-/* Deployed badge — green 3D button effect */
-.edp-badge-deployed {
-  background: linear-gradient(180deg, #4ade80 0%, #22c55e 50%, #16a34a 100%) !important;
-  color: #052e16 !important;
-  border: 1px solid #15803d !important;
-  border-bottom-width: 3px !important;
-  border-radius: 6px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.05em !important;
-  box-shadow: 0 2px 6px rgba(34, 197, 94, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-  transition: all 0.15s ease !important;
-  cursor: default !important;
-}
-
-.edp-badge-deployed:hover {
-  background: linear-gradient(180deg, #86efac 0%, #4ade80 50%, #22c55e 100%) !important;
-  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
-  transform: translateY(-1px) !important;
-}
-
-.edp-badge-deployed:active {
-  border-bottom-width: 1px !important;
-  box-shadow: 0 1px 2px rgba(34, 197, 94, 0.3) !important;
-  transform: translateY(2px) !important;
-}
-
-/* ── Vessel photo ──────────────────────────────────────────────────── */
-
-.edp-vessel-photo {
-  margin-bottom: 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  position: relative;
-}
-
-.edp-vessel-photo img {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-height: 240px;
-  object-fit: cover;
-}
-
-.edp-vessel-photo-credit {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 4px 8px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 9px;
-}
-
-.edp-vessel-photo-placeholder {
-  margin-bottom: 12px;
-  padding: 32px 16px;
-  background: var(--surface);
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  text-align: center;
-  font-size: 11px;
-  color: var(--text-faint);
-}
-
 /* ── Generic renderer ──────────────────────────────────────────────── */
 
 .edp-generic {
@@ -513,6 +446,7 @@
   margin-top: 4px;
 }
 
+<<<<<<< HEAD
 /* ── News items ────────────────────────────────────────────────────── */
 
 .edp-news-item {
@@ -633,7 +567,7 @@
   flex-shrink: 0;
 }
 
-
+=======
 /* ── Military Vessel Cluster ───────────────────────────────────────── */
 
 .edp-vessel-list {
@@ -708,6 +642,88 @@
   line-height: 1.4;
 }
 
+/* Clickable vessel rows */
+.edp-vessel-item--clickable {
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.edp-vessel-item--clickable:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.edp-vessel-chevron {
+  margin-left: auto;
+  font-size: 16px;
+  color: var(--text-faint);
+  transition: color 0.15s;
+}
+.edp-vessel-item--clickable:hover .edp-vessel-chevron {
+  color: var(--accent);
+}
+
+/* Back button (injected by navigate()) */
+.edp-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 12px 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+}
+.edp-back-btn:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+/* Wikipedia image in vessel detail */
+.edp-vessel-wiki {
+  margin: 0 0 4px 0;
+}
+.edp-vessel-wiki-img {
+  display: none;
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+.edp-vessel-wiki-extract {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 0 0 6px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.edp-vessel-wiki-link {
+  font-size: 11px;
+  color: var(--accent);
+  text-decoration: none;
+}
+.edp-vessel-wiki-link:hover { text-decoration: underline; }
+
+/* External article link */
+.edp-vessel-article-wrap {
+  padding: 8px 0 4px;
+}
+.edp-external-link {
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+}
+.edp-external-link:hover { text-decoration: underline; }
+
 /* ── Responsive ────────────────────────────────────────────────────── */
 
 @media (max-width: 600px) {
@@ -715,183 +731,4 @@
     width: 100vw;
     right: -100vw;
   }
-}
-
-/* ── Ticker link (inline $TICKER) ──────────────────────────────────── */
-
-.ticker-link {
-  color: var(--accent, #FFD700);
-  cursor: pointer;
-  font-weight: 600;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.15s;
-}
-
-.ticker-link:hover {
-  border-bottom-color: var(--accent, #FFD700);
-}
-
-/* ── TradingView widget container ──────────────────────────────────── */
-
-.edp-tradingview-widget {
-  overflow: hidden;
-  border-radius: 8px;
-  margin: 0 0 12px;
-  background: var(--surface);
-  min-height: 220px;
-}
-
-/* ── Price change colors ────────────────────────────────────────────── */
-
-.edp-positive { color: #22c55e; }
-.edp-negative { color: #ef4444; }
-
-/* ── Sparkline wrapper ──────────────────────────────────────────────── */
-
-.edp-sparkline-wrap {
-  margin-top: 8px;
-  width: 100%;
-}
-
-/* ── SEC filing rows ────────────────────────────────────────────────── */
-
-.edp-sec-filing {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.06));
-}
-
-.edp-sec-filing:last-child {
-  border-bottom: none;
-}
-
-.edp-sec-type-badge {
-  flex-shrink: 0;
-  display: inline-block;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  background: var(--surface);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-  margin-top: 2px;
-}
-
-.edp-sec-type-annual {
-  background: rgba(34, 197, 94, 0.15);
-  color: #22c55e;
-  border-color: rgba(34, 197, 94, 0.3);
-}
-
-.edp-sec-type-quarterly {
-  background: rgba(96, 165, 250, 0.15);
-  color: #60a5fa;
-  border-color: rgba(96, 165, 250, 0.3);
-}
-
-.edp-sec-type-current {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.3);
-}
-
-.edp-sec-filing-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.edp-sec-filing-title {
-  font-size: 12px;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.4;
-}
-
-.edp-sec-filing-meta {
-  font-size: 11px;
-  color: var(--text-secondary);
-  margin-top: 2px;
-}
-
-.edp-sec-filing-link {
-  flex-shrink: 0;
-  color: var(--accent-blue, #60a5fa);
-  font-size: 14px;
-  text-decoration: none;
-  line-height: 1;
-  padding: 2px 4px;
-}
-
-.edp-sec-filing-link:hover {
-  color: var(--text);
-}
-
-/* ── Exchange movers heatmap ────────────────────────────────────────── */
-
-.edp-movers-group {
-  margin-bottom: 12px;
-}
-
-.edp-movers-group:last-child {
-  margin-bottom: 0;
-}
-
-.edp-movers-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-  margin-bottom: 6px;
-}
-
-.edp-movers-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
-}
-
-.edp-mover-cell {
-  border-radius: 5px;
-  padding: 6px 4px;
-  text-align: center;
-  cursor: default;
-  transition: filter 0.15s;
-  border: 1px solid rgba(255,255,255,0.06);
-}
-
-.edp-mover-cell:hover {
-  filter: brightness(1.15);
-}
-
-.edp-mover-cell.ticker-link {
-  cursor: pointer;
-}
-
-.edp-mover-cell.ticker-link:hover {
-  filter: brightness(1.3);
-  outline: 1px solid rgba(255,255,255,0.2);
-}
-
-.edp-mover-sym {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-bottom: 2px;
-}
-
-.edp-mover-pct {
-  font-size: 10px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
