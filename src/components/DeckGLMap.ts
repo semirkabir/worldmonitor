@@ -48,22 +48,9 @@ import type { Earthquake } from '@/services/earthquakes';
 import type { ClimateAnomaly } from '@/services/climate';
 import { ArcLayer } from '@deck.gl/layers';
 import { HeatmapLayer } from '@deck.gl/aggregation-layers';
-<<<<<<< HEAD
 import { H3HexagonLayer } from '@deck.gl/geo-layers';
-<<<<<<< HEAD
 import type { WeatherAlert, WeatherCategory } from '@/services/weather';
 import { getWeatherEventCategory } from '@/services/weather';
-=======
-=======
-import { H3HexagonLayer, TripsLayer } from '@deck.gl/geo-layers';
->>>>>>> 86b527d0 (Add animated flow visualizations to cables, pipelines, and trade routes)
-import type { WeatherAlert } from '@/services/weather';
-import { getWeatherAlertIconUrl } from '@/services/weather';
-<<<<<<< HEAD
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
-=======
-import { getNaturalEventIconUrl } from '@/services/eonet';
->>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
 import { escapeHtml } from '@/utils/sanitize';
 import { tokenizeForMatch, matchKeyword, matchesAnyKeyword, findMatchingKeywords } from '@/utils/keyword-match';
 import { t } from '@/services/i18n';
@@ -530,12 +517,6 @@ export class DeckGLMap {
   private protestSuperclusterSource: SocialUnrestEvent[] = [];
   private newsPulseIntervalId: ReturnType<typeof setInterval> | null = null;
   private dayNightIntervalId: ReturnType<typeof setInterval> | null = null;
-  // Flow animation for cables, pipelines, trade routes
-  private flowTime = 0;
-  private flowRafId: number | null = null;
-  private cableFlowTrips: { path: [number, number][]; timestamps: number[]; color: [number, number, number, number] }[] = [];
-  private pipelineFlowTrips: { path: [number, number][]; timestamps: number[]; color: [number, number, number, number] }[] = [];
-  private tradeFlowTrips: { path: [number, number][]; timestamps: number[]; color: [number, number, number, number] }[] = [];
   private cachedNightPolygon: [number, number][] | null = null;
   private readonly startupTime = Date.now();
   private lastCableHighlightSignature = '';
@@ -571,7 +552,6 @@ export class DeckGLMap {
       this.maplibreMap?.triggerRepaint();
     });
 
-    this.buildAllFlowTrips();
     this.setupDOM();
     this.popup = new MapPopup(container);
 
@@ -1392,7 +1372,6 @@ export class DeckGLMap {
     // Undersea cables layer
     if (mapLayers.cables) {
       layers.push(this.createCablesLayer());
-      layers.push(this.createCablesFlowLayer());
     } else {
       this.layerCache.delete('cables-layer');
     }
@@ -1400,7 +1379,6 @@ export class DeckGLMap {
     // Pipelines layer
     if (mapLayers.pipelines) {
       layers.push(this.createPipelinesLayer());
-      layers.push(this.createPipelinesFlowLayer());
     } else {
       this.layerCache.delete('pipelines-layer');
     }
@@ -1466,7 +1444,7 @@ export class DeckGLMap {
 
     // Natural events layer
     if (mapLayers.natural && filteredNaturalEvents.length > 0) {
-      layers.push(...this.createNaturalEventsLayer(filteredNaturalEvents));
+      layers.push(this.createNaturalEventsLayer(filteredNaturalEvents));
     }
 
     // Satellite fires layer (NASA FIRMS)
@@ -1482,11 +1460,7 @@ export class DeckGLMap {
 
     // Weather alerts layer
     if (mapLayers.weather && filteredWeatherAlerts.length > 0) {
-<<<<<<< HEAD
       layers.push(...this.createWeatherLayers(filteredWeatherAlerts));
-=======
-      layers.push(...this.createWeatherLayer(filteredWeatherAlerts));
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
     }
 
     // Internet outages layer
@@ -1638,7 +1612,6 @@ export class DeckGLMap {
     if (mapLayers.tradeRoutes) {
       layers.push(this.createTradeRoutesLayer());
       layers.push(this.createTradeChokepointsLayer());
-      layers.push(this.createTradeFlowLayer());
     } else {
       this.layerCache.delete('trade-routes-layer');
       this.layerCache.delete('trade-chokepoints-layer');
@@ -1711,175 +1684,6 @@ export class DeckGLMap {
   }
 
   // Layer creation methods
-  // ─── Flow animation ───────────────────────────────────────────────────────
-
-  /** Slerp two [lon, lat] points along a great circle at fraction t */
-  private static interpGreatCircle(a: [number, number], b: [number, number], t: number): [number, number] {
-    const R = Math.PI / 180;
-    const lon1 = a[0] * R, lat1 = a[1] * R;
-    const lon2 = b[0] * R, lat2 = b[1] * R;
-    const d = 2 * Math.asin(Math.sqrt(
-      Math.sin((lat2 - lat1) / 2) ** 2 +
-      Math.cos(lat1) * Math.cos(lat2) * Math.sin((lon2 - lon1) / 2) ** 2
-    ));
-    if (d < 1e-9) return a;
-    const A = Math.sin((1 - t) * d) / Math.sin(d);
-    const B = Math.sin(t * d) / Math.sin(d);
-    const x = A * Math.cos(lat1) * Math.cos(lon1) + B * Math.cos(lat2) * Math.cos(lon2);
-    const y = A * Math.cos(lat1) * Math.sin(lon1) + B * Math.cos(lat2) * Math.sin(lon2);
-    const z = A * Math.sin(lat1) + B * Math.sin(lat2);
-    return [(Math.atan2(y, x)) / R, (Math.atan2(z, Math.sqrt(x * x + y * y))) / R];
-  }
-
-  /** Build TripsLayer trip entries for a set of paths, creating N packets per path. */
-  private buildPathFlowTrips(
-    paths: [number, number][][],
-    color: [number, number, number, number],
-    loopMs: number,
-    nPackets: number,
-  ): { path: [number, number][]; timestamps: number[]; color: [number, number, number, number] }[] {
-    const legMs = loopMs / nPackets;
-    const trips: typeof this.cableFlowTrips = [];
-    for (const path of paths) {
-      if (path.length < 2) continue;
-      for (let p = 0; p < nPackets; p++) {
-        const t0 = legMs * p;
-        const t1 = legMs * (p + 1);
-        const n = path.length;
-        trips.push({
-          path,
-          timestamps: path.map((_, i) => t0 + (t1 - t0) * (i / (n - 1))),
-          color,
-        });
-      }
-    }
-    return trips;
-  }
-
-  private buildAllFlowTrips(): void {
-    const CABLE_LOOP = 3000;
-    const PIPE_LOOP = 4500;
-    const TRADE_LOOP = 8000;
-
-    this.cableFlowTrips = this.buildPathFlowTrips(
-      UNDERSEA_CABLES.map(c => c.points as [number, number][]),
-      [30, 210, 255, 230],
-      CABLE_LOOP,
-      3,
-    );
-
-    this.pipelineFlowTrips = PIPELINES.flatMap(pipe => {
-      const hex = PIPELINE_COLORS[pipe.type as keyof typeof PIPELINE_COLORS] || '#ffaa33';
-      const rgba = this.hexToRgba(hex, 255);
-      const color: [number, number, number, number] = [rgba[0]!, rgba[1]!, rgba[2]!, 240];
-      return this.buildPathFlowTrips(
-        [pipe.points as [number, number][]],
-        color,
-        PIPE_LOOP,
-        3,
-      );
-    });
-
-    // Trade routes: sample great-circle arcs into polylines for TripsLayer
-    const N_SAMPLE = 24;
-    this.tradeFlowTrips = this.tradeRouteSegments.flatMap(seg => {
-      const path: [number, number][] = [];
-      for (let i = 0; i <= N_SAMPLE; i++) {
-        path.push(DeckGLMap.interpGreatCircle(
-          seg.sourcePosition as [number, number],
-          seg.targetPosition as [number, number],
-          i / N_SAMPLE,
-        ));
-      }
-      const color: [number, number, number, number] =
-        seg.status === 'disrupted' ? [255, 90, 90, 230] :
-        seg.status === 'high_risk'  ? [255, 190, 50, 220] :
-        [100, 225, 255, 200];
-      return this.buildPathFlowTrips([path], color, TRADE_LOOP, 2);
-    });
-  }
-
-  private startFlowAnimation(): void {
-    if (this.flowRafId !== null) return;
-    const tick = () => {
-      this.flowTime = Date.now();
-      this.rafUpdateLayers();
-      this.flowRafId = requestAnimationFrame(tick);
-    };
-    this.flowRafId = requestAnimationFrame(tick);
-  }
-
-  private stopFlowAnimation(): void {
-    if (this.flowRafId !== null) {
-      cancelAnimationFrame(this.flowRafId);
-      this.flowRafId = null;
-    }
-  }
-
-  private syncFlowAnimation(): void {
-    if (this.renderPaused) { this.stopFlowAnimation(); return; }
-    const { layers } = this.state;
-    const needsFlow = layers.cables || layers.pipelines || layers.tradeRoutes;
-    if (needsFlow && this.flowRafId === null) this.startFlowAnimation();
-    else if (!needsFlow && this.flowRafId !== null) this.stopFlowAnimation();
-  }
-
-  private createCablesFlowLayer(): TripsLayer {
-    const CABLE_LOOP = 3000;
-    return new TripsLayer({
-      id: 'cables-flow-layer',
-      data: this.cableFlowTrips,
-      getPath: (d: typeof this.cableFlowTrips[0]) => d.path,
-      getTimestamps: (d: typeof this.cableFlowTrips[0]) => d.timestamps,
-      getColor: (d: typeof this.cableFlowTrips[0]) => d.color,
-      currentTime: this.flowTime % CABLE_LOOP,
-      trailLength: 520,
-      widthMinPixels: 1.5,
-      widthMaxPixels: 3,
-      capRounded: true,
-      jointRounded: true,
-      updateTriggers: { currentTime: this.flowTime },
-    });
-  }
-
-  private createPipelinesFlowLayer(): TripsLayer {
-    const PIPE_LOOP = 4500;
-    return new TripsLayer({
-      id: 'pipelines-flow-layer',
-      data: this.pipelineFlowTrips,
-      getPath: (d: typeof this.pipelineFlowTrips[0]) => d.path,
-      getTimestamps: (d: typeof this.pipelineFlowTrips[0]) => d.timestamps,
-      getColor: (d: typeof this.pipelineFlowTrips[0]) => d.color,
-      currentTime: this.flowTime % PIPE_LOOP,
-      trailLength: 700,
-      widthMinPixels: 2,
-      widthMaxPixels: 4,
-      capRounded: true,
-      jointRounded: true,
-      updateTriggers: { currentTime: this.flowTime },
-    });
-  }
-
-  private createTradeFlowLayer(): TripsLayer {
-    const TRADE_LOOP = 8000;
-    return new TripsLayer({
-      id: 'trade-flow-layer',
-      data: this.tradeFlowTrips,
-      getPath: (d: typeof this.tradeFlowTrips[0]) => d.path,
-      getTimestamps: (d: typeof this.tradeFlowTrips[0]) => d.timestamps,
-      getColor: (d: typeof this.tradeFlowTrips[0]) => d.color,
-      currentTime: this.flowTime % TRADE_LOOP,
-      trailLength: 1400,
-      widthMinPixels: 2,
-      widthMaxPixels: 5,
-      capRounded: true,
-      jointRounded: true,
-      updateTriggers: { currentTime: this.flowTime },
-    });
-  }
-
-  // ─── / Flow animation ─────────────────────────────────────────────────────
-
   private createCablesLayer(): PathLayer {
     const highlightedCables = this.highlightedAssets.cable;
     const cacheKey = 'cables-layer';
@@ -1989,13 +1793,6 @@ export class DeckGLMap {
   }
 
   private createBasesLayer(): IconLayer {
-<<<<<<< HEAD
-=======
-    const highlightedBases = this.highlightedAssets.base;
-    const zoom = this.maplibreMap?.getZoom() || 3;
-    const alphaScale = Math.min(1, (zoom - 2.5) / 2.5);
-    void alphaScale; // alpha scaling reserved for future use
->>>>>>> 0cb63b6e (fix(types): resolve pre-existing TypeScript errors to unblock CI)
     const data = this.getBasesData();
 
     return new IconLayer({
@@ -2385,36 +2182,20 @@ export class DeckGLMap {
     });
   }
 
-  private createNaturalEventsLayer(events: NaturalEvent[]): IconLayer[] {
-    const layers: IconLayer[] = [];
-    const byCategory = new Map<string | null, NaturalEvent[]>();
-
-    for (const e of events) {
-      const url = getNaturalEventIconUrl(e.category);
-      if (!byCategory.has(url)) byCategory.set(url, []);
-      byCategory.get(url)!.push(e);
-    }
-
-    for (const [iconUrl, group] of byCategory) {
-      const isPng = iconUrl !== null;
-      layers.push(new IconLayer({
-        id: isPng ? `natural-events-png-${iconUrl.split('/').pop()}` : 'natural-events-layer',
-        data: group,
-        getPosition: (d: NaturalEvent) => [d.lon, d.lat],
-        getIcon: () => 'marker',
-        iconAtlas: isPng ? iconUrl! : getSharedLayerIconAtlas('natural'),
-        iconMapping: isPng
-          ? { marker: { x: 0, y: 0, width: 512, height: 512, mask: false } }
-          : SHARED_LAYER_ICON_MAPPING,
-        getSize: (d: NaturalEvent) => d.title.startsWith('🔴') ? 20 : d.title.startsWith('🟠') ? 17 : 14,
-        sizeMinPixels: 10,
-        sizeMaxPixels: 26,
-        pickable: true,
-        billboard: true,
-      }));
-    }
-
-    return layers;
+  private createNaturalEventsLayer(events: NaturalEvent[]): IconLayer {
+    return new IconLayer({
+      id: 'natural-events-layer',
+      data: events,
+      getPosition: (d: NaturalEvent) => [d.lon, d.lat],
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('natural'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: (d: NaturalEvent) => d.title.startsWith('🔴') ? 20 : d.title.startsWith('🟠') ? 17 : 14,
+      sizeMinPixels: 10,
+      sizeMaxPixels: 26,
+      pickable: true,
+      billboard: true,
+    });
   }
 
   private createFiresLayer(): IconLayer {
@@ -2449,17 +2230,9 @@ export class DeckGLMap {
     });
   }
 
-<<<<<<< HEAD
   private createWeatherLayers(alerts: WeatherAlert[]): IconLayer[] {
-=======
-  private createWeatherLayer(alerts: WeatherAlert[]): IconLayer[] {
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
     const alertsWithCoords = alerts.filter(a => a.centroid && a.centroid.length === 2);
-    const floodAlerts = alertsWithCoords.filter(a => getWeatherAlertIconUrl(a.event) !== null);
-    const otherAlerts = alertsWithCoords.filter(a => getWeatherAlertIconUrl(a.event) === null);
-    const sizeFor = (d: WeatherAlert) => d.severity === 'Extreme' ? 18 : d.severity === 'Severe' ? 16 : 14;
 
-<<<<<<< HEAD
     // Group alerts by weather category
     const byCategory = new Map<WeatherCategory, WeatherAlert[]>();
     for (const alert of alertsWithCoords) {
@@ -2492,43 +2265,6 @@ export class DeckGLMap {
         billboard: true,
       });
     });
-=======
-    const layers: IconLayer[] = [];
-
-    if (otherAlerts.length > 0) {
-      layers.push(new IconLayer({
-        id: 'weather-layer',
-        data: otherAlerts,
-        getPosition: (d) => d.centroid as [number, number],
-        getIcon: () => 'marker',
-        iconAtlas: getSharedLayerIconAtlas('weather'),
-        iconMapping: SHARED_LAYER_ICON_MAPPING,
-        getSize: sizeFor,
-        sizeMinPixels: 8,
-        sizeMaxPixels: 20,
-        pickable: true,
-        billboard: true,
-      }));
-    }
-
-    if (floodAlerts.length > 0) {
-      layers.push(new IconLayer({
-        id: 'weather-flood-layer',
-        data: floodAlerts,
-        getPosition: (d) => d.centroid as [number, number],
-        getIcon: () => 'marker',
-        iconAtlas: '/icons/flood-warning.png',
-        iconMapping: { marker: { x: 0, y: 0, width: 512, height: 512, mask: false } },
-        getSize: sizeFor,
-        sizeMinPixels: 8,
-        sizeMaxPixels: 20,
-        pickable: true,
-        billboard: true,
-      }));
-    }
-
-    return layers;
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
   }
 
   private createOutagesLayer(outages: InternetOutage[]): IconLayer {
@@ -2691,52 +2427,14 @@ export class DeckGLMap {
     });
   }
 
-  /** Scatter vessels that share nearly the same coordinates into a circle around their group centre. */
-  private scatterVessels<T extends { lat: number; lon: number }>(
-    vessels: T[],
-    threshold = 0.4,
-    spread = 0.22,
-  ): Array<T & { _sLat: number; _sLon: number }> {
-    const result = vessels.map(v => ({ ...v, _sLat: v.lat, _sLon: v.lon }));
-    const used = new Set<number>();
-
-    for (let i = 0; i < result.length; i++) {
-      if (used.has(i)) continue;
-      const ri = result[i]!;
-      const group: number[] = [i];
-      for (let j = i + 1; j < result.length; j++) {
-        if (used.has(j)) continue;
-        const rj = result[j]!;
-        if (Math.abs(ri.lat - rj.lat) < threshold &&
-            Math.abs(ri.lon - rj.lon) < threshold) {
-          group.push(j);
-          used.add(j);
-        }
-      }
-      used.add(i);
-      if (group.length < 2) continue;
-
-      const cLat = group.reduce((s, k) => s + result[k]!.lat, 0) / group.length;
-      const cLon = group.reduce((s, k) => s + result[k]!.lon, 0) / group.length;
-      group.forEach((k, pos) => {
-        const angle = (pos / group.length) * Math.PI * 2 - Math.PI / 2;
-        const rk = result[k]!;
-        rk._sLat = cLat + spread * Math.cos(angle);
-        rk._sLon = cLon + spread * Math.sin(angle);
-      });
-    }
-    return result;
-  }
-
   private createMilitaryVesselsLayer(vessels: MilitaryVessel[]): IconLayer {
-    const scattered = this.scatterVessels(vessels);
     return new IconLayer({
       id: 'military-vessels-layer',
-      data: scattered,
-      getPosition: (d) => [d._sLon, d._sLat],
-      getIcon: () => 'marker',
-      iconAtlas: '/icons/aircraft-carrier.png',
-      iconMapping: { marker: { x: 0, y: 0, width: 512, height: 512, mask: false } },
+      data: vessels,
+      getPosition: (d) => [d.lon, d.lat],
+      getIcon: () => 'vessel',
+      iconAtlas: 'https://cdn-icons-png.flaticon.com/512/6175/6175141.png',
+      iconMapping: { vessel: { x: 0, y: 0, width: 512, height: 512, mask: false } },
       getSize: 24,
       sizeMinPixels: 12,
       sizeMaxPixels: 32,
@@ -2746,14 +2444,13 @@ export class DeckGLMap {
   }
 
   private createMilitaryVesselClustersLayer(clusters: MilitaryVesselCluster[]): IconLayer {
-    const scattered = this.scatterVessels(clusters);
     return new IconLayer({
       id: 'military-vessel-clusters-layer',
-      data: scattered,
-      getPosition: (d) => [d._sLon, d._sLat],
-      getIcon: () => 'marker',
-      iconAtlas: '/icons/aircraft-carrier.png',
-      iconMapping: { marker: { x: 0, y: 0, width: 512, height: 512, mask: false } },
+      data: clusters,
+      getPosition: (d) => [d.lon, d.lat],
+      getIcon: () => 'vessel',
+      iconAtlas: 'https://cdn-icons-png.flaticon.com/512/6175/6175141.png',
+      iconMapping: { vessel: { x: 0, y: 0, width: 512, height: 512, mask: false } },
       getSize: (d: MilitaryVesselCluster) => 24 + Math.min(8, (d.vesselCount || 1) * 0.7),
       sizeMinPixels: 14,
       sizeMaxPixels: 36,
@@ -3626,8 +3323,7 @@ export class DeckGLMap {
     if (!info.object) return null;
 
     const rawLayerId = info.layer?.id || '';
-    const strippedLayerId = rawLayerId.endsWith('-ghost') ? rawLayerId.slice(0, -6) : rawLayerId;
-    const layerId = strippedLayerId.startsWith('natural-events-png-') ? 'natural-events-layer' : strippedLayerId;
+    const layerId = rawLayerId.endsWith('-ghost') ? rawLayerId.slice(0, -6) : rawLayerId;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const obj = info.object as any;
     const text = (value: unknown): string => escapeHtml(String(value ?? ''));
@@ -3788,7 +3484,6 @@ export class DeckGLMap {
       }
       case 'repair-ships-layer':
         return { html: `<div class="deckgl-tooltip"><strong>${text(obj.name || t('components.deckgl.tooltip.repairShip'))}</strong><br/>${text(obj.status)}</div>` };
-<<<<<<< HEAD
       // All weather sub-layers share the same tooltip
       case 'weather-tornado-layer':
       case 'weather-flood-layer':
@@ -3799,10 +3494,6 @@ export class DeckGLMap {
       case 'weather-fire-layer':
       case 'weather-wind-layer':
       case 'weather-default-layer': {
-=======
-      case 'weather-layer':
-      case 'weather-flood-layer': {
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
         const areaDesc = typeof obj.areaDesc === 'string' ? obj.areaDesc : '';
         const area = areaDesc ? `<br/><small>${text(areaDesc.slice(0, 50))}${areaDesc.length > 50 ? '...' : ''}</small>` : '';
         return { html: `<div class="deckgl-tooltip"><strong>${text(obj.event || t('components.deckgl.layers.weatherAlerts'))}</strong><br/>${text(obj.severity)}${area}</div>` };
@@ -3896,8 +3587,7 @@ export class DeckGLMap {
     }
 
     const rawClickLayerId = info.layer?.id || '';
-    const strippedClickLayerId = rawClickLayerId.endsWith('-ghost') ? rawClickLayerId.slice(0, -6) : rawClickLayerId;
-    const layerId = strippedClickLayerId.startsWith('natural-events-png-') ? 'natural-events-layer' : strippedClickLayerId;
+    const layerId = rawClickLayerId.endsWith('-ghost') ? rawClickLayerId.slice(0, -6) : rawClickLayerId;
 
     // Hotspots show popup with related news
     if (layerId === 'hotspots-layer') {
@@ -4103,7 +3793,6 @@ export class DeckGLMap {
       'cables-layer': 'cable',
       'pipelines-layer': 'pipeline',
       'earthquakes-layer': 'earthquake',
-<<<<<<< HEAD
       'weather-tornado-layer': 'weather',
       'weather-flood-layer': 'weather',
       'weather-thunderstorm-layer': 'weather',
@@ -4113,10 +3802,6 @@ export class DeckGLMap {
       'weather-fire-layer': 'weather',
       'weather-wind-layer': 'weather',
       'weather-default-layer': 'weather',
-=======
-      'weather-layer': 'weather',
-      'weather-flood-layer': 'weather',
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
       'outages-layer': 'outage',
       'cyber-threats-layer': 'cyberThreat',
       'iran-events-layer': 'iranEvent',
@@ -4201,8 +3886,7 @@ export class DeckGLMap {
     if (!info.object || !this.onEntityClick) return;
 
     const rawLayerId = info.layer?.id || '';
-    const strippedHoverLayerId = rawLayerId.endsWith('-ghost') ? rawLayerId.slice(0, -6) : rawLayerId;
-    const layerId = strippedHoverLayerId.startsWith('natural-events-png-') ? 'natural-events-layer' : strippedHoverLayerId;
+    const layerId = rawLayerId.endsWith('-ghost') ? rawLayerId.slice(0, -6) : rawLayerId;
 
     if (layerId === 'tech-hq-clusters-layer') {
       const cluster = info.object as MapTechHQCluster;
@@ -4269,7 +3953,6 @@ export class DeckGLMap {
       'cables-layer': 'cable',
       'pipelines-layer': 'pipeline',
       'earthquakes-layer': 'earthquake',
-<<<<<<< HEAD
       'weather-tornado-layer': 'weather',
       'weather-flood-layer': 'weather',
       'weather-thunderstorm-layer': 'weather',
@@ -4279,10 +3962,6 @@ export class DeckGLMap {
       'weather-fire-layer': 'weather',
       'weather-wind-layer': 'weather',
       'weather-default-layer': 'weather',
-=======
-      'weather-layer': 'weather',
-      'weather-flood-layer': 'weather',
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
       'outages-layer': 'outage',
       'cyber-threats-layer': 'cyberThreat',
       'iran-events-layer': 'iranEvent',
@@ -4647,18 +4326,6 @@ export class DeckGLMap {
     header.append(title, status);
     layersPanel.appendChild(header);
 
-    // Search input
-    const searchWrap = document.createElement('div');
-    searchWrap.className = 'layer-search-wrap';
-    const searchInput = document.createElement('input');
-    searchInput.type = 'text';
-    searchInput.className = 'layer-search-input';
-    searchInput.placeholder = 'Search layers…';
-    searchInput.autocomplete = 'off';
-    searchInput.spellcheck = false;
-    searchWrap.appendChild(searchInput);
-    layersPanel.appendChild(searchWrap);
-
     // Build layer list
     const list = document.createElement('div');
     list.className = 'toggle-list map-tray-body';
@@ -4737,17 +4404,6 @@ export class DeckGLMap {
     this.renderCustomCategories(list, status, layersPanel, layerConfig);
 
     layersPanel.appendChild(list);
-
-    // Wire up search filter
-    searchInput.addEventListener('input', () => {
-      const q = searchInput.value.trim().toLowerCase();
-      list.querySelectorAll<HTMLElement>('.layer-toggle').forEach(el => {
-        const labelText = el.querySelector('.toggle-label')?.textContent?.toLowerCase() ?? '';
-        el.style.display = !q || labelText.includes(q) ? '' : 'none';
-      });
-    });
-    // Stop wheel events on search input from scrolling the map
-    searchInput.addEventListener('wheel', e => e.stopPropagation(), { passive: true });
 
     // Keep reference for event binding below
     const toggles = layersPanel;
@@ -4883,103 +4539,6 @@ export class DeckGLMap {
     });
   }
 
-<<<<<<< HEAD
-=======
-  /** Open the custom category creation modal */
-  protected _openCustomCategoryModal(
-    layerConfig: Array<{ key: string; label: string; icon: string; premium?: string }>,
-    list: HTMLElement,
-    status: HTMLElement,
-    layersPanel: HTMLElement,
-  ): void {
-    // Remove any existing modal
-    document.querySelector('.custom-category-modal-overlay')?.remove();
-
-    const overlay = document.createElement('div');
-    overlay.className = 'custom-category-modal-overlay';
-
-    const modal = document.createElement('div');
-    modal.className = 'custom-category-modal';
-
-    const title = document.createElement('div');
-    title.className = 'custom-category-modal-title';
-    title.textContent = 'New Custom Category';
-    modal.appendChild(title);
-
-    const nameLabel = document.createElement('label');
-    nameLabel.className = 'custom-category-modal-label';
-    nameLabel.textContent = 'Category name';
-    const nameInput = document.createElement('input');
-    nameInput.type = 'text';
-    nameInput.className = 'custom-category-modal-input';
-    nameInput.placeholder = 'e.g. My Watch List';
-    nameInput.maxLength = 40;
-    nameLabel.appendChild(nameInput);
-    modal.appendChild(nameLabel);
-
-    const sourcesLabel = document.createElement('div');
-    sourcesLabel.className = 'custom-category-modal-label';
-    sourcesLabel.textContent = 'Select sources';
-    modal.appendChild(sourcesLabel);
-
-    const sourcesList = document.createElement('div');
-    sourcesList.className = 'custom-category-modal-sources';
-    modal.appendChild(sourcesList);
-
-    // All available layers for this variant
-    const allLayers = getLayersForVariant((SITE_VARIANT || 'full') as MapVariant, 'flat');
-    allLayers.forEach(def => {
-      const row = document.createElement('label');
-      row.className = 'custom-category-source-row';
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.value = def.key;
-      const iconEl = document.createElement('span');
-      iconEl.className = 'toggle-icon';
-      iconEl.style.color = resolveLayerAccentColor(def.key, getCurrentTheme());
-      iconEl.innerHTML = def.icon;
-      const lbl = document.createElement('span');
-      lbl.textContent = resolveLayerLabel(def, t);
-      row.append(cb, iconEl, lbl);
-      sourcesList.appendChild(row);
-    });
-
-    const actions = document.createElement('div');
-    actions.className = 'custom-category-modal-actions';
-
-    const cancelBtn = document.createElement('button');
-    cancelBtn.className = 'custom-category-modal-btn cancel';
-    cancelBtn.textContent = 'Cancel';
-    cancelBtn.addEventListener('click', () => overlay.remove());
-
-    const createBtn = document.createElement('button');
-    createBtn.className = 'custom-category-modal-btn create';
-    createBtn.textContent = 'Create';
-    createBtn.addEventListener('click', () => {
-      const name = nameInput.value.trim();
-      const selectedLayers = Array.from(sourcesList.querySelectorAll<HTMLInputElement>('input:checked'))
-        .map(cb => cb.value as keyof MapLayers);
-      if (!name) { nameInput.focus(); return; }
-      if (selectedLayers.length === 0) return;
-
-      const newCat: CustomCategory = { id: Date.now().toString(), name, layers: selectedLayers };
-      this.customCategories = [...this.customCategories, newCat];
-      saveCustomCategories(this.customCategories);
-      this.renderCustomCategories(list, status, layersPanel, layerConfig);
-      overlay.remove();
-    });
-
-    actions.append(cancelBtn, createBtn);
-    modal.appendChild(actions);
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-
-    // Close on overlay click
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-    nameInput.focus();
-  }
-
->>>>>>> 0cb63b6e (fix(types): resolve pre-existing TypeScript errors to unblock CI)
   /** Clear all active layers */
   private clearAllLayers(): void {
     const layerDefs = getLayersForVariant((SITE_VARIANT || 'full') as MapVariant, 'flat');
@@ -5336,13 +4895,11 @@ export class DeckGLMap {
     this.renderPaused = paused;
     if (paused) {
       this.stopPulseAnimation();
-      this.stopFlowAnimation();
       this.stopDayNightTimer();
       return;
     }
 
     this.syncPulseAnimation();
-    this.syncFlowAnimation();
     if (this.state.layers.dayNight) this.startDayNightTimer();
     if (!paused && this.renderPending) {
       this.renderPending = false;
@@ -5369,7 +4926,6 @@ export class DeckGLMap {
       console.warn(`[DeckGLMap] updateLayers took ${elapsed.toFixed(2)}ms (>16ms budget), dirty=${dirty ? [...dirty].join(',') : 'full'}`);
     }
     this.updateZoomHints();
-    this.syncFlowAnimation();
   }
 
   private updateZoomHints(): void {
@@ -5492,8 +5048,8 @@ export class DeckGLMap {
       data: events,
       getPosition: (d) => [d.longitude, d.latitude],
       getIcon: () => 'marker',
-      iconAtlas: '/icons/armed-conflict.png',
-      iconMapping: { marker: { x: 0, y: 0, width: 512, height: 512, mask: false } },
+      iconAtlas: getSharedLayerIconAtlas('ucdpEvents'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
       getSize: (d) => Math.min(18, Math.max(11, Math.sqrt(d.deaths_best || 1) * 2 + 11)),
       sizeMinPixels: 8,
       sizeMaxPixels: 20,
@@ -6847,7 +6403,6 @@ export class DeckGLMap {
       this.styleLoadTimeoutId = null;
     }
     this.stopPulseAnimation();
-    this.stopFlowAnimation();
     this.stopDayNightTimer();
     if (this.aircraftFetchTimer) {
       clearInterval(this.aircraftFetchTimer);
