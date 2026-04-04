@@ -443,6 +443,95 @@
   text-decoration: underline;
 }
 
+/* ── Nuclear / Irradiator photo ─────────────────────────────────────── */
+
+.edp-base-photo {
+  margin-bottom: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.edp-base-photo img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  background: color-mix(in srgb, var(--surface) 70%, black);
+}
+
+.edp-base-photo-credit {
+  padding: 6px 10px;
+  font-size: 10px;
+  color: var(--text-faint);
+  border-top: 1px solid var(--border);
+}
+
+.edp-base-photo-placeholder {
+  margin-bottom: 12px;
+  padding: 24px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--surface) 80%, black);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+
+.edp-nuclear-photo {
+  margin-bottom: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.edp-nuclear-photo-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  background: color-mix(in srgb, var(--surface) 70%, black);
+}
+
+.edp-nuclear-photo-credit {
+  padding: 6px 10px;
+  font-size: 10px;
+  color: var(--text-faint);
+  border-top: 1px solid var(--border);
+}
+
+.edp-nuclear-photo-placeholder {
+  margin-bottom: 12px;
+  padding: 24px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--surface) 80%, black);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+
+.edp-wiki-loading {
+  padding: 12px 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.edp-wiki-link {
+  display: inline-block;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.edp-wiki-link:hover {
+  text-decoration: underline;
+}
+
 /* ── Launch schedule items ──────────────────────────────────────────── */
 
 .edp-launch-item {
@@ -876,3 +965,556 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+
+/* ── Prediction Market Cards ── */
+.edp-trade-btn {
+  display: block;
+  margin: 12px 16px;
+  padding: 12px;
+  text-align: center;
+  background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.edp-trade-btn:hover {
+  opacity: 0.9;
+}
+
+/* Accordion */
+.edp-poly-accordion {
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+}
+
+.edp-poly-accordion-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.edp-poly-accordion-header:hover {
+  background: color-mix(in srgb, var(--surface) 60%, var(--border-subtle));
+}
+
+.edp-poly-accordion-title {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.edp-poly-price {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.edp-poly-price--active {
+  background: rgba(139, 92, 246, 0.15);
+  color: #A78BFA;
+}
+
+.edp-poly-price--closed {
+  background: var(--border-subtle);
+  color: var(--text-faint);
+}
+
+.edp-poly-chevron {
+  font-size: 10px;
+  color: var(--text-faint);
+  transition: transform 0.15s;
+  flex-shrink: 0;
+}
+
+.edp-poly-accordion-body {
+  padding: 0 12px 12px;
+}
+
+.edp-poly-chart {
+  margin-bottom: 12px;
+}
+
+.edp-poly-chart-svg {
+  width: 100%;
+  height: 100px;
+  display: block;
+}
+
+.edp-poly-chart-placeholder {
+  color: var(--text-faint);
+  font-size: 12px;
+  padding: 20px 0;
+  text-align: center;
+}
+
+/* Yes/No bar */
+.edp-poly-bar-track {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.edp-poly-bar-yes {
+  background: #22C55E;
+  transition: width 0.3s;
+}
+
+.edp-poly-bar-no {
+  background: #EF4444;
+  transition: width 0.3s;
+}
+
+.edp-poly-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  margin-bottom: 8px;
+}
+
+.edp-poly-bar-label--yes {
+  color: #22C55E;
+  font-weight: 600;
+}
+
+.edp-poly-bar-label--no {
+  color: #EF4444;
+  font-weight: 600;
+}
+
+/* Stats */
+.edp-poly-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.edp-poly-stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.edp-poly-stat-label {
+  color: var(--text-muted);
+}
+
+.edp-poly-stat-value {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Trade link inside accordion */
+.edp-poly-trade-link {
+  display: block;
+  text-align: center;
+  padding: 8px;
+  background: rgba(139, 92, 246, 0.1);
+  color: #A78BFA;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  text-decoration: none;
+  margin-top: 4px;
+}
+
+.edp-poly-trade-link:hover {
+  background: rgba(139, 92, 246, 0.2);
+}
+
+.edp-poly-closed {
+  text-align: center;
+  padding: 8px;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+/* Polymarket collapsible sections (holders, comments) */
+.edp-poly-section {
+  margin-top: 8px;
+}
+
+.edp-poly-section-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  padding: 8px 0 !important;
+  background: none !important;
+  border: none !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  color: var(--text-secondary) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  cursor: pointer !important;
+  text-align: left !important;
+  outline: none !important;
+  font-family: inherit !important;
+  line-height: inherit !important;
+  box-shadow: none !important;
+}
+
+.edp-poly-section-header:hover {
+  color: var(--text);
+}
+
+.edp-poly-section-toggle {
+  cursor: pointer;
+}
+
+.edp-poly-section-toggle .edp-poly-chevron {
+  font-size: 10px;
+  color: var(--text-faint);
+  transition: transform 0.15s;
+}
+
+.edp-poly-section-body {
+  padding-top: 8px;
+}
+
+/* Holders */
+.edp-poly-holder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.edp-poly-holder:last-child {
+  border-bottom: none;
+}
+
+.edp-poly-holder-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.edp-poly-holder-avatar--yes {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22C55E;
+}
+
+.edp-poly-holder-avatar--no {
+  background: rgba(239, 68, 68, 0.15);
+  color: #EF4444;
+}
+
+.edp-poly-holder-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.edp-poly-holder-address {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.edp-poly-holder-shares {
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.edp-poly-holder-side {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.edp-poly-holder-side--yes {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22C55E;
+}
+
+.edp-poly-holder-side--no {
+  background: rgba(239, 68, 68, 0.12);
+  color: #EF4444;
+}
+
+/* Comments */
+.edp-poly-comment {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.edp-poly-comment:last-child {
+  border-bottom: none;
+}
+
+.edp-poly-comment-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.edp-poly-comment-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.edp-poly-comment-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.edp-poly-comment-author {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.edp-poly-comment-time {
+  font-size: 9px;
+  color: var(--text-faint);
+}
+
+.edp-poly-comment-text {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.edp-poly-comment-likes {
+  font-size: 10px;
+  color: var(--text-faint);
+  margin-top: 4px;
+}
+
+
+/* ── Prediction Market Cards ── */
+.edp-trade-btn {
+  display: block;
+  margin: 12px 16px;
+  padding: 12px;
+  text-align: center;
+  background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.edp-trade-btn:hover {
+  opacity: 0.9;
+}
+
+/* Accordion */
+.edp-poly-accordion {
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+}
+
+.edp-poly-accordion-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.edp-poly-accordion-header:hover {
+  background: color-mix(in srgb, var(--surface) 60%, var(--border-subtle));
+}
+
+.edp-poly-accordion-title {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.edp-poly-price {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.edp-poly-price--active {
+  background: rgba(139, 92, 246, 0.15);
+  color: #A78BFA;
+}
+
+.edp-poly-price--closed {
+  background: var(--border-subtle);
+  color: var(--text-faint);
+}
+
+.edp-poly-chevron {
+  font-size: 10px;
+  color: var(--text-faint);
+  transition: transform 0.15s;
+  flex-shrink: 0;
+}
+
+.edp-poly-accordion-body {
+  padding: 0 12px 12px;
+}
+
+.edp-poly-chart {
+  margin-bottom: 12px;
+}
+
+.edp-poly-chart-svg {
+  width: 100%;
+  height: 100px;
+  display: block;
+}
+
+.edp-poly-chart-placeholder {
+  color: var(--text-faint);
+  font-size: 12px;
+  padding: 20px 0;
+  text-align: center;
+}
+
+/* Yes/No bar */
+.edp-poly-bar-track {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.edp-poly-bar-yes {
+  background: #22C55E;
+  transition: width 0.3s;
+}
+
+.edp-poly-bar-no {
+  background: #EF4444;
+  transition: width 0.3s;
+}
+
+.edp-poly-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  margin-bottom: 8px;
+}
+
+.edp-poly-bar-label--yes {
+  color: #22C55E;
+  font-weight: 600;
+}
+
+.edp-poly-bar-label--no {
+  color: #EF4444;
+  font-weight: 600;
+}
+
+/* Stats */
+.edp-poly-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.edp-poly-stat {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.edp-poly-stat-label {
+  color: var(--text-muted);
+}
+
+.edp-poly-stat-value {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Trade link inside accordion */
+.edp-poly-trade-link {
+  display: block;
+  text-align: center;
+  padding: 8px;
+  background: rgba(139, 92, 246, 0.1);
+  color: #A78BFA;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  text-decoration: none;
+  margin-top: 4px;
+}
+
+.edp-poly-trade-link:hover {
+  background: rgba(139, 92, 246, 0.2);
+}
+
+.edp-poly-closed {
+  text-align: center;
+  padding: 8px;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-style: italic;
+}
+

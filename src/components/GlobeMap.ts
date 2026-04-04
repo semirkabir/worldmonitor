@@ -1081,6 +1081,7 @@ export class GlobeMap {
       const popupType = kindToPopupType[d._kind];
       if (popupType) {
         this.hideTooltip();
+        this.zoomToMarker(d);
         this.onEntityClickCb(popupType, d);
       }
     } else {
@@ -1200,6 +1201,15 @@ export class GlobeMap {
     const alt = Math.min(4.0, (pov.altitude ?? 1.8) * 1.6);
     this.globe.pointOfView({ lat: pov.lat, lng: pov.lng, altitude: alt }, 500);
     setTimeout(() => this.flushMarkers(), 600);
+  }
+
+  private zoomToMarker(d: GlobeMarker): void {
+    if (!this.globe) return;
+    const lat = d._lat;
+    const lng = d._lng;
+    if (lat == null || lng == null) return;
+    this.globe.pointOfView({ lat, lng, altitude: 0.3 }, 800);
+    setTimeout(() => this.flushMarkers(), 900);
   }
 
   private createLayerToggles(): void {

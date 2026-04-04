@@ -258,7 +258,17 @@ export class SearchManager implements AppModule {
         break;
       }
       case 'prediction': {
-        this.scrollToPanel('polymarket');
+        const market = result.data as { title?: string; slug?: string; url?: string; volume?: number; endDate?: string; yesPrice?: number };
+        this.ctx.entityDetailPanel?.show('predictionMarket', {
+          id: market.slug || '',
+          title: market.title || '',
+          slug: market.slug || '',
+          category: 'geopolitics',
+          volume: market.volume || 0,
+          endDate: market.endDate,
+          closed: false,
+          url: market.url || '',
+        });
         break;
       }
       case 'base': {

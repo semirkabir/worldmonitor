@@ -771,3 +771,159 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Macro economic cards grid ── */
+.cdp-macro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.cdp-macro-card {
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 72px;
+}
+
+.cdp-macro-card--unavailable {
+  opacity: 0.5;
+}
+
+.cdp-macro-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cdp-macro-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.cdp-macro-trend {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.cdp-macro-trend--up {
+  color: var(--semantic-critical);
+}
+
+.cdp-macro-trend--down {
+  color: var(--semantic-normal);
+}
+
+.cdp-macro-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.cdp-macro-card--unavailable .cdp-macro-value {
+  font-size: 14px;
+  color: var(--text-faint);
+}
+
+.cdp-macro-year {
+  font-size: 9px;
+  color: var(--text-faint);
+}
+
+@media (max-width: 768px) {
+  .cdp-macro-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .cdp-macro-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Macro economic cards grid ── */
+.cdp-macro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.cdp-macro-card {
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 72px;
+}
+
+.cdp-macro-card--unavailable {
+  opacity: 0.5;
+}
+
+.cdp-macro-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cdp-macro-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.cdp-macro-trend {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.cdp-macro-trend--up {
+  color: var(--semantic-critical);
+}
+
+.cdp-macro-trend--down {
+  color: var(--semantic-normal);
+}
+
+.cdp-macro-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.cdp-macro-card--unavailable .cdp-macro-value {
+  font-size: 14px;
+  color: var(--text-faint);
+}
+
+.cdp-macro-year {
+  font-size: 9px;
+  color: var(--text-faint);
+}
+
+@media (max-width: 768px) {
+  .cdp-macro-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .cdp-macro-grid {
+    grid-template-columns: 1fr;
+  }
+}

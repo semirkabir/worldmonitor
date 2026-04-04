@@ -7,6 +7,7 @@ import type {
   CountryDeepDiveSignalDetails,
 } from '@/components/CountryBriefPanel';
 import { CountryDeepDivePanel } from '@/components/CountryDeepDivePanel';
+import { fetchCountryMacroData } from '@/services/economic';
 import { reverseGeocode } from '@/utils/reverse-geocode';
 import {
   getCountryAtCoordinates,
@@ -181,6 +182,12 @@ export class CountryIntelManager implements AppModule {
     this.ctx.countryBriefPage.updateSignalDetails?.(this.buildSignalDetails(code));
     this.ctx.countryBriefPage.updateMilitaryActivity?.(this.buildMilitarySummary(code, country));
     this.ctx.countryBriefPage.updateEconomicIndicators?.(this.buildEconomicIndicators(code, score, null));
+
+    // Fetch macroeconomic cards (debt/GDP, CPI, GDP growth, CDS, FX reserves, current account)
+    fetchCountryMacroData(code).then((cards) => {
+      if (this.ctx.countryBriefPage?.getCode() !== code) return;
+      this.ctx.countryBriefPage.updateMacroCards?.(cards);
+    });
 
     const marketClient = new MarketServiceClient('', { fetch: (...args: Parameters<typeof globalThis.fetch>) => globalThis.fetch(...args) });
     const stockPromise = marketClient.getCountryStockIndex({ countryCode: code })

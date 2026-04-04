@@ -3,7 +3,6 @@
  */
 import { escapeHtml } from '@/utils/sanitize';
 import { t } from '@/services/i18n';
-import { sanitizeUrl } from '@/utils/sanitize';
 import { getCSSColor } from '@/utils';
 import type { CountryScore } from '@/services/country-instability';
 import type { PredictionMarket } from '@/services/prediction';
@@ -227,19 +226,40 @@ export class CountryIntelModal {
       return;
     }
 
-    const items = markets.map(market => {
-      const href = sanitizeUrl(market.url || '#') || '#';
+    const items = markets.map((market, idx) => {
       return `
-      <div class="market-item">
-        <a href="${href}" target="_blank" rel="noopener noreferrer" class="prediction-market-card">
+      <div class="market-item" data-market-idx="${idx}" style="cursor:pointer;">
+        <div class="prediction-market-card">
         <div class="market-provider">Polymarket</div>
         <div class="market-question">${escapeHtml(market.title)}</div>
         <div class="market-prob">${market.yesPrice.toFixed(1)}%</div>
-      </a>
-    `;
+      </div>
+    </div>
+  `;
     }).join('');
 
     section.innerHTML = `<div class="markets-label">📊 ${t('modals.countryIntel.predictionMarkets')}</div>${items}`;
+
+    section.querySelectorAll('.market-item').forEach((item: Element) => {
+      item.addEventListener('click', () => {
+        const idx = parseInt(item.getAttribute('data-market-idx') || '0', 10);
+        const market = markets[idx];
+        if (!market) return;
+        const panel = (window as any).__entityDetailPanel;
+        if (panel) {
+          panel.show('predictionMarket', {
+            id: market.slug || '',
+            title: market.title,
+            slug: market.slug || '',
+            category: 'geopolitics',
+            volume: market.volume,
+            endDate: market.endDate,
+            closed: false,
+            url: market.url,
+          });
+        }
+      });
+    });
   }
 
   public updateStock(data: StockIndexData): void {

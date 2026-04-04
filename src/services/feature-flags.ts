@@ -6,18 +6,12 @@
  * via the /api/user-tier endpoint using the Firebase ID token.
  */
 
-<<<<<<< HEAD
-import { isLoggedIn } from './user-auth';
-=======
 import { getFirebaseAuth } from './firebase-auth';
-import { isLoggedIn, getUserId } from './user-auth';
->>>>>>> 1614038b (chore(env): update example environment variables for API keys)
+import { isLoggedIn } from './user-auth';
 
 export type FeatureTier = 'free' | 'pro' | 'business' | 'enterprise';
 type TierResponse = 'free' | 'pro' | 'business' | 'enterprise' | 'anonymous';
 
-<<<<<<< HEAD
-=======
 export interface TierInfo {
   tier: TierResponse;
   requestsPerHour: number;
@@ -27,7 +21,6 @@ export interface TierInfo {
 
 const TIER_ORDER: Record<string, number> = { anonymous: 0, free: 1, pro: 2, business: 3, enterprise: 4 };
 
->>>>>>> 1614038b (chore(env): update example environment variables for API keys)
 export interface Feature {
   key: string;
   name: string;
@@ -56,7 +49,7 @@ let tierCacheExpiry = 0;
 
 const TIER_CACHE_MS = 5 * 60 * 1000;
 
-async function resolveTierFromServer(): Promise<TierResponse> {
+async function resolveTierFromServer(): Promise<FeatureTier> {
   const auth = getFirebaseAuth();
   if (!auth) return 'free';
 
@@ -118,4 +111,3 @@ export function getFeatureTier(featureKey: string): TierResponse | 'logged_in' {
   const feature = FEATURES.find(f => f.key === featureKey);
   return feature?.tier ?? 'free';
 }
-

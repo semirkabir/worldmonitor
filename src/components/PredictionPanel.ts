@@ -1,6 +1,6 @@
 import { Panel } from './Panel';
 import type { PredictionMarket } from '@/services/prediction';
-import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
+import { escapeHtml } from '@/utils/sanitize';
 import { t } from '@/services/i18n';
 
 export class PredictionPanel extends Panel {
@@ -37,10 +37,7 @@ export class PredictionPanel extends Panel {
         const noPercent = 100 - yesPercent;
         const volumeStr = this.formatVolume(p.volume);
 
-        const safeUrl = sanitizeUrl(p.url || '');
-        const titleHtml = safeUrl
-          ? `<a href="${safeUrl}" target="_blank" rel="noopener" class="prediction-question prediction-link">${escapeHtml(p.title)}</a>`
-          : `<div class="prediction-question">${escapeHtml(p.title)}</div>`;
+        const titleHtml = `<div class="prediction-question">${escapeHtml(p.title)}</div>`;
 
         let expiryHtml = '';
         if (p.endDate) {
@@ -78,10 +75,7 @@ export class PredictionPanel extends Panel {
     // Attach click listeners
     const items = this.element.querySelectorAll('.prediction-item');
     items.forEach((item: Element, index: number) => {
-      item.addEventListener('click', (e: Event) => {
-        // Don't trigger if they clicked the external link directly
-        if ((e.target as HTMLElement).tagName.toLowerCase() === 'a') return;
-        
+      item.addEventListener('click', () => {
         const market = data[index];
         if (market && this.onMarketClick) {
           this.onMarketClick(market);

@@ -739,24 +739,17 @@ export class PanelLayoutManager implements AppModule {
 
     const predictionPanel = new PredictionPanel();
     predictionPanel.setOnMarketClick((market) => {
-      if (this.ctx.predictionBriefPage) {
-        this.ctx.predictionBriefPage.showLoading();
-        import('@/services/prediction').then(module => {
-           module.fetchMarketDetails(market.slug || '')
-            .then(details => {
-              if (details) {
-                this.ctx.predictionBriefPage?.show(market, details);
-              } else {
-                this.ctx.predictionBriefPage?.hide();
-              }
-            })
-            .catch(err => {
-              console.error('[Prediction Market] Failed to load details', err);
-              this.ctx.predictionBriefPage?.hide();
-            });
-        }).catch(err => {
-          console.error('[Prediction Market] Failed to load prediction module', err);
-          this.ctx.predictionBriefPage?.hide();
+      if (this.ctx.entityDetailPanel) {
+        this.ctx.countryBriefPage?.hide();
+        this.ctx.entityDetailPanel.show('predictionMarket', {
+          id: market.slug || '',
+          title: market.title,
+          slug: market.slug || '',
+          category: 'geopolitics',
+          volume: market.volume,
+          endDate: market.endDate,
+          closed: false,
+          url: market.url,
         });
       }
     });

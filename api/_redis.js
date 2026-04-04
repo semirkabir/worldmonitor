@@ -45,6 +45,50 @@ export async function redisGet(key, timeoutMs = 3000) {
 }
 
 /**
+ * SET a single key in Redis via the Upstash REST API with optional TTL.
+ * @param {string} key
+ * @param {string} value
+ * @param {number} [ttlSeconds] - Optional TTL in seconds
+ * @param {number} [timeoutMs=3000]
+ * @returns {Promise<void>}
+ */
+export async function redisSet(key, value, ttlSeconds, timeoutMs = 3000) {
+  const { url, token } = getRedisCredentials();
+  let setUrl = `${url}/set/${encodeURIComponent(key)}/${encodeURIComponent(value)}`;
+  if (ttlSeconds) {
+    setUrl += `/EX/${ttlSeconds}`;
+  }
+  const resp = await fetch(setUrl, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!resp.ok) throw new Error(`Redis SET HTTP ${resp.status}`);
+}
+
+/**
+ * SET a single key in Redis via the Upstash REST API with optional TTL.
+ * @param {string} key
+ * @param {string} value
+ * @param {number} [ttlSeconds] - Optional TTL in seconds
+ * @param {number} [timeoutMs=3000]
+ * @returns {Promise<void>}
+ */
+export async function redisSet(key, value, ttlSeconds, timeoutMs = 3000) {
+  const { url, token } = getRedisCredentials();
+  let setUrl = `${url}/set/${encodeURIComponent(key)}/${encodeURIComponent(value)}`;
+  if (ttlSeconds) {
+    setUrl += `/EX/${ttlSeconds}`;
+  }
+  const resp = await fetch(setUrl, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!resp.ok) throw new Error(`Redis SET HTTP ${resp.status}`);
+}
+
+/**
  * Scan Redis keys matching a pattern.
  * @param {string} pattern - MATCH pattern (e.g. 'seed-meta:*')
  * @param {number} [maxIterations=5]

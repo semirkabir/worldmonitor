@@ -202,7 +202,7 @@ export class App {
 
     // One-time migration per variant: ensure each variant's core layer group
     // and default-enabled panels start active, even for older saved settings.
-    const REQUIRED_DEFAULTS_MIGRATION_KEY = `worldmonitor-required-defaults-${currentVariant}-v2`;
+    const REQUIRED_DEFAULTS_MIGRATION_KEY = `worldmonitor-required-defaults-${currentVariant}-v3`;
     if (!localStorage.getItem(REQUIRED_DEFAULTS_MIGRATION_KEY)) {
       let mapLayersChanged = false;
       requiredLayers.forEach((layer) => {

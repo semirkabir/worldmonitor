@@ -19,7 +19,7 @@ export function getSearchResultActionLabel(type: SearchResultType): string {
     news: 'Jump to matching coverage',
     hotspot: 'Focus this map hotspot',
     market: 'Jump to markets panel',
-    prediction: 'Jump to prediction panel',
+    prediction: 'Open market details',
     conflict: 'Focus this conflict zone',
     base: 'Focus this base on the map',
     pipeline: 'Open pipeline on the map',

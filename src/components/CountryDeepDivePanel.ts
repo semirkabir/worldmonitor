@@ -12,12 +12,10 @@ import { PORTS } from '@/config/ports';
 import { haversineKm } from '@/utils/geo';
 import type {
   CountryBriefPanel,
-  CountryIntelData,
-  StockIndexData,
   CountryDeepDiveSignalDetails,
-  CountryDeepDiveSignalItem,
   CountryDeepDiveMilitarySummary,
   CountryDeepDiveEconomicIndicator,
+  MacroEconomicCardData,
 } from './CountryBriefPanel';
 import type { MapContainer } from './MapContainer';
 
@@ -68,6 +66,7 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
   private militaryBody: HTMLElement | null = null;
   private infrastructureBody: HTMLElement | null = null;
   private economicBody: HTMLElement | null = null;
+  private macroCards: MacroEconomicCardData[] = [];
   private marketsBody: HTMLElement | null = null;
   private briefBody: HTMLElement | null = null;
   private timelineBody: HTMLElement | null = null;
@@ -487,18 +486,28 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
 
     for (const market of markets.slice(0, 5)) {
       const item = this.el('div', 'cdp-market-item');
+      item.style.cursor = 'pointer';
+      item.addEventListener('click', () => {
+        import('@/app/app-context').then(() => {
+          const panel = (window as any).__entityDetailPanel;
+          if (panel) {
+            panel.show('predictionMarket', {
+              id: market.slug || '',
+              title: market.title,
+              slug: market.slug || '',
+              category: 'geopolitics',
+              volume: market.volume,
+              endDate: market.endDate,
+              closed: false,
+              url: market.url,
+            });
+          }
+        });
+      });
+
       const top = this.el('div', 'cdp-market-top');
       const title = this.el('div', 'cdp-market-title', market.title);
       top.append(title);
-
-      const link = sanitizeUrl(market.url || '');
-      if (link) {
-        const anchor = this.el('a', 'cdp-market-link', 'Open');
-        anchor.setAttribute('href', link);
-        anchor.setAttribute('target', '_blank');
-        anchor.setAttribute('rel', 'noopener');
-        top.append(anchor);
-      }
 
       const prob = this.el('div', 'cdp-market-prob', `Probability: ${Math.round(market.yesPrice)}%`);
       const meta = this.el('div', 'cdp-market-meta', market.endDate ? `Ends ${this.shortDate(market.endDate)}` : 'Active');
@@ -798,27 +807,33 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
     if (!this.economicBody) return;
     this.economicBody.replaceChildren();
 
-    if (this.economicIndicators.length === 0) {
+    if (this.macroCards.length === 0) {
       this.economicBody.append(this.makeEmpty(t('countryBrief.noIndicators')));
       return;
     }
 
-    for (const indicator of this.economicIndicators.slice(0, 3)) {
-      const row = this.el('div', 'cdp-economic-item');
-      const top = this.el('div', 'cdp-economic-top');
-      const isMarketRow = indicator.label === 'Stock Index' || indicator.label === 'Weekly Momentum';
-      const trendClass = isMarketRow ? `trend-market-${indicator.trend}` : `trend-${indicator.trend}`;
-      top.append(
-        this.el('span', 'cdp-economic-label', indicator.label),
-        this.el('span', `cdp-trend-token ${trendClass}`, this.trendArrowFromDirection(indicator.trend)),
-      );
-      const value = this.el('div', 'cdp-economic-value', indicator.value);
-      row.append(top, value);
-      if (indicator.source) {
-        row.append(this.el('div', 'cdp-economic-source', indicator.source));
+    const grid = this.el('div', 'cdp-macro-grid');
+    for (const card of this.macroCards) {
+      const el = this.el('div', `cdp-macro-card ${card.available ? '' : 'cdp-macro-card--unavailable'}`);
+      const header = this.el('div', 'cdp-macro-header');
+      const label = this.el('span', 'cdp-macro-label', card.label);
+      header.append(label);
+      if (card.available && card.trend !== 'flat') {
+        const arrow = this.el('span', `cdp-macro-trend cdp-macro-trend--${card.trend}`, card.trend === 'up' ? '▲' : '▼');
+        header.append(arrow);
       }
-      this.economicBody.append(row);
+      const value = this.el('div', 'cdp-macro-value', card.value);
+      const year = card.year ? this.el('div', 'cdp-macro-year', card.year) : null;
+      el.append(header, value);
+      if (year) el.append(year);
+      grid.append(el);
     }
+    this.economicBody.append(grid);
+  }
+
+  public updateMacroCards(cards: MacroEconomicCardData[]): void {
+    this.macroCards = cards;
+    this.renderEconomicIndicators();
   }
 
   private highlightInfrastructure(type: AssetType): void {

@@ -136,6 +136,7 @@ export class MapComponent {
   private protests: SocialUnrestEvent[] = [];
   private flightDelays: AirportDelayAlert[] = [];
   private aircraftPositions: PositionSample[] = [];
+  private aircraftDensity = 100;
   private militaryFlights: MilitaryFlight[] = [];
   private militaryFlightClusters: MilitaryFlightCluster[] = [];
   private militaryVessels: MilitaryVessel[] = [];
@@ -2497,9 +2498,11 @@ export class MapComponent {
       });
     }
 
-    // Aircraft positions (simplified dots in SVG fallback, limited to 200)
+    // Aircraft positions (simplified dots in SVG fallback, limited by density slider)
     if (this.state.layers.flights) {
-      this.aircraftPositions.slice(0, 200).forEach((ac) => {
+      const density = this.aircraftDensity / 100;
+      const maxCount = Math.max(1, Math.floor(this.aircraftPositions.length * density));
+      this.aircraftPositions.slice(0, Math.min(maxCount, 200)).forEach((ac) => {
         const pt = projection([ac.lon, ac.lat]);
         if (!pt) return;
 

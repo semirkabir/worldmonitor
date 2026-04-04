@@ -380,6 +380,77 @@ const TECH_INDICATORS: Record<string, string> = {
   'NE.EXP.GNFS.ZS': 'Exports of Goods & Services (% of GDP)',
 };
 
+const MACRO_INDICATORS: Record<string, { label: string; unit: string; wbCode: string }> = {
+  debtToGdp: { label: 'Debt to GDP', unit: '%', wbCode: 'GC.DOD.TOTL.GD.ZS' },
+  cpi: { label: 'CPI', unit: '', wbCode: 'FP.CPI.TOTL.ZG' },
+  gdpGrowth: { label: 'GDP Growth', unit: '%', wbCode: 'NY.GDP.MKTP.KD.ZG' },
+  cdsSpreads: { label: 'CDS Spreads', unit: 'bps', wbCode: '' },
+  fxReserves: { label: 'FX Reserves', unit: '$B', wbCode: 'FI.RES.TOTL.CD' },
+  currentAccount: { label: 'Current Account', unit: '% of GDP', wbCode: 'BN.CAB.XOKA.GD.ZS' },
+};
+
+export interface MacroEconomicCard {
+  key: string;
+  label: string;
+  value: string;
+  year: string;
+  trend: 'up' | 'down' | 'flat';
+  available: boolean;
+}
+
+export async function fetchCountryMacroData(countryCode: string): Promise<MacroEconomicCard[]> {
+  const cards: MacroEconomicCard[] = [];
+
+  const wbKeys = Object.entries(MACRO_INDICATORS)
+    .filter(([, v]) => v.wbCode !== '')
+    .map(([k, v]) => ({ key: k, ...v }));
+
+  const results = await Promise.allSettled(
+    wbKeys.map(async ({ key, wbCode, label, unit }) => {
+      try {
+        const resp = await getIndicatorData(wbCode, { countries: [countryCode], years: 3 });
+        const latest = resp.latestByCountry?.[countryCode];
+        if (latest && latest.value != null) {
+          const values = resp.byCountry?.[countryCode]?.values ?? [];
+          const prev = values.length > 1 ? values[values.length - 2]?.value : null;
+          let trend: 'up' | 'down' | 'flat' = 'flat';
+          if (prev != null) {
+            const diff = latest.value - prev;
+            trend = diff > 0.01 ? 'up' : diff < -0.01 ? 'down' : 'flat';
+          }
+          let displayValue: string;
+          if (unit === '$B') {
+            displayValue = `$${(latest.value / 1e9).toFixed(1)}B`;
+          } else if (unit === '%') {
+            displayValue = `${latest.value.toFixed(1)}%`;
+          } else if (unit === '% of GDP') {
+            displayValue = `${latest.value.toFixed(1)}%`;
+          } else {
+            displayValue = latest.value.toFixed(1);
+          }
+          return { key, label, value: displayValue, year: latest.year, trend, available: true };
+        }
+      } catch {
+        // fall through
+      }
+      return { key, label, value: '—', year: '', trend: 'flat' as const, available: false };
+    }),
+  );
+
+  for (const r of results) {
+    if (r.status === 'fulfilled') cards.push(r.value);
+  }
+
+  // CDS spreads — not available from World Bank, use placeholder
+  cards.push({ key: 'cdsSpreads', label: 'CDS Spreads', value: '—', year: '', trend: 'flat', available: false });
+
+  // Sort to match the desired order
+  const order = ['debtToGdp', 'cpi', 'gdpGrowth', 'cdsSpreads', 'fxReserves', 'currentAccount'];
+  cards.sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key));
+
+  return cards;
+}
+
 const TECH_COUNTRIES = [
   'USA', 'CHN', 'JPN', 'DEU', 'KOR', 'GBR', 'IND', 'ISR', 'SGP', 'TWN',
   'FRA', 'CAN', 'SWE', 'NLD', 'CHE', 'FIN', 'IRL', 'AUS', 'BRA', 'IDN',

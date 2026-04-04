@@ -1524,6 +1524,18 @@
       "sources": "{{count}} sources",
       "relatedAssetsNear": "Related assets near {{location}}"
     },
+    "articleViewer": {
+      "back": "Back to news",
+      "cached": "Cached",
+      "failedToLoad": "Failed to load article",
+      "openOriginal": "Open original"
+    },
+    "articleViewer": {
+      "back": "Back to news",
+      "cached": "Cached",
+      "failedToLoad": "Failed to load article",
+      "openOriginal": "Open original"
+    },
     "export": {
       "exportData": "Export Data"
     },
@@ -1671,6 +1683,12 @@
       "showMethodologyInfo": "Show methodology info",
       "dragToResize": "Drag to resize (double-click to reset)",
       "openSettings": "Open Settings"
+    },
+    "articleViewer": {
+      "back": "Back to news",
+      "cached": "Cached",
+      "failedToLoad": "Failed to load article",
+      "openOriginal": "Open original"
     },
     "languageSelector": {
       "selectLanguage": "Select Language",

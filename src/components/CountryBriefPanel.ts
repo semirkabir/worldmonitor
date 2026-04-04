@@ -66,6 +66,15 @@ export interface CountryDeepDiveEconomicIndicator {
   source?: string;
 }
 
+export interface MacroEconomicCardData {
+  key: string;
+  label: string;
+  value: string;
+  year: string;
+  trend: 'up' | 'down' | 'flat';
+  available: boolean;
+}
+
 export interface CountryBriefPanel {
   show(country: string, code: string, score: CountryScore | null, signals: CountryBriefSignals): void;
   hide(): void;
@@ -88,6 +97,7 @@ export interface CountryBriefPanel {
   updateSignalDetails?(details: CountryDeepDiveSignalDetails): void;
   updateMilitaryActivity?(summary: CountryDeepDiveMilitarySummary): void;
   updateEconomicIndicators?(indicators: CountryDeepDiveEconomicIndicator[]): void;
+  updateMacroCards?(cards: MacroEconomicCardData[]): void;
   maximize?(): void;
   minimize?(): void;
   getIsMaximized?(): boolean;

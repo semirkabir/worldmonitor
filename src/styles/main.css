@@ -1628,7 +1628,7 @@ canvas,
   right: 0;
   height: 20px;
   cursor: ns-resize;
-  background: linear-gradient(to top, transparent, transparent);
+  background: linear-gradient(to top, rgba(68, 136, 255, 0.15), transparent);
   z-index: 100;
   transition: background 0.2s;
   touch-action: none;
@@ -1638,7 +1638,12 @@ canvas,
 
 .panel-resize-handle:hover,
 .panel-resize-handle.active {
-  background: linear-gradient(to top, rgba(68, 136, 255, 0.15), transparent);
+  background: linear-gradient(to top, rgba(68, 136, 255, 0.25), transparent);
+}
+
+.panel-resize-handle:hover,
+.panel-resize-handle.active {
+  background: linear-gradient(to top, rgba(68, 136, 255, 0.25), transparent);
 }
 
 .panel-resize-handle::after {
@@ -1665,7 +1670,7 @@ canvas,
   bottom: 0;
   width: 20px;
   cursor: ew-resize;
-  background: linear-gradient(to left, transparent, transparent);
+  background: linear-gradient(to left, rgba(68, 136, 255, 0.15), transparent);
   z-index: 100;
   transition: background 0.2s;
   touch-action: none;
@@ -1675,7 +1680,12 @@ canvas,
 
 .panel-col-resize-handle:hover,
 .panel-col-resize-handle.active {
-  background: linear-gradient(to left, rgba(68, 136, 255, 0.15), transparent);
+  background: linear-gradient(to left, rgba(68, 136, 255, 0.25), transparent);
+}
+
+.panel-col-resize-handle:hover,
+.panel-col-resize-handle.active {
+  background: linear-gradient(to left, rgba(68, 136, 255, 0.25), transparent);
 }
 
 .panel-col-resize-handle::after {
@@ -1740,11 +1750,6 @@ body.panel-resize-active iframe {
   flex-shrink: 0;
   position: relative;
   transition: background-color 0.3s ease, border-color 0.3s ease;
-  cursor: grab;
-}
-
-.panel-header:active {
-  cursor: grabbing;
 }
 
 .panel-header-error {
@@ -3289,7 +3294,8 @@ body.live-news-fullscreen-active .panels-grid > *:not(.live-news-fullscreen) {
 }
 
 .item.alert {
-  border-left: 2px solid var(--red);
+  background: rgba(59, 130, 246, 0.08);
+  border-left: 2px solid rgba(59, 130, 246, 0.6);
   padding-left: 8px;
   margin-left: -8px;
 }
@@ -9619,7 +9625,7 @@ body.urgency-mode #header {
 }
 
 .flight-delay-marker.normal {
-  --flight-color: var(--status-live);
+  --flight-color: var(--semantic-normal);
 }
 
 .flight-delay-marker.minor {
@@ -9698,7 +9704,7 @@ body.urgency-mode #header {
 }
 
 .popup-header.flight.normal {
-  --flight-color: var(--status-live);
+  --flight-color: var(--semantic-normal);
 }
 
 .popup-header.flight.minor {
@@ -15689,9 +15695,9 @@ body.urgency-mode #header {
   background-color: transparent !important;
 }
 
-/* Override deck.gl default grab cursor - use default pointer */
+/* deck.gl grab cursor */
 #deckgl-overlay canvas {
-  cursor: default !important;
+  cursor: grab !important;
 }
 
 #deckgl-overlay canvas:active {

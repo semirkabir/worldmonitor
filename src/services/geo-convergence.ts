@@ -69,24 +69,28 @@ export function ingestProtests(events: SocialUnrestEvent[]): void {
   for (const e of events) {
     ingestGeoEvent(e.lat, e.lon, 'protest', e.time);
   }
+  if (cells.size > 500) pruneOldEvents();
 }
 
 export function ingestFlights(flights: MilitaryFlight[]): void {
   for (const f of flights) {
     ingestGeoEvent(f.lat, f.lon, 'military_flight', f.lastSeen);
   }
+  if (cells.size > 500) pruneOldEvents();
 }
 
 export function ingestVessels(vessels: MilitaryVessel[]): void {
   for (const v of vessels) {
     ingestGeoEvent(v.lat, v.lon, 'military_vessel', v.lastAisUpdate);
   }
+  if (cells.size > 500) pruneOldEvents();
 }
 
 export function ingestEarthquakes(quakes: Earthquake[]): void {
   for (const q of quakes) {
     ingestGeoEvent(q.location?.latitude ?? 0, q.location?.longitude ?? 0, 'earthquake', new Date(q.occurredAt));
   }
+  if (cells.size > 500) pruneOldEvents();
 }
 
 export interface GeoConvergenceAlert {

@@ -167,6 +167,23 @@ export class DataLoaderManager implements AppModule {
   private readonly applyTimeRangeFilterToNewsPanelsDebounced = debounce(() => {
     this.applyTimeRangeFilterToNewsPanels();
   }, 120);
+  private readonly debouncedRefreshCiiAndBrief = debounce(() => {
+    this.refreshCiiAndBriefInternal(false);
+  }, 500);
+
+  private lastIntelligenceFetch: Record<string, number> = {};
+  private readonly STATIC_DATA_STALENESS_MS = 60 * 60 * 1000;
+  private readonly DYNAMIC_DATA_STALENESS_MS = 15 * 60 * 1000;
+
+  private shouldFetchIntelligenceSource(source: string, isStatic = false): boolean {
+    const lastFetch = this.lastIntelligenceFetch[source] ?? 0;
+    const staleness = isStatic ? this.STATIC_DATA_STALENESS_MS : this.DYNAMIC_DATA_STALENESS_MS;
+    return (Date.now() - lastFetch) >= staleness;
+  }
+
+  private markIntelligenceSourceFetched(source: string): void {
+    this.lastIntelligenceFetch[source] = Date.now();
+  }
 
   public updateSearchIndex: () => void = () => {};
 
@@ -213,12 +230,16 @@ export class DataLoaderManager implements AppModule {
     }
   }
 
-  private refreshCiiAndBrief(forceLocal = false): void {
+  private refreshCiiAndBriefInternal(forceLocal = false): void {
     (this.ctx.panels['cii'] as CIIPanel)?.refresh(forceLocal);
     this.callbacks.refreshOpenCountryBrief();
     const scores = calculateCII();
     this.ctx.map?.setCIIScores(scores.map(s => ({ code: s.code, score: s.score, level: s.level })));
     this.ctx.map?.setLayerReady('ciiChoropleth', scores.length > 0);
+  }
+
+  private refreshCiiAndBrief(_forceLocal = false): void {
+    this.debouncedRefreshCiiAndBrief();
   }
 
   private async tryFetchDigest(): Promise<ListFeedDigestResponse | null> {
@@ -1220,6 +1241,7 @@ export class DataLoaderManager implements AppModule {
   async loadIntelligenceSignals(): Promise<void> {
     resetHotspotActivity();
     const tasks: Promise<void>[] = [];
+    const hydratedUcdp = getHydratedData('ucdpEvents') as import('@/generated/client/worldmonitor/conflict/v1/service_client').ListUcdpEventsResponse | undefined;
 
     tasks.push((async () => {
       try {
@@ -1270,21 +1292,10 @@ export class DataLoaderManager implements AppModule {
     tasks.push(protestsTask.then(() => undefined));
 
     tasks.push((async () => {
-      try {
-        const conflictData = await fetchConflictEvents();
-        ingestConflictsForCII(conflictData.events);
-        if (conflictData.count > 0) dataFreshness.recordUpdate('acled_conflict', conflictData.count);
-      } catch (error) {
-        console.error('[Intelligence] Conflict events fetch failed:', error);
-        dataFreshness.recordError('acled_conflict', String(error));
-      }
-    })());
-
-    const hydratedUcdp = getHydratedData('ucdpEvents') as import('@/generated/client/worldmonitor/conflict/v1/service_client').ListUcdpEventsResponse | undefined;
-
-    tasks.push((async () => {
+      if (!this.shouldFetchIntelligenceSource('ucdp', true)) return;
       try {
         const classifications = await fetchUcdpClassifications(hydratedUcdp);
+        this.markIntelligenceSourceFetched('ucdp');
         ingestUcdpForCII(classifications);
         if (classifications.size > 0) dataFreshness.recordUpdate('ucdp', classifications.size);
       } catch (error) {
@@ -1294,8 +1305,10 @@ export class DataLoaderManager implements AppModule {
     })());
 
     tasks.push((async () => {
+      if (!this.shouldFetchIntelligenceSource('hapi', true)) return;
       try {
         const summaries = await fetchHapiSummary();
+        this.markIntelligenceSourceFetched('hapi');
         ingestHapiForCII(summaries);
         if (summaries.size > 0) dataFreshness.recordUpdate('hapi', summaries.size);
       } catch (error) {
