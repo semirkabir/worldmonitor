@@ -3,7 +3,7 @@ import { row } from '../types';
 import type { EntityRenderer, EntityRenderContext } from '../types';
 
 const VESSEL_TYPE_LABELS: Record<string, string> = {
-  carrier: 'Carrier',
+  carrier: 'Aircraft Carrier',
   destroyer: 'Destroyer',
   frigate: 'Frigate',
   submarine: 'Submarine',
@@ -40,8 +40,103 @@ const OPERATOR_LABELS: Record<string, string> = {
   other: 'Other',
 };
 
+function renderVesselDetail(vessel: MilitaryVessel, ctx: EntityRenderContext): HTMLElement {
+  const container = ctx.el('div', 'edp-generic');
+
+  // Header
+  const header = ctx.el('div', 'edp-header');
+  header.append(ctx.el('h2', 'edp-title', vessel.name));
+  if (vessel.hullNumber) header.append(ctx.el('div', 'edp-subtitle', vessel.hullNumber));
+
+  const badgeRow = ctx.el('div', 'edp-badge-row');
+  badgeRow.append(ctx.badge(VESSEL_TYPE_LABELS[vessel.vesselType] ?? vessel.vesselType, 'edp-badge'));
+  if (vessel.isDark) {
+    badgeRow.append(ctx.badge('AIS DARK', 'edp-badge edp-badge-severity'));
+  } else if (vessel.usniDeploymentStatus && vessel.usniDeploymentStatus !== 'unknown') {
+    badgeRow.append(ctx.badge(vessel.usniDeploymentStatus.toUpperCase(), 'edp-badge edp-badge-status'));
+  }
+  header.append(badgeRow);
+  container.append(header);
+
+  // Wikipedia image + extract (async)
+  const wikiWrap = ctx.el('div', 'edp-vessel-wiki');
+  const wikiImg = ctx.el('img', 'edp-vessel-wiki-img') as HTMLImageElement;
+  wikiImg.alt = vessel.name;
+  const wikiCaption = ctx.el('div', 'edp-vessel-wiki-caption');
+  wikiWrap.append(wikiImg, wikiCaption);
+  container.append(wikiWrap);
+
+  // Fetch Wikipedia summary
+  const slug = vessel.name.replace(/ /g, '_');
+  fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(slug)}`, { signal: ctx.signal })
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then((data: { thumbnail?: { source: string }; extract?: string; content_urls?: { desktop?: { page?: string } } }) => {
+      if (data.thumbnail?.source) {
+        wikiImg.src = data.thumbnail.source;
+        wikiImg.style.display = 'block';
+      }
+      if (data.extract) {
+        const desc = ctx.el('p', 'edp-description edp-vessel-wiki-extract', data.extract);
+        wikiCaption.append(desc);
+      }
+      if (data.content_urls?.desktop?.page) {
+        const link = ctx.el('a', 'edp-vessel-wiki-link') as HTMLAnchorElement;
+        link.href = data.content_urls.desktop.page;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = 'Wikipedia →';
+        wikiCaption.append(link);
+      }
+    })
+    .catch(() => { /* no wiki data — section stays empty */ });
+
+  // Current location card
+  const [locCard, locBody] = ctx.sectionCard('Current Location');
+  if (vessel.note) locBody.append(row(ctx, 'Position', vessel.note));
+  locBody.append(row(ctx, 'Coordinates', `${vessel.lat.toFixed(4)}°, ${vessel.lon.toFixed(4)}°`));
+  if (vessel.usniRegion) locBody.append(row(ctx, 'Region', vessel.usniRegion));
+  if (vessel.nearChokepoint) locBody.append(row(ctx, 'Near Chokepoint', vessel.nearChokepoint));
+  if (vessel.nearBase) locBody.append(row(ctx, 'Near Base', vessel.nearBase));
+  if (vessel.destination) locBody.append(row(ctx, 'Destination', vessel.destination));
+  container.append(locCard);
+
+  // Vessel info card
+  const [infoCard, infoBody] = ctx.sectionCard('Vessel Info');
+  infoBody.append(row(ctx, 'Type', VESSEL_TYPE_LABELS[vessel.vesselType] ?? vessel.vesselType));
+  infoBody.append(row(ctx, 'Operator', OPERATOR_LABELS[vessel.operator] ?? vessel.operatorCountry));
+  if (vessel.speed > 0) infoBody.append(row(ctx, 'Speed', `${vessel.speed.toFixed(1)} kn`));
+  if (vessel.heading) infoBody.append(row(ctx, 'Heading', `${vessel.heading}°`));
+  if (vessel.usniStrikeGroup) infoBody.append(row(ctx, 'Strike Group', vessel.usniStrikeGroup));
+  if (vessel.aisGapMinutes && vessel.aisGapMinutes > 0) {
+    infoBody.append(row(ctx, 'AIS Gap', `${vessel.aisGapMinutes} min`));
+  }
+  infoBody.append(row(ctx, 'Confidence', vessel.confidence));
+  container.append(infoCard);
+
+  // Activity description
+  if (vessel.usniActivityDescription) {
+    const [actCard, actBody] = ctx.sectionCard('Activity');
+    actBody.append(ctx.el('p', 'edp-description', vessel.usniActivityDescription));
+    container.append(actCard);
+  }
+
+  // USNI article link
+  if (vessel.usniArticleUrl) {
+    const linkWrap = ctx.el('div', 'edp-vessel-article-wrap');
+    const link = ctx.el('a', 'edp-external-link') as HTMLAnchorElement;
+    link.href = vessel.usniArticleUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = '→ USNI News Article';
+    linkWrap.append(link);
+    container.append(linkWrap);
+  }
+
+  return container;
+}
+
 function renderVesselRow(vessel: MilitaryVessel, ctx: EntityRenderContext): HTMLElement {
-  const item = ctx.el('div', 'edp-vessel-item');
+  const item = ctx.el('div', 'edp-vessel-item edp-vessel-item--clickable');
 
   const nameRow = ctx.el('div', 'edp-vessel-name-row');
   const name = ctx.el('span', 'edp-vessel-name', vessel.name || vessel.id);
@@ -53,8 +148,13 @@ function renderVesselRow(vessel: MilitaryVessel, ctx: EntityRenderContext): HTML
   if (vessel.isDark) {
     nameRow.append(ctx.badge('DARK', 'edp-badge edp-badge-severity edp-vessel-status'));
   } else if (vessel.usniDeploymentStatus && vessel.usniDeploymentStatus !== 'unknown') {
-    nameRow.append(ctx.badge(vessel.usniDeploymentStatus.toUpperCase(), 'edp-badge edp-badge-dim edp-vessel-status'));
+    // Green badge for deployed status
+    nameRow.append(ctx.badge(vessel.usniDeploymentStatus.toUpperCase(), 'edp-badge edp-badge-status edp-vessel-status'));
   }
+
+  // Chevron
+  const chevron = ctx.el('span', 'edp-vessel-chevron', '›');
+  nameRow.append(chevron);
   item.append(nameRow);
 
   const metaRow = ctx.el('div', 'edp-vessel-meta');
@@ -70,6 +170,11 @@ function renderVesselRow(vessel: MilitaryVessel, ctx: EntityRenderContext): HTML
   if (vessel.note) {
     item.append(ctx.el('div', 'edp-vessel-note', vessel.note));
   }
+
+  // Click → drill into vessel detail
+  item.addEventListener('click', () => {
+    ctx.navigate(renderVesselDetail(vessel, ctx));
+  });
 
   return item;
 }

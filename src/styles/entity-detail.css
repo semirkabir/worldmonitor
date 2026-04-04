@@ -642,7 +642,88 @@
   line-height: 1.4;
 }
 
->>>>>>> 1cb194e1470f72d02cf63ae528f7cce0a93fd78a
+/* Clickable vessel rows */
+.edp-vessel-item--clickable {
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.edp-vessel-item--clickable:hover {
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.edp-vessel-chevron {
+  margin-left: auto;
+  font-size: 16px;
+  color: var(--text-faint);
+  transition: color 0.15s;
+}
+.edp-vessel-item--clickable:hover .edp-vessel-chevron {
+  color: var(--accent);
+}
+
+/* Back button (injected by navigate()) */
+.edp-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 12px 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+}
+.edp-back-btn:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+/* Wikipedia image in vessel detail */
+.edp-vessel-wiki {
+  margin: 0 0 4px 0;
+}
+.edp-vessel-wiki-img {
+  display: none;
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+.edp-vessel-wiki-extract {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 0 0 6px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.edp-vessel-wiki-link {
+  font-size: 11px;
+  color: var(--accent);
+  text-decoration: none;
+}
+.edp-vessel-wiki-link:hover { text-decoration: underline; }
+
+/* External article link */
+.edp-vessel-article-wrap {
+  padding: 8px 0 4px;
+}
+.edp-external-link {
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+}
+.edp-external-link:hover { text-decoration: underline; }
+
 /* ── Responsive ────────────────────────────────────────────────────── */
 
 @media (max-width: 600px) {

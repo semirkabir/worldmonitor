@@ -8,6 +8,8 @@ export interface EntityRenderContext {
   makeLoading: (text: string) => HTMLElement;
   makeEmpty: (text: string) => HTMLElement;
   signal: AbortSignal;
+  /** Push a new content element onto the panel's navigation stack */
+  navigate: (content: HTMLElement) => void;
 }
 
 /** Each entity type can register a renderer */
