@@ -49,17 +49,8 @@ import type { ClimateAnomaly } from '@/services/climate';
 import { ArcLayer } from '@deck.gl/layers';
 import { HeatmapLayer } from '@deck.gl/aggregation-layers';
 import { H3HexagonLayer } from '@deck.gl/geo-layers';
-<<<<<<< HEAD
 import type { WeatherAlert, WeatherCategory } from '@/services/weather';
 import { getWeatherEventCategory } from '@/services/weather';
-=======
-import type { WeatherAlert } from '@/services/weather';
-import { getWeatherAlertIconUrl } from '@/services/weather';
-<<<<<<< HEAD
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
-=======
-import { getNaturalEventIconUrl } from '@/services/eonet';
->>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
 import { escapeHtml } from '@/utils/sanitize';
 import { tokenizeForMatch, matchKeyword, matchesAnyKeyword, findMatchingKeywords } from '@/utils/keyword-match';
 import { t } from '@/services/i18n';
@@ -1453,7 +1444,7 @@ export class DeckGLMap {
 
     // Natural events layer
     if (mapLayers.natural && filteredNaturalEvents.length > 0) {
-      layers.push(...this.createNaturalEventsLayer(filteredNaturalEvents));
+      layers.push(this.createNaturalEventsLayer(filteredNaturalEvents));
     }
 
     // Satellite fires layer (NASA FIRMS)
@@ -1469,11 +1460,7 @@ export class DeckGLMap {
 
     // Weather alerts layer
     if (mapLayers.weather && filteredWeatherAlerts.length > 0) {
-<<<<<<< HEAD
       layers.push(...this.createWeatherLayers(filteredWeatherAlerts));
-=======
-      layers.push(...this.createWeatherLayer(filteredWeatherAlerts));
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
     }
 
     // Internet outages layer
@@ -1806,13 +1793,6 @@ export class DeckGLMap {
   }
 
   private createBasesLayer(): IconLayer {
-<<<<<<< HEAD
-=======
-    const highlightedBases = this.highlightedAssets.base;
-    const zoom = this.maplibreMap?.getZoom() || 3;
-    const alphaScale = Math.min(1, (zoom - 2.5) / 2.5);
-    void alphaScale; // alpha scaling reserved for future use
->>>>>>> 0cb63b6e (fix(types): resolve pre-existing TypeScript errors to unblock CI)
     const data = this.getBasesData();
 
     return new IconLayer({
@@ -2202,36 +2182,20 @@ export class DeckGLMap {
     });
   }
 
-  private createNaturalEventsLayer(events: NaturalEvent[]): IconLayer[] {
-    const layers: IconLayer[] = [];
-    const byCategory = new Map<string | null, NaturalEvent[]>();
-
-    for (const e of events) {
-      const url = getNaturalEventIconUrl(e.category);
-      if (!byCategory.has(url)) byCategory.set(url, []);
-      byCategory.get(url)!.push(e);
-    }
-
-    for (const [iconUrl, group] of byCategory) {
-      const isPng = iconUrl !== null;
-      layers.push(new IconLayer({
-        id: isPng ? `natural-events-png-${iconUrl.split('/').pop()}` : 'natural-events-layer',
-        data: group,
-        getPosition: (d: NaturalEvent) => [d.lon, d.lat],
-        getIcon: () => 'marker',
-        iconAtlas: isPng ? iconUrl! : getSharedLayerIconAtlas('natural'),
-        iconMapping: isPng
-          ? { marker: { x: 0, y: 0, width: 512, height: 512, mask: false } }
-          : SHARED_LAYER_ICON_MAPPING,
-        getSize: (d: NaturalEvent) => d.title.startsWith('🔴') ? 20 : d.title.startsWith('🟠') ? 17 : 14,
-        sizeMinPixels: 10,
-        sizeMaxPixels: 26,
-        pickable: true,
-        billboard: true,
-      }));
-    }
-
-    return layers;
+  private createNaturalEventsLayer(events: NaturalEvent[]): IconLayer {
+    return new IconLayer({
+      id: 'natural-events-layer',
+      data: events,
+      getPosition: (d: NaturalEvent) => [d.lon, d.lat],
+      getIcon: () => 'marker',
+      iconAtlas: getSharedLayerIconAtlas('natural'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
+      getSize: (d: NaturalEvent) => d.title.startsWith('🔴') ? 20 : d.title.startsWith('🟠') ? 17 : 14,
+      sizeMinPixels: 10,
+      sizeMaxPixels: 26,
+      pickable: true,
+      billboard: true,
+    });
   }
 
   private createFiresLayer(): IconLayer {
@@ -2266,17 +2230,9 @@ export class DeckGLMap {
     });
   }
 
-<<<<<<< HEAD
   private createWeatherLayers(alerts: WeatherAlert[]): IconLayer[] {
-=======
-  private createWeatherLayer(alerts: WeatherAlert[]): IconLayer[] {
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
     const alertsWithCoords = alerts.filter(a => a.centroid && a.centroid.length === 2);
-    const floodAlerts = alertsWithCoords.filter(a => getWeatherAlertIconUrl(a.event) !== null);
-    const otherAlerts = alertsWithCoords.filter(a => getWeatherAlertIconUrl(a.event) === null);
-    const sizeFor = (d: WeatherAlert) => d.severity === 'Extreme' ? 18 : d.severity === 'Severe' ? 16 : 14;
 
-<<<<<<< HEAD
     // Group alerts by weather category
     const byCategory = new Map<WeatherCategory, WeatherAlert[]>();
     for (const alert of alertsWithCoords) {
@@ -2309,43 +2265,6 @@ export class DeckGLMap {
         billboard: true,
       });
     });
-=======
-    const layers: IconLayer[] = [];
-
-    if (otherAlerts.length > 0) {
-      layers.push(new IconLayer({
-        id: 'weather-layer',
-        data: otherAlerts,
-        getPosition: (d) => d.centroid as [number, number],
-        getIcon: () => 'marker',
-        iconAtlas: getSharedLayerIconAtlas('weather'),
-        iconMapping: SHARED_LAYER_ICON_MAPPING,
-        getSize: sizeFor,
-        sizeMinPixels: 8,
-        sizeMaxPixels: 20,
-        pickable: true,
-        billboard: true,
-      }));
-    }
-
-    if (floodAlerts.length > 0) {
-      layers.push(new IconLayer({
-        id: 'weather-flood-layer',
-        data: floodAlerts,
-        getPosition: (d) => d.centroid as [number, number],
-        getIcon: () => 'marker',
-        iconAtlas: '/icons/flood-warning.png',
-        iconMapping: { marker: { x: 0, y: 0, width: 512, height: 512, mask: false } },
-        getSize: sizeFor,
-        sizeMinPixels: 8,
-        sizeMaxPixels: 20,
-        pickable: true,
-        billboard: true,
-      }));
-    }
-
-    return layers;
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
   }
 
   private createOutagesLayer(outages: InternetOutage[]): IconLayer {
@@ -2508,49 +2427,14 @@ export class DeckGLMap {
     });
   }
 
-  /** Scatter vessels that share nearly the same coordinates into a circle around their group centre. */
-  private scatterVessels<T extends { lat: number; lon: number }>(
-    vessels: T[],
-    threshold = 0.4,
-    spread = 0.22,
-  ): Array<T & { _sLat: number; _sLon: number }> {
-    const result = vessels.map(v => ({ ...v, _sLat: v.lat, _sLon: v.lon }));
-    const used = new Set<number>();
-
-    for (let i = 0; i < result.length; i++) {
-      if (used.has(i)) continue;
-      const group: number[] = [i];
-      for (let j = i + 1; j < result.length; j++) {
-        if (used.has(j)) continue;
-        if (Math.abs(result[i].lat - result[j].lat) < threshold &&
-            Math.abs(result[i].lon - result[j].lon) < threshold) {
-          group.push(j);
-          used.add(j);
-        }
-      }
-      used.add(i);
-      if (group.length < 2) continue;
-
-      const cLat = group.reduce((s, k) => s + result[k].lat, 0) / group.length;
-      const cLon = group.reduce((s, k) => s + result[k].lon, 0) / group.length;
-      group.forEach((k, pos) => {
-        const angle = (pos / group.length) * Math.PI * 2 - Math.PI / 2;
-        result[k]._sLat = cLat + spread * Math.cos(angle);
-        result[k]._sLon = cLon + spread * Math.sin(angle);
-      });
-    }
-    return result;
-  }
-
   private createMilitaryVesselsLayer(vessels: MilitaryVessel[]): IconLayer {
-    const scattered = this.scatterVessels(vessels);
     return new IconLayer({
       id: 'military-vessels-layer',
-      data: scattered,
-      getPosition: (d) => [d._sLon, d._sLat],
-      getIcon: () => 'marker',
-      iconAtlas: '/icons/aircraft-carrier.png',
-      iconMapping: { marker: { x: 0, y: 0, width: 512, height: 512, mask: false } },
+      data: vessels,
+      getPosition: (d) => [d.lon, d.lat],
+      getIcon: () => 'vessel',
+      iconAtlas: 'https://cdn-icons-png.flaticon.com/512/6175/6175141.png',
+      iconMapping: { vessel: { x: 0, y: 0, width: 512, height: 512, mask: false } },
       getSize: 24,
       sizeMinPixels: 12,
       sizeMaxPixels: 32,
@@ -2560,14 +2444,13 @@ export class DeckGLMap {
   }
 
   private createMilitaryVesselClustersLayer(clusters: MilitaryVesselCluster[]): IconLayer {
-    const scattered = this.scatterVessels(clusters);
     return new IconLayer({
       id: 'military-vessel-clusters-layer',
-      data: scattered,
-      getPosition: (d) => [d._sLon, d._sLat],
-      getIcon: () => 'marker',
-      iconAtlas: '/icons/aircraft-carrier.png',
-      iconMapping: { marker: { x: 0, y: 0, width: 512, height: 512, mask: false } },
+      data: clusters,
+      getPosition: (d) => [d.lon, d.lat],
+      getIcon: () => 'vessel',
+      iconAtlas: 'https://cdn-icons-png.flaticon.com/512/6175/6175141.png',
+      iconMapping: { vessel: { x: 0, y: 0, width: 512, height: 512, mask: false } },
       getSize: (d: MilitaryVesselCluster) => 24 + Math.min(8, (d.vesselCount || 1) * 0.7),
       sizeMinPixels: 14,
       sizeMaxPixels: 36,
@@ -3440,8 +3323,7 @@ export class DeckGLMap {
     if (!info.object) return null;
 
     const rawLayerId = info.layer?.id || '';
-    const strippedLayerId = rawLayerId.endsWith('-ghost') ? rawLayerId.slice(0, -6) : rawLayerId;
-    const layerId = strippedLayerId.startsWith('natural-events-png-') ? 'natural-events-layer' : strippedLayerId;
+    const layerId = rawLayerId.endsWith('-ghost') ? rawLayerId.slice(0, -6) : rawLayerId;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const obj = info.object as any;
     const text = (value: unknown): string => escapeHtml(String(value ?? ''));
@@ -3602,7 +3484,6 @@ export class DeckGLMap {
       }
       case 'repair-ships-layer':
         return { html: `<div class="deckgl-tooltip"><strong>${text(obj.name || t('components.deckgl.tooltip.repairShip'))}</strong><br/>${text(obj.status)}</div>` };
-<<<<<<< HEAD
       // All weather sub-layers share the same tooltip
       case 'weather-tornado-layer':
       case 'weather-flood-layer':
@@ -3613,10 +3494,6 @@ export class DeckGLMap {
       case 'weather-fire-layer':
       case 'weather-wind-layer':
       case 'weather-default-layer': {
-=======
-      case 'weather-layer':
-      case 'weather-flood-layer': {
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
         const areaDesc = typeof obj.areaDesc === 'string' ? obj.areaDesc : '';
         const area = areaDesc ? `<br/><small>${text(areaDesc.slice(0, 50))}${areaDesc.length > 50 ? '...' : ''}</small>` : '';
         return { html: `<div class="deckgl-tooltip"><strong>${text(obj.event || t('components.deckgl.layers.weatherAlerts'))}</strong><br/>${text(obj.severity)}${area}</div>` };
@@ -3710,8 +3587,7 @@ export class DeckGLMap {
     }
 
     const rawClickLayerId = info.layer?.id || '';
-    const strippedClickLayerId = rawClickLayerId.endsWith('-ghost') ? rawClickLayerId.slice(0, -6) : rawClickLayerId;
-    const layerId = strippedClickLayerId.startsWith('natural-events-png-') ? 'natural-events-layer' : strippedClickLayerId;
+    const layerId = rawClickLayerId.endsWith('-ghost') ? rawClickLayerId.slice(0, -6) : rawClickLayerId;
 
     // Hotspots show popup with related news
     if (layerId === 'hotspots-layer') {
@@ -3917,7 +3793,6 @@ export class DeckGLMap {
       'cables-layer': 'cable',
       'pipelines-layer': 'pipeline',
       'earthquakes-layer': 'earthquake',
-<<<<<<< HEAD
       'weather-tornado-layer': 'weather',
       'weather-flood-layer': 'weather',
       'weather-thunderstorm-layer': 'weather',
@@ -3927,10 +3802,6 @@ export class DeckGLMap {
       'weather-fire-layer': 'weather',
       'weather-wind-layer': 'weather',
       'weather-default-layer': 'weather',
-=======
-      'weather-layer': 'weather',
-      'weather-flood-layer': 'weather',
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
       'outages-layer': 'outage',
       'cyber-threats-layer': 'cyberThreat',
       'iran-events-layer': 'iranEvent',
@@ -4015,8 +3886,7 @@ export class DeckGLMap {
     if (!info.object || !this.onEntityClick) return;
 
     const rawLayerId = info.layer?.id || '';
-    const strippedHoverLayerId = rawLayerId.endsWith('-ghost') ? rawLayerId.slice(0, -6) : rawLayerId;
-    const layerId = strippedHoverLayerId.startsWith('natural-events-png-') ? 'natural-events-layer' : strippedHoverLayerId;
+    const layerId = rawLayerId.endsWith('-ghost') ? rawLayerId.slice(0, -6) : rawLayerId;
 
     if (layerId === 'tech-hq-clusters-layer') {
       const cluster = info.object as MapTechHQCluster;
@@ -4083,7 +3953,6 @@ export class DeckGLMap {
       'cables-layer': 'cable',
       'pipelines-layer': 'pipeline',
       'earthquakes-layer': 'earthquake',
-<<<<<<< HEAD
       'weather-tornado-layer': 'weather',
       'weather-flood-layer': 'weather',
       'weather-thunderstorm-layer': 'weather',
@@ -4093,10 +3962,6 @@ export class DeckGLMap {
       'weather-fire-layer': 'weather',
       'weather-wind-layer': 'weather',
       'weather-default-layer': 'weather',
-=======
-      'weather-layer': 'weather',
-      'weather-flood-layer': 'weather',
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
       'outages-layer': 'outage',
       'cyber-threats-layer': 'cyberThreat',
       'iran-events-layer': 'iranEvent',
@@ -4674,103 +4539,6 @@ export class DeckGLMap {
     });
   }
 
-<<<<<<< HEAD
-=======
-  /** Open the custom category creation modal */
-  protected _openCustomCategoryModal(
-    layerConfig: Array<{ key: string; label: string; icon: string; premium?: string }>,
-    list: HTMLElement,
-    status: HTMLElement,
-    layersPanel: HTMLElement,
-  ): void {
-    // Remove any existing modal
-    document.querySelector('.custom-category-modal-overlay')?.remove();
-
-    const overlay = document.createElement('div');
-    overlay.className = 'custom-category-modal-overlay';
-
-    const modal = document.createElement('div');
-    modal.className = 'custom-category-modal';
-
-    const title = document.createElement('div');
-    title.className = 'custom-category-modal-title';
-    title.textContent = 'New Custom Category';
-    modal.appendChild(title);
-
-    const nameLabel = document.createElement('label');
-    nameLabel.className = 'custom-category-modal-label';
-    nameLabel.textContent = 'Category name';
-    const nameInput = document.createElement('input');
-    nameInput.type = 'text';
-    nameInput.className = 'custom-category-modal-input';
-    nameInput.placeholder = 'e.g. My Watch List';
-    nameInput.maxLength = 40;
-    nameLabel.appendChild(nameInput);
-    modal.appendChild(nameLabel);
-
-    const sourcesLabel = document.createElement('div');
-    sourcesLabel.className = 'custom-category-modal-label';
-    sourcesLabel.textContent = 'Select sources';
-    modal.appendChild(sourcesLabel);
-
-    const sourcesList = document.createElement('div');
-    sourcesList.className = 'custom-category-modal-sources';
-    modal.appendChild(sourcesList);
-
-    // All available layers for this variant
-    const allLayers = getLayersForVariant((SITE_VARIANT || 'full') as MapVariant, 'flat');
-    allLayers.forEach(def => {
-      const row = document.createElement('label');
-      row.className = 'custom-category-source-row';
-      const cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.value = def.key;
-      const iconEl = document.createElement('span');
-      iconEl.className = 'toggle-icon';
-      iconEl.style.color = resolveLayerAccentColor(def.key, getCurrentTheme());
-      iconEl.innerHTML = def.icon;
-      const lbl = document.createElement('span');
-      lbl.textContent = resolveLayerLabel(def, t);
-      row.append(cb, iconEl, lbl);
-      sourcesList.appendChild(row);
-    });
-
-    const actions = document.createElement('div');
-    actions.className = 'custom-category-modal-actions';
-
-    const cancelBtn = document.createElement('button');
-    cancelBtn.className = 'custom-category-modal-btn cancel';
-    cancelBtn.textContent = 'Cancel';
-    cancelBtn.addEventListener('click', () => overlay.remove());
-
-    const createBtn = document.createElement('button');
-    createBtn.className = 'custom-category-modal-btn create';
-    createBtn.textContent = 'Create';
-    createBtn.addEventListener('click', () => {
-      const name = nameInput.value.trim();
-      const selectedLayers = Array.from(sourcesList.querySelectorAll<HTMLInputElement>('input:checked'))
-        .map(cb => cb.value as keyof MapLayers);
-      if (!name) { nameInput.focus(); return; }
-      if (selectedLayers.length === 0) return;
-
-      const newCat: CustomCategory = { id: Date.now().toString(), name, layers: selectedLayers };
-      this.customCategories = [...this.customCategories, newCat];
-      saveCustomCategories(this.customCategories);
-      this.renderCustomCategories(list, status, layersPanel, layerConfig);
-      overlay.remove();
-    });
-
-    actions.append(cancelBtn, createBtn);
-    modal.appendChild(actions);
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-
-    // Close on overlay click
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-    nameInput.focus();
-  }
-
->>>>>>> 0cb63b6e (fix(types): resolve pre-existing TypeScript errors to unblock CI)
   /** Clear all active layers */
   private clearAllLayers(): void {
     const layerDefs = getLayersForVariant((SITE_VARIANT || 'full') as MapVariant, 'flat');
@@ -5280,8 +5048,8 @@ export class DeckGLMap {
       data: events,
       getPosition: (d) => [d.longitude, d.latitude],
       getIcon: () => 'marker',
-      iconAtlas: '/icons/armed-conflict.png',
-      iconMapping: { marker: { x: 0, y: 0, width: 512, height: 512, mask: false } },
+      iconAtlas: getSharedLayerIconAtlas('ucdpEvents'),
+      iconMapping: SHARED_LAYER_ICON_MAPPING,
       getSize: (d) => Math.min(18, Math.max(11, Math.sqrt(d.deaths_best || 1) * 2 + 11)),
       sizeMinPixels: 8,
       sizeMaxPixels: 20,
