@@ -1,6 +1,7 @@
 # CSS Filter Approximations for Stadia Themes
 
 ## Overview
+
 Add CSS filter-based theme options that approximate Stadia's visual styles using free tile sources (OpenFreeMap/CARTO) as the base, with CSS filters applied on top. Zero cost, no API keys required.
 
 ---
