@@ -2656,21 +2656,24 @@ export class MapComponent {
         const used = new Set<number>();
         for (let i = 0; i < res.length; i++) {
           if (used.has(i)) continue;
+          const ri = res[i]!;
           const grp: number[] = [i];
           for (let j = i + 1; j < res.length; j++) {
             if (used.has(j)) continue;
-            if (Math.abs(res[i].v.lat - res[j].v.lat) < THRESHOLD && Math.abs(res[i].v.lon - res[j].v.lon) < THRESHOLD) {
+            const rj = res[j]!;
+            if (Math.abs(ri.v.lat - rj.v.lat) < THRESHOLD && Math.abs(ri.v.lon - rj.v.lon) < THRESHOLD) {
               grp.push(j); used.add(j);
             }
           }
           used.add(i);
           if (grp.length < 2) continue;
-          const cLat = grp.reduce((s, k) => s + res[k].v.lat, 0) / grp.length;
-          const cLon = grp.reduce((s, k) => s + res[k].v.lon, 0) / grp.length;
+          const cLat = grp.reduce((s, k) => s + res[k]!.v.lat, 0) / grp.length;
+          const cLon = grp.reduce((s, k) => s + res[k]!.v.lon, 0) / grp.length;
           grp.forEach((k, pos) => {
             const angle = (pos / grp.length) * Math.PI * 2 - Math.PI / 2;
-            res[k].sLat = cLat + SPREAD * Math.cos(angle);
-            res[k].sLon = cLon + SPREAD * Math.sin(angle);
+            const rk = res[k]!;
+            rk.sLat = cLat + SPREAD * Math.cos(angle);
+            rk.sLon = cLon + SPREAD * Math.sin(angle);
           });
         }
         return res;
