@@ -4,7 +4,7 @@ import { escapeHtml } from '@/utils/sanitize';
 import { getCSSColor, getCurrentTheme } from '@/utils';
 import type { Topology, GeometryCollection } from 'topojson-specification';
 import type { Feature, Geometry } from 'geojson';
-import type { MapLayers, Hotspot, NewsItem, InternetOutage, RelatedAsset, AssetType, AisDisruptionEvent, AisDensityZone, CableAdvisory, RepairShip, SocialUnrestEvent, MilitaryFlight, MilitaryVessel, MilitaryFlightCluster, MilitaryVesselCluster, NaturalEvent, CyberThreat, CableHealthRecord } from '@/types';
+import type { MapLayers, Hotspot, NewsItem, InternetOutage, RelatedAsset, AssetType, AisDisruptionEvent, AisDensityZone, CableAdvisory, RepairShip, SocialUnrestEvent, MilitaryFlight, MilitaryVessel, MilitaryFlightCluster, MilitaryVesselCluster, NaturalEvent, CyberThreat, CableHealthRecord, UcdpGeoEvent } from '@/types';
 import type { AirportDelayAlert, PositionSample } from '@/services/aviation';
 import type { Earthquake } from '@/services/earthquakes';
 import { type IranEvent, getIranEventCssColor, getIranEventSize } from '@/services/conflict';
@@ -141,6 +141,7 @@ export class MapComponent {
   private militaryVessels: MilitaryVessel[] = [];
   private militaryVesselClusters: MilitaryVesselCluster[] = [];
   private naturalEvents: NaturalEvent[] = [];
+  private ucdpEvents: UcdpGeoEvent[] = [];
   private firmsFireData: Array<{ lat: number; lon: number; brightness: number; frp: number; confidence: number; region: string; acq_date: string; daynight: string }> = [];
   private techEvents: TechEventMarker[] = [];
   private techActivities: TechHubActivity[] = [];
@@ -2648,9 +2649,35 @@ export class MapComponent {
       });
 
       // Military Vessels (warships, carriers, submarines)
-      // Render individual vessels
-      this.militaryVessels.forEach((vessel) => {
-        const pos = projection([vessel.lon, vessel.lat]);
+      // Scatter overlapping vessels into a circle before rendering
+      const scatteredVessels = (() => {
+        const THRESHOLD = 0.4, SPREAD = 0.22;
+        const res = this.militaryVessels.map(v => ({ v, sLat: v.lat, sLon: v.lon }));
+        const used = new Set<number>();
+        for (let i = 0; i < res.length; i++) {
+          if (used.has(i)) continue;
+          const grp: number[] = [i];
+          for (let j = i + 1; j < res.length; j++) {
+            if (used.has(j)) continue;
+            if (Math.abs(res[i].v.lat - res[j].v.lat) < THRESHOLD && Math.abs(res[i].v.lon - res[j].v.lon) < THRESHOLD) {
+              grp.push(j); used.add(j);
+            }
+          }
+          used.add(i);
+          if (grp.length < 2) continue;
+          const cLat = grp.reduce((s, k) => s + res[k].v.lat, 0) / grp.length;
+          const cLon = grp.reduce((s, k) => s + res[k].v.lon, 0) / grp.length;
+          grp.forEach((k, pos) => {
+            const angle = (pos / grp.length) * Math.PI * 2 - Math.PI / 2;
+            res[k].sLat = cLat + SPREAD * Math.cos(angle);
+            res[k].sLon = cLon + SPREAD * Math.sin(angle);
+          });
+        }
+        return res;
+      })();
+
+      scatteredVessels.forEach(({ v: vessel, sLat, sLon }) => {
+        const pos = projection([sLon, sLat]);
         if (!pos) return;
 
         const div = document.createElement('div');
@@ -2661,7 +2688,11 @@ export class MapComponent {
         const icon = document.createElement('div');
         icon.className = `military-vessel-icon ${vessel.vesselType}`;
         icon.style.transform = `rotate(${vessel.heading}deg)`;
-        // CSS handles the diamond/anchor rendering
+        const vesselImg = document.createElement('img');
+        vesselImg.src = '/icons/aircraft-carrier.png';
+        vesselImg.alt = vessel.vesselType;
+        vesselImg.className = 'nat-event-icon-img';
+        icon.appendChild(vesselImg);
         div.appendChild(icon);
 
         // Dark vessel warning indicator
@@ -2794,6 +2825,41 @@ export class MapComponent {
           const rect = this.container.getBoundingClientRect();
           this.popup.show({
             type: 'natEvent',
+            data: event,
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top,
+          });
+        });
+
+        this.overlays.appendChild(div);
+      });
+    }
+
+    // Armed Conflict Events (UCDP) - ucdpEvents layer
+    if (this.state.layers.ucdpEvents) {
+      this.ucdpEvents.forEach((event) => {
+        const pos = projection([event.longitude, event.latitude]);
+        if (!pos) return;
+
+        const div = document.createElement('div');
+        div.className = 'nat-event-marker ucdp-event-marker';
+        div.style.left = `${pos[0]}px`;
+        div.style.top = `${pos[1]}px`;
+
+        const icon = document.createElement('div');
+        icon.className = 'nat-event-icon';
+        const img = document.createElement('img');
+        img.src = '/icons/armed-conflict.png';
+        img.alt = 'armed conflict';
+        img.className = 'nat-event-icon-img';
+        icon.appendChild(img);
+        div.appendChild(icon);
+
+        div.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const rect = this.container.getBoundingClientRect();
+          this.popup.show({
+            type: 'ucdpEvent',
             data: event,
             x: e.clientX - rect.left,
             y: e.clientY - rect.top,
@@ -3731,6 +3797,11 @@ export class MapComponent {
 
   public setNaturalEvents(events: NaturalEvent[]): void {
     this.naturalEvents = events;
+    this.render();
+  }
+
+  public setUcdpEvents(events: UcdpGeoEvent[]): void {
+    this.ucdpEvents = events;
     this.render();
   }
 

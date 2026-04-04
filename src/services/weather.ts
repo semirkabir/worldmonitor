@@ -34,17 +34,13 @@ interface NWSResponse {
   features: NWSAlert[];
 }
 
-<<<<<<< HEAD
 export function getWeatherAlertIconUrl(event: string): string | null {
   const lower = event.toLowerCase();
   if (lower.includes('flood')) return '/icons/flood-warning.png';
   return null;
 }
 
-const NWS_API = 'https://api.weather.gov/alerts/active';
-=======
 const NWS_API = '/api/weather';
->>>>>>> main
 const breaker = createCircuitBreaker<WeatherAlert[]>({ name: 'NWS Weather', cacheTtlMs: 30 * 60 * 1000, persistCache: true });
 
 export async function fetchWeatherAlerts(): Promise<WeatherAlert[]> {

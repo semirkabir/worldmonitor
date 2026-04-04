@@ -6933,7 +6933,6 @@ a.prediction-link:hover {
   background: rgba(0, 209, 255, 0.12);
 }
 
-<<<<<<< HEAD
 .popup-header.iranEvent.high {
   border-left: 3px solid #ff3232;
 }
@@ -19934,7 +19933,6 @@ body:has(.tauri-titlebar) .breaking-news-container {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-<<<<<<< HEAD
   height: 14px;
 }
 
@@ -19944,12 +19942,6 @@ body:has(.tauri-titlebar) .breaking-news-container {
 }
 
 /* panels-collapse-btn: seamless within the bar */
-=======
-  background: rgba(255, 255, 255, 0.04);
-}
-
-/* panels-collapse-btn: infused pill — vertical orientation for side layout */
->>>>>>> main
 .map-resize-handle .panels-collapse-btn {
   position: relative;
   top: auto; right: auto; bottom: auto; left: auto;
@@ -19957,26 +19949,16 @@ body:has(.tauri-titlebar) .breaking-news-container {
   display: flex;
   align-items: center;
   justify-content: center;
-<<<<<<< HEAD
   width: 40px;
   height: 100%;
   background: transparent;
   border: none;
   color: var(--text-dim);
   opacity: 0.5;
-=======
-  width: 20px;
-  height: 38px;
-  border-radius: 100px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.45);
->>>>>>> main
   cursor: pointer;
   z-index: 30;
   padding: 0;
   flex-shrink: 0;
-<<<<<<< HEAD
   transition: opacity 0.15s, color 0.15s;
 }
 .map-resize-handle .panels-collapse-btn:hover,
@@ -19986,34 +19968,16 @@ body:has(.tauri-titlebar) .breaking-news-container {
 }
 
 /* panels-collapse-btn: horizontal orientation for bottom/stacked layout */
-=======
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-.map-resize-handle .panels-collapse-btn:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--bg);
-}
-
-/* panels-collapse-btn: infused pill — horizontal orientation for stacked layout */
->>>>>>> main
 @media (max-width: 1599px) {
   .main-content:not(.layout-side) .map-resize-handle.has-collapse-btns {
     flex-direction: row;
   }
-<<<<<<< HEAD
-=======
-  /* In stacked layout the handle resizes map height — use ns-resize cursor */
   .main-content:not(.layout-side) .map-resize-handle {
     cursor: ns-resize;
   }
   .main-content:not(.layout-side) .map-resize-handle .panels-collapse-btn {
-    width: 40px;
-    height: 20px;
-    border-radius: 100px;
-    cursor: pointer; /* button keeps its own cursor */
+    cursor: pointer;
   }
->>>>>>> main
 }
 
 /* Horizontal map↔bottom-grid handle: always visible in side layout, button centered */
@@ -20037,38 +20001,21 @@ body:has(.tauri-titlebar) .breaking-news-container {
   align-items: center;
   justify-content: center;
   width: 40px;
-<<<<<<< HEAD
   height: 100%;
   background: transparent;
   border: none;
   color: var(--text-dim);
   opacity: 0.5;
-=======
-  height: 20px;
-  border-radius: 100px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.45);
->>>>>>> main
   cursor: pointer;
   z-index: 30;
   padding: 0;
   flex-shrink: 0;
-<<<<<<< HEAD
   transition: opacity 0.15s, color 0.15s;
 }
 .bottom-grid-resize-handle .bottom-grid-collapse-btn:hover,
 .bottom-grid-resize-handle:hover .bottom-grid-collapse-btn {
   opacity: 1;
   color: var(--accent);
-=======
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-.bottom-grid-resize-handle .bottom-grid-collapse-btn:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--bg);
->>>>>>> main
 }
 
 #layoutToggleBtn.active {
