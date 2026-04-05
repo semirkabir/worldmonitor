@@ -2519,12 +2519,11 @@ export class MapComponent {
         if (!pt) return;
 
         const div = document.createElement('div');
-        div.className = 'aircraft-marker';
+        div.className = `aircraft-marker ${ac.onGround ? 'grounded' : 'airborne'}`;
         div.style.position = 'absolute';
         div.style.left = `${pt[0]}px`;
         div.style.top = `${pt[1]}px`;
         div.style.transform = `translate(-50%, -50%) rotate(${ac.trackDeg}deg)`;
-        div.style.color = ac.onGround ? '#c3c7cf' : '#b8bab8';
         div.style.lineHeight = '1';
         div.style.pointerEvents = 'auto';
         div.style.cursor = 'pointer';

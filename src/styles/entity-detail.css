@@ -718,14 +718,29 @@
   font-size: 12px;
 }
 
-.edp-flight-progress-label {
-  color: var(--text);
-  font-weight: 600;
+.edp-flight-progress-endpoint {
   min-width: 0;
+  color: var(--text);
 }
 
-.edp-flight-progress-label-right {
+.edp-flight-progress-endpoint-right {
   text-align: right;
+}
+
+.edp-flight-progress-code {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.edp-flight-progress-name {
+  margin-top: 2px;
+  color: var(--text-faint);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .edp-flight-progress-meta {
@@ -757,13 +772,13 @@
   transform: translate(-50%, -50%);
   padding: 4px 9px;
   border-radius: 999px;
-  background: var(--surface);
-  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
-  color: var(--text);
+  background: hsl(var(--flight-badge-hue, 220) 78% 56%);
+  border: 1px solid color-mix(in srgb, hsl(var(--flight-badge-hue, 220) 78% 56%) 70%, white 18%);
+  color: white;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.08em;
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--overlay-heavy) 25%, transparent);
+  box-shadow: 0 8px 20px color-mix(in srgb, hsl(var(--flight-badge-hue, 220) 78% 56%) 28%, transparent);
 }
 
 .edp-flight-hero-skeleton {
@@ -782,13 +797,22 @@
     align-items: flex-start;
   }
 
-  .edp-flight-progress-summary {
-    display: flex;
+  .edp-flight-progress-meta,
+  .edp-flight-progress-endpoint-right {
+    text-align: left;
   }
 
-  .edp-flight-progress-meta,
-  .edp-flight-progress-label-right {
-    text-align: left;
+  .edp-flight-progress-summary {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .edp-flight-progress-meta {
+    white-space: normal;
+  }
+
+  .edp-flight-progress-name {
+    white-space: normal;
   }
 
   .edp-flight-route-strip,
