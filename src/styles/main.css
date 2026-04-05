@@ -1,9 +1,9 @@
-@import './rtl-overrides.css';
+﻿@import './rtl-overrides.css';
 @import './panels.css';
 @import './tier1.css';
 
 /* ============================================================
-   Theme Colors — overridden by [data-theme="light"] below
+   Theme Colors ΓÇö overridden by [data-theme="light"] below
    ============================================================ */
 :root {
   /* Backgrounds */
@@ -69,7 +69,7 @@
 }
 
 /* ============================================================
-   Semantic Colors — dark-mode defaults, light overrides below
+   Semantic Colors ΓÇö dark-mode defaults, light overrides below
    ============================================================ */
 :root {
   /* Severity levels */
@@ -107,11 +107,11 @@
 }
 
 /* ============================================================
-   Light Theme — overrides theme colors AND semantic colors
+   Light Theme ΓÇö overrides theme colors AND semantic colors
    Bright/neon dark-mode colors need darker variants for light backgrounds
    ============================================================ */
 [data-theme="light"] {
-  /* Semantic color overrides — darker variants for light backgrounds */
+  /* Semantic color overrides ΓÇö darker variants for light backgrounds */
   --semantic-high: #ea580c;
   /* Tailwind orange-600 (was #ff8800, 2.27:1) */
   --semantic-elevated: #d97706;
@@ -215,7 +215,7 @@ body {
 }
 
 /* ============================================================
-   Global select — strip macOS native chrome, consistent dark UI
+   Global select ΓÇö strip macOS native chrome, consistent dark UI
    ============================================================ */
 select {
   appearance: none !important;
@@ -409,7 +409,7 @@ select optgroup {
   letter-spacing: 0.5px;
 }
 
-/* ── Region selector: pin icon + 3D pulse + zoom dropdown ── */
+/* ΓöÇΓöÇ Region selector: pin icon + 3D pulse + zoom dropdown ΓöÇΓöÇ */
 
 .wm-sel-pin {
   flex-shrink: 0;
@@ -460,7 +460,7 @@ body.animations-paused *::after {
 }
 
 /* ============================================================
-   Theme Transition — smooth 200ms animation for theme switches
+   Theme Transition ΓÇö smooth 200ms animation for theme switches
    ============================================================ */
 *,
 *::before,
@@ -1366,7 +1366,7 @@ canvas,
   position: relative;
   height: 8px;
   cursor: ns-resize;
-  background: transparent;
+  background: linear-gradient(to bottom, transparent, var(--border));
   z-index: 200;
   display: none;
   align-items: center;
@@ -1385,8 +1385,8 @@ canvas,
 }
 
 .map-resize-handle:hover::after {
-  background: var(--text-dim);
-  opacity: 0.6;
+  background: #fff !important;
+  opacity: 1;
 }
 
 .bottom-grid-resize-handle {
@@ -1413,8 +1413,8 @@ canvas,
 }
 
 .bottom-grid-resize-handle:hover::after {
-  background: var(--text-dim);
-  opacity: 0.6;
+  background: #fff !important;
+  opacity: 1;
 }
 
 .corner-resize-handle {
@@ -1427,8 +1427,8 @@ canvas,
 }
 
 .map-section.resizing .map-resize-handle::after {
-  background: var(--text-dim);
-  opacity: 0.3;
+  background: var(--green);
+  opacity: 1;
 }
 
 .map-section.pinned {
@@ -1503,7 +1503,7 @@ canvas,
   background: var(--green-dim);
 }
 
-/* Hidden by default — shown only inside 768px media query */
+/* Hidden by default ΓÇö shown only inside 768px media query */
 .map-collapse-btn {
   display: none;
 }
@@ -1523,46 +1523,6 @@ canvas,
   scrollbar-width: none;
   -ms-overflow-style: none;
   /* This ensures panels scroll UNDER the pinned map (z-index: 100) */
-}
-
-/* Scroll-to-top button for panels */
-.scroll-to-top-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #ffffff;
-  border: none;
-  color: #000000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 10050;
-  opacity: 0;
-  transform: translateY(-8px);
-  transition: opacity 0.2s, transform 0.2s, background 0.15s;
-  pointer-events: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-}
-/* Keep button fixed at top of viewport when inside panels-grid */
-.panels-grid > .scroll-to-top-btn {
-  position: fixed;
-  top: 56px;
-  right: 16px;
-}
-.main-content.panels-hidden .panels-grid > .scroll-to-top-btn {
-  display: none;
-}
-.scroll-to-top-btn.visible {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-}
-.scroll-to-top-btn:hover {
-  background: #e0e0e0;
 }
 
 .panels-grid::-webkit-scrollbar {
@@ -1628,7 +1588,7 @@ canvas,
   right: 0;
   height: 20px;
   cursor: ns-resize;
-  background: linear-gradient(to top, rgba(68, 136, 255, 0.15), transparent);
+  background: linear-gradient(to top, transparent, transparent);
   z-index: 100;
   transition: background 0.2s;
   touch-action: none;
@@ -1638,16 +1598,11 @@ canvas,
 
 .panel-resize-handle:hover,
 .panel-resize-handle.active {
-  background: linear-gradient(to top, rgba(68, 136, 255, 0.25), transparent);
-}
-
-.panel-resize-handle:hover,
-.panel-resize-handle.active {
-  background: linear-gradient(to top, rgba(68, 136, 255, 0.25), transparent);
+  background: linear-gradient(to top, rgba(68, 136, 255, 0.15), transparent);
 }
 
 .panel-resize-handle::after {
-  content: '⋯';
+  content: 'Γï»';
   position: absolute;
   bottom: 2px;
   left: 50%;
@@ -1670,7 +1625,7 @@ canvas,
   bottom: 0;
   width: 20px;
   cursor: ew-resize;
-  background: linear-gradient(to left, rgba(68, 136, 255, 0.15), transparent);
+  background: linear-gradient(to left, transparent, transparent);
   z-index: 100;
   transition: background 0.2s;
   touch-action: none;
@@ -1680,16 +1635,11 @@ canvas,
 
 .panel-col-resize-handle:hover,
 .panel-col-resize-handle.active {
-  background: linear-gradient(to left, rgba(68, 136, 255, 0.25), transparent);
-}
-
-.panel-col-resize-handle:hover,
-.panel-col-resize-handle.active {
-  background: linear-gradient(to left, rgba(68, 136, 255, 0.25), transparent);
+  background: linear-gradient(to left, rgba(68, 136, 255, 0.15), transparent);
 }
 
 .panel-col-resize-handle::after {
-  content: '⋮';
+  content: 'Γï«';
   position: absolute;
   right: 3px;
   top: 50%;
@@ -1750,6 +1700,11 @@ body.panel-resize-active iframe {
   flex-shrink: 0;
   position: relative;
   transition: background-color 0.3s ease, border-color 0.3s ease;
+  cursor: grab;
+}
+
+.panel-header:active {
+  cursor: grabbing;
 }
 
 .panel-header-error {
@@ -1841,7 +1796,7 @@ body.panel-resize-active iframe {
   animation: count-bump 0.5s ease-out;
 }
 
-/* ── Panel copy button ────────────────────────────────────────── */
+/* ΓöÇΓöÇ Panel copy button ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 .panel-copy-btn {
   background: none;
   border: none;
@@ -1859,7 +1814,7 @@ body.panel-resize-active iframe {
   color: var(--accent, #44ff88);
 }
 
-/* ── Panel sparkline ─────────────────────────────────────────── */
+/* ΓöÇΓöÇ Panel sparkline ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 .panel-sparkline {
   display: flex;
   align-items: center;
@@ -2188,7 +2143,7 @@ body.panel-resize-active iframe {
   cursor: grabbing;
 }
 
-/* Live News – Channel settings button (same style as webcam view buttons) */
+/* Live News ΓÇô Channel settings button (same style as webcam view buttons) */
 .live-news-settings-btn {
   padding: 4px 8px;
   background: transparent;
@@ -3294,8 +3249,7 @@ body.live-news-fullscreen-active .panels-grid > *:not(.live-news-fullscreen) {
 }
 
 .item.alert {
-  background: rgba(59, 130, 246, 0.08);
-  border-left: 2px solid rgba(59, 130, 246, 0.6);
+  border-left: 2px solid var(--red);
   padding-left: 8px;
   margin-left: -8px;
 }
@@ -3992,23 +3946,6 @@ body.live-news-fullscreen-active .panels-grid > *:not(.live-news-fullscreen) {
   background: var(--darken-heavy);
   border-left: 3px solid var(--accent);
   border-radius: 2px;
-}
-
-/* Featured image for signals in modal */
-.signal-featured-image {
-  width: 100%;
-  max-height: 180px;
-  overflow: hidden;
-  border-radius: 6px;
-  margin-bottom: 10px;
-  background: var(--overlay-subtle);
-}
-
-.signal-featured-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
 }
 
 .signal-item:last-child {
@@ -4785,6 +4722,43 @@ body.playback-mode .status-dot {
   stroke: #ffa500;
   opacity: 0.8;
   filter: drop-shadow(0 0 4px #ffa500);
+}
+
+/* Animated flow overlays for cables and pipelines */
+.cable-flow-path {
+  fill: none;
+  stroke: #00d4ff;
+  stroke-width: 2;
+  stroke-opacity: 0.75;
+  stroke-dasharray: 5 20;
+  stroke-linecap: round;
+  animation: cable-data-flow 2s linear infinite;
+  filter: drop-shadow(0 0 3px #00d4ff);
+}
+
+@keyframes cable-data-flow {
+  to { stroke-dashoffset: -25; }
+}
+
+.pipeline-flow-path {
+  stroke-width: 3.5;
+  stroke-opacity: 0.72;
+  stroke-dasharray: 10 14;
+  stroke-linecap: round;
+  animation: pipeline-bulk-flow 3.5s linear infinite;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+.pipeline-flow-path.pipeline-flow-oil {
+  filter: drop-shadow(0 0 4px #f97316);
+}
+
+.pipeline-flow-path.pipeline-flow-gas {
+  filter: drop-shadow(0 0 4px #06b6d4);
+}
+
+@keyframes pipeline-bulk-flow {
+  to { stroke-dashoffset: -24; }
 }
 
 @keyframes cable-health-fault-pulse {
@@ -7057,7 +7031,7 @@ a.prediction-link:hover {
   color: var(--semantic-high);
 }
 
-/* Hotspot severity badge colors — override the generic muted .low */
+/* Hotspot severity badge colors ΓÇö override the generic muted .low */
 .popup-header.hotspot .popup-badge.high {
   background: var(--semantic-critical);
 }
@@ -7266,7 +7240,7 @@ a.prediction-link:hover {
 }
 
 .popup-list li::before {
-  content: '●';
+  content: 'ΓùÅ';
   position: absolute;
   left: 0;
   color: var(--red);
@@ -7665,7 +7639,7 @@ a.prediction-link:hover {
 }
 
 /* Export Panel */
-/* ── Visitor Counter ──────────────────────────────────────────────────────── */
+/* ΓöÇΓöÇ Visitor Counter ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
 .visitor-counter {
   position: relative;
@@ -7825,7 +7799,7 @@ a.prediction-link:hover {
   display: block;
 }
 
-/* ── Urgency Mode ─────────────────────────────────────────────────────────── */
+/* ΓöÇΓöÇ Urgency Mode ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
 @keyframes urgency-border-pulse {
   0%, 100% { box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.25), 0 0 6px rgba(239, 68, 68, 0.1); }
@@ -7859,7 +7833,7 @@ body.urgency-mode #header {
   animation: urgency-header-glow 2.5s ease-in-out infinite;
 }
 
-/* ── Export Panel ─────────────────────────────────────────────────────────── */
+/* ΓöÇΓöÇ Export Panel ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
 .export-panel-container {
   position: relative;
@@ -9466,7 +9440,7 @@ body.urgency-mode #header {
   margin-right: 4px;
 }
 
-/* Mobile search FAB — always visible floating button */
+/* Mobile search FAB ΓÇö always visible floating button */
 .search-mobile-fab {
   display: none;
 }
@@ -9640,7 +9614,7 @@ body.urgency-mode #header {
 }
 
 .flight-delay-marker.normal {
-  --flight-color: var(--semantic-normal);
+  --flight-color: var(--status-live);
 }
 
 .flight-delay-marker.minor {
@@ -9719,7 +9693,7 @@ body.urgency-mode #header {
 }
 
 .popup-header.flight.normal {
-  --flight-color: var(--semantic-normal);
+  --flight-color: var(--status-live);
 }
 
 .popup-header.flight.minor {
@@ -10387,7 +10361,7 @@ body.urgency-mode #header {
 }
 
 .panel-locked-features li::before {
-  content: "— ";
+  content: "ΓÇö ";
   color: #d4a843;
 }
 
@@ -10473,7 +10447,7 @@ body.urgency-mode #header {
   letter-spacing: 0.5px;
 }
 
-/* Highlight glow on new items — stays until next data refresh */
+/* Highlight glow on new items ΓÇö stays until next data refresh */
 .item.item-new-highlight {
   background: linear-gradient(90deg, rgba(68, 255, 136, 0.15) 0%, transparent 60%);
   border-left-color: var(--green) !important;
@@ -11251,7 +11225,7 @@ body.urgency-mode #header {
    Mobile Touch Optimization
    ========================================================================== */
 
-/* Narrow viewport only — keep 768 in sync with MOBILE_BREAKPOINT_PX in src/utils/index.ts */
+/* Narrow viewport only ΓÇö keep 768 in sync with MOBILE_BREAKPOINT_PX in src/utils/index.ts */
 @media (max-width: 768px) {
   /* Expand touch targets for all map markers using ::before pseudo-element */
   /* This creates an invisible touch area around small markers */
@@ -11369,7 +11343,7 @@ body.urgency-mode #header {
     max-height: 100dvh !important;
   }
 
-  /* Collapsed map on mobile — higher specificity overrides .map-section above */
+  /* Collapsed map on mobile ΓÇö higher specificity overrides .map-section above */
   .main-content .map-section.collapsed {
     height: auto !important;
     min-height: 0 !important;
@@ -11384,7 +11358,7 @@ body.urgency-mode #header {
     display: none;
   }
 
-  /* Map collapse toggle button — mobile only */
+  /* Map collapse toggle button ΓÇö mobile only */
   .map-collapse-btn {
     display: inline-flex;
     align-items: center;
@@ -11655,7 +11629,7 @@ body.urgency-mode #header {
 }
 
 .hotspot-gdelt-header::before {
-  content: '📡';
+  content: '≡ƒôí';
   font-size: 12px;
 }
 
@@ -13747,7 +13721,7 @@ body.urgency-mode #header {
   background: var(--overlay-light);
 }
 
-/* Findings Detail Panel — slides in from right */
+/* Findings Detail Panel ΓÇö slides in from right */
 .findings-detail-panel {
   position: fixed;
   top: 0;
@@ -13901,7 +13875,7 @@ body.urgency-mode #header {
   color: var(--text-dim);
 }
 
-/* Intelligence Finding Panel — enriched section blocks */
+/* Intelligence Finding Panel ΓÇö enriched section blocks */
 .ifp-main {
   padding: 14px 16px;
   border-bottom: 1px solid var(--border-dim, rgba(255,255,255,0.07));
@@ -14208,7 +14182,7 @@ body.urgency-mode #header {
   display: block;
 }
 
-/* Article image for velocity spike — sits above signal metrics */
+/* Article image for velocity spike ΓÇö sits above signal metrics */
 .ifp-article-image {
   width: 100%;
   border-radius: 8px;
@@ -14754,7 +14728,7 @@ body.urgency-mode #header {
   height: 100%;
   overflow: hidden;
   /* Prevent browser from intercepting touch gestures (pinch-zoom, pan)
-     so MapLibre/deck.gl can handle them directly — fixes Android pinch-zoom */
+     so MapLibre/deck.gl can handle them directly ΓÇö fixes Android pinch-zoom */
   touch-action: none;
 }
 
@@ -15018,7 +14992,7 @@ body.urgency-mode #header {
   font-weight: bold;
 }
 
-/* Layers row — flex row with toggle btn + help btn */
+/* Layers row ΓÇö flex row with toggle btn + help btn */
 .deckgl-time-slider .layers-row {
   display: flex;
   align-items: stretch;
@@ -15197,7 +15171,7 @@ body.urgency-mode #header {
 }
 
 .deckgl-layer-toggles .layer-toggle.zoom-hidden::after {
-  content: '🔍+';
+  content: '≡ƒöì+';
   position: absolute;
   top: -4px;
   right: 2px;
@@ -15227,7 +15201,7 @@ body.urgency-mode #header {
 }
 
 .deckgl-layer-toggles .layer-toggle input[type="checkbox"]:checked::after {
-  content: '✓';
+  content: 'Γ£ô';
   position: absolute;
   top: 50%;
   left: 50%;
@@ -15278,7 +15252,7 @@ body.urgency-mode #header {
   border-color: rgba(68, 255, 136, 0.2);
 }
 
-/* ─── Custom category: + button on Conflicts row ─────────────────────────── */
+/* ΓöÇΓöÇΓöÇ Custom category: + button on Conflicts row ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 .custom-category-add-btn {
   margin-left: auto;
   flex-shrink: 0;
@@ -15302,7 +15276,7 @@ body.urgency-mode #header {
   color: var(--green);
 }
 
-/* ─── Custom category divider ─────────────────────────────────────────────── */
+/* ΓöÇΓöÇΓöÇ Custom category divider ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 .custom-category-divider {
   font-size: 8px;
   font-weight: 700;
@@ -15313,7 +15287,7 @@ body.urgency-mode #header {
   opacity: 0.6;
 }
 
-/* ─── Custom category item ────────────────────────────────────────────────── */
+/* ΓöÇΓöÇΓöÇ Custom category item ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 .custom-category-item {
   position: relative;
 }
@@ -15345,7 +15319,7 @@ body.urgency-mode #header {
   border-color: var(--red, #f87171);
 }
 
-/* ─── Custom category creation modal ─────────────────────────────────────── */
+/* ΓöÇΓöÇΓöÇ Custom category creation modal ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 .custom-category-modal-overlay {
   position: fixed;
   inset: 0;
@@ -15440,7 +15414,7 @@ body.urgency-mode #header {
   border-color: var(--green);
 }
 .custom-category-source-row input[type="checkbox"]:checked::after {
-  content: '✓';
+  content: 'Γ£ô';
   position: absolute;
   top: 50%;
   left: 50%;
@@ -15710,9 +15684,9 @@ body.urgency-mode #header {
   background-color: transparent !important;
 }
 
-/* deck.gl grab cursor */
+/* Override deck.gl default grab cursor - use default pointer */
 #deckgl-overlay canvas {
-  cursor: grab !important;
+  cursor: default !important;
 }
 
 #deckgl-overlay canvas:active {
@@ -16859,7 +16833,7 @@ body.urgency-mode #header {
 }
 
 .panel-sort-option.active::before {
-  content: '✓';
+  content: 'Γ£ô';
   margin-right: 6px;
 }
 
@@ -18197,7 +18171,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
   color: var(--accent);
 }
 
-/* ── Country Intel Modal ── */
+/* ΓöÇΓöÇ Country Intel Modal ΓöÇΓöÇ */
 .country-intel-overlay {
   position: fixed;
   inset: 0;
@@ -19769,7 +19743,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
 }
 
 /* ============================================================
-   Community Discussion Widget — Floating Pill
+   Community Discussion Widget ΓÇö Floating Pill
    ============================================================ */
 .community-widget {
   position: fixed;
@@ -19902,7 +19876,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
   color: var(--text-dim, #888);
 }
 
-/* ── Ultra-wide layout: map left, panels beside it ── */
+/* ΓöÇΓöÇ Ultra-wide layout: map left, panels beside it ΓöÇΓöÇ */
 @media (min-width: 1600px) {
   .main-content {
     display: grid;
@@ -19958,7 +19932,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
     bottom: 0;
     width: 8px;
     height: 100% !important;
-    background: transparent;
+    background: var(--border-subtle);
     margin: 0;
     cursor: ew-resize;
     display: flex;
@@ -19968,12 +19942,12 @@ body:has(.tauri-titlebar) .breaking-news-container {
   }
 
   .map-resize-handle:hover {
-    background: transparent;
+    background: var(--border-subtle);
   }
 
   .map-resize-handle:hover::after {
-    background: var(--text-dim);
-    opacity: 0.6;
+    background: #fff !important;
+    opacity: 1;
   }
 
   .map-resize-handle::after {
@@ -20042,7 +20016,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
   }
 }
 
-/* ── Forced side layout (user toggle) ── */
+/* ΓöÇΓöÇ Forced side layout (user toggle) ΓöÇΓöÇ */
 .main-content.layout-side {
   display: grid;
   grid-template-columns: var(--map-sidebar-split, 60%) minmax(280px, 1fr);
@@ -20083,7 +20057,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
   bottom: 0;
   width: 8px;
   height: 100% !important;
-  background: transparent;
+  background: var(--border-subtle);
   margin: 0;
   cursor: ew-resize;
   display: flex;
@@ -20092,11 +20066,11 @@ body:has(.tauri-titlebar) .breaking-news-container {
   z-index: 10;
 }
 .main-content.layout-side .map-resize-handle:hover {
-  background: transparent;
+  background: var(--border-subtle);
 }
 .main-content.layout-side .map-resize-handle:hover::after {
-  background: var(--text-dim);
-  opacity: 0.6;
+  background: #fff !important;
+  opacity: 1;
 }
 .main-content.layout-side .map-resize-handle::after {
   width: 3px;
@@ -20132,7 +20106,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
   position: relative;
 }
 
-/* ── Panels hidden (map fullscreen) ── works in both bottom & side layouts */
+/* ΓöÇΓöÇ Panels hidden (map fullscreen) ΓöÇΓöÇ works in both bottom & side layouts */
 .main-content.panels-hidden .panels-grid {
   display: none !important;
 }
@@ -20165,7 +20139,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
   grid-column: 1;
 }
 
-/* ── Bottom grid hidden (independent of sidebar panels) ── */
+/* ΓöÇΓöÇ Bottom grid hidden (independent of sidebar panels) ΓöÇΓöÇ */
 .map-section.bottom-grid-hidden #mapBottomGrid {
   display: none !important;
 }
@@ -20190,10 +20164,10 @@ body:has(.tauri-titlebar) .breaking-news-container {
   display: none !important;
 }
 
-/* ── Collapse buttons — each on its own resize handle ── */
+/* ΓöÇΓöÇ Collapse buttons ΓÇö each on its own resize handle ΓöÇΓöÇ */
 
 /* In stacked/bottom layout (<1600px, no layout-side): hide the bottom-grid handle.
-   mapBottomGrid is empty in this layout — the handle stacks on top of mapResizeHandle
+   mapBottomGrid is empty in this layout ΓÇö the handle stacks on top of mapResizeHandle
    and causes both buttons to overlap. */
 @media (max-width: 1599px) {
   .main-content:not(.layout-side) #bottomGridResizeHandle {
@@ -20201,27 +20175,13 @@ body:has(.tauri-titlebar) .breaking-news-container {
   }
 }
 
-/* Vertical map↔panel handle (side layout): stays visible, button overlaps the resize bar */
+/* Vertical mapΓåöpanel handle (side layout): stays visible, overflows the button */
 .map-resize-handle.has-collapse-btns {
   display: flex !important;
   overflow: visible;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-<<<<<<< HEAD
-<<<<<<< HEAD
-  background: transparent;
-}
-/* Show resize bar under button */
-.map-resize-handle.has-collapse-btns::after {
-  opacity: 0.3;
-  height: 100%;
-  width: 3px;
-}
-
-/* panels-collapse-btn: pill centered on the resize bar — side layout */
-=======
-=======
->>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
   height: 14px;
 }
 
@@ -20231,62 +20191,23 @@ body:has(.tauri-titlebar) .breaking-news-container {
 }
 
 /* panels-collapse-btn: seamless within the bar */
-<<<<<<< HEAD
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
-=======
->>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
 .map-resize-handle .panels-collapse-btn {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  position: relative;
+  top: auto; right: auto; bottom: auto; left: auto;
+  transform: none;
   display: flex;
   align-items: center;
   justify-content: center;
-<<<<<<< HEAD
-<<<<<<< HEAD
-  width: 22px;
-  height: 40px;
-  border-radius: 100px;
-  background: var(--surface);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #fff;
-=======
-=======
->>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
   width: 40px;
   height: 100%;
   background: transparent;
   border: none;
   color: var(--text-dim);
   opacity: 0.5;
-<<<<<<< HEAD
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
-=======
->>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
   cursor: pointer;
   z-index: 30;
   padding: 0;
   flex-shrink: 0;
-<<<<<<< HEAD
-<<<<<<< HEAD
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-[data-theme="light"] .map-resize-handle .panels-collapse-btn {
-  background: var(--surface);
-  color: #000;
-  border-color: rgba(0, 0, 0, 0.12);
-}
-.map-resize-handle .panels-collapse-btn:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--bg);
-}
-
-/* panels-collapse-btn: pill centered on the resize bar — stacked/bottom layout */
-=======
-=======
->>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
   transition: opacity 0.15s, color 0.15s;
 }
 .map-resize-handle .panels-collapse-btn:hover,
@@ -20296,125 +20217,54 @@ body:has(.tauri-titlebar) .breaking-news-container {
 }
 
 /* panels-collapse-btn: horizontal orientation for bottom/stacked layout */
-<<<<<<< HEAD
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
-=======
->>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
 @media (max-width: 1599px) {
   .main-content:not(.layout-side) .map-resize-handle.has-collapse-btns {
     flex-direction: row;
   }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
   .main-content:not(.layout-side) .map-resize-handle {
     cursor: ns-resize;
   }
   .main-content:not(.layout-side) .map-resize-handle .panels-collapse-btn {
-<<<<<<< HEAD
-    width: 40px;
-    height: 22px;
-    border-radius: 100px;
-    cursor: pointer;
-    background: var(--surface);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-  }
-  .main-content:not(.layout-side) [data-theme="light"] .map-resize-handle .panels-collapse-btn {
-    background: var(--surface);
-    color: #000;
-    border-color: rgba(0, 0, 0, 0.12);
-  }
-=======
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
-=======
     cursor: pointer;
   }
->>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
 }
 
-/* Horizontal map↔bottom-grid handle: button centered on the resize bar */
+/* Horizontal mapΓåöbottom-grid handle: always visible in side layout, button centered */
 .bottom-grid-resize-handle.has-collapse-btns {
   display: flex !important;
   overflow: visible;
   align-items: center;
   justify-content: center;
-<<<<<<< HEAD
-  background: transparent;
-}
-/* Show resize bar under button */
-.bottom-grid-resize-handle.has-collapse-btns::after {
-  opacity: 0.3;
-  width: 100%;
-  height: 3px;
-=======
   height: 14px;
 }
 
 .bottom-grid-resize-handle.has-collapse-btns::after {
   display: none;
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
 }
 
 .bottom-grid-resize-handle .bottom-grid-collapse-btn {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  position: relative;
+  top: auto; right: auto; bottom: auto; left: auto;
+  transform: none;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 40px;
-<<<<<<< HEAD
-<<<<<<< HEAD
-  height: 22px;
-  border-radius: 100px;
-  background: var(--surface);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #fff;
-=======
-=======
->>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
   height: 100%;
   background: transparent;
   border: none;
   color: var(--text-dim);
   opacity: 0.5;
-<<<<<<< HEAD
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
-=======
->>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
   cursor: pointer;
   z-index: 30;
   padding: 0;
   flex-shrink: 0;
-<<<<<<< HEAD
-<<<<<<< HEAD
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-[data-theme="light"] .bottom-grid-resize-handle .bottom-grid-collapse-btn {
-  background: var(--surface);
-  color: #000;
-  border-color: rgba(0, 0, 0, 0.12);
-}
-.bottom-grid-resize-handle .bottom-grid-collapse-btn:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--bg);
-=======
-=======
->>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
   transition: opacity 0.15s, color 0.15s;
 }
 .bottom-grid-resize-handle .bottom-grid-collapse-btn:hover,
 .bottom-grid-resize-handle:hover .bottom-grid-collapse-btn {
   opacity: 1;
   color: var(--accent);
-<<<<<<< HEAD
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
-=======
->>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
 }
 
 #layoutToggleBtn.active {
@@ -20495,7 +20345,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
   overflow: hidden;
 }
 
-/* ─── Globe Map Styles ──────────────────────────────────────────────────────── */
+/* ΓöÇΓöÇΓöÇ Globe Map Styles ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 
 .globe-mode {
   background: #000 !important;
@@ -20508,7 +20358,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
   100% { transform: scale(2.5); opacity: 0; }
 }
 
-/* ── Panel remove (−) button ──────────────────────────── */
+/* ΓöÇΓöÇ Panel remove (ΓêÆ) button ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 .panel-remove-btn {
   display: inline-flex;
   background: none;
@@ -20526,7 +20376,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
 }
 .panel-remove-btn:hover { opacity: 1; color: #ff4444; }
 
-/* ── Add Widget ghost card ────────────────────────────── */
+/* ΓöÇΓöÇ Add Widget ghost card ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 .add-widget-btn {
   display: flex;
   flex-direction: column;
@@ -20547,7 +20397,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
 .add-widget-btn:hover { border-color: var(--text-dim); color: var(--text); }
 .add-widget-plus { font-size: 24px; line-height: 1; }
 
-/* ── Add Widget overlay ───────────────────────────────── */
+/* ΓöÇΓöÇ Add Widget overlay ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 .add-widget-overlay {
   position: fixed;
   bottom: 60px;
@@ -20602,9 +20452,9 @@ body:has(.tauri-titlebar) .breaking-news-container {
 .add-widget-item-plus { color: var(--text-muted); font-size: 18px; flex-shrink: 0; }
 .add-widget-item:hover .add-widget-item-plus { color: var(--text); }
 
-/* ════════════════════════════════════════════════════════════════
+/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
    CII Country Quick-Compare
-   ════════════════════════════════════════════════════════════════ */
+   ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */
 .cii-vs-btn {
   background: none;
   border: 1px solid var(--border);
@@ -20716,9 +20566,9 @@ body:has(.tauri-titlebar) .breaking-news-container {
   color: #ffaa00;
 }
 
-/* ════════════════════════════════════════════════════════════════
+/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
    Toast notification
-   ════════════════════════════════════════════════════════════════ */
+   ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */
 .wm-toast {
   position: fixed;
   bottom: 24px; left: 50%;
@@ -20747,9 +20597,9 @@ body:has(.tauri-titlebar) .breaking-news-container {
   transform: translateX(-50%) translateY(0);
 }
 
-/* ════════════════════════════════════════════════════════════════
+/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
    Live Status Dropdown
-   ════════════════════════════════════════════════════════════════ */
+   ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */
 .status-indicator { position: relative; }
 
 .status-dropdown {
@@ -21159,7 +21009,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
 }
 
 .map-tray-header::after {
-  content: '▼';
+  content: 'Γû╝';
   margin-left: auto;
   font-size: 8px;
   color: var(--text-dim);
@@ -21184,7 +21034,7 @@ body:has(.tauri-titlebar) .breaking-news-container {
 }
 
 .map-tray-header::after {
-  content: '▼';
+  content: 'Γû╝';
   margin-left: auto;
   font-size: 8px;
   color: var(--text-dim);
@@ -21326,7 +21176,7 @@ body[data-panel-density="comfortable"] .panel-tabs {
 .status-dropdown-badge-stale { color: #ffaa00; background: rgba(255,170,0,0.1); }
 .status-dropdown-badge-error { color: #ff3030; background: rgba(255,48,48,0.1); }
 
-/* ── Earnings Calendar Panel ──────────────────────────────────────── */
+/* ΓöÇΓöÇ Earnings Calendar Panel ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 .ecp-controls { display: flex; gap: 8px; padding: 8px; border-bottom: 1px solid var(--border); }
 .ecp-range-select, .ecp-symbol-input { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 4px; font-size: 12px; }
 .ecp-range-select { flex: 0 0 auto; }
@@ -21346,7 +21196,7 @@ body[data-panel-density="comfortable"] .panel-tabs {
 .ecp-beat { color: #22c55e !important; }
 .ecp-miss { color: #ef4444 !important; }
 
-/* ── IPO Calendar Panel ───────────────────────────────────────────── */
+/* ΓöÇΓöÇ IPO Calendar Panel ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 .ipo-controls { padding: 8px; border-bottom: 1px solid var(--border); }
 .ipo-range-select { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 4px; font-size: 12px; }
 .ipo-list { overflow-y: auto; max-height: calc(100vh - 200px); }
@@ -21362,7 +21212,7 @@ body[data-panel-density="comfortable"] .panel-tabs {
 .ipo-detail .ipo-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 .ipo-detail .ipo-value { font-size: 12px; color: var(--text); font-weight: 600; }
 
-/* ── Insider Trading Panel ────────────────────────────────────────── */
+/* ΓöÇΓöÇ Insider Trading Panel ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 .insider-controls { padding: 8px; border-bottom: 1px solid var(--border); }
 .insider-symbol-input { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 4px; font-size: 12px; }
 .insider-list { overflow-y: auto; max-height: calc(100vh - 200px); }
@@ -21377,7 +21227,7 @@ body[data-panel-density="comfortable"] .panel-tabs {
 .insider-detail .insider-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 .insider-detail .insider-value { font-size: 12px; color: var(--text); font-weight: 600; }
 
-/* ── Options Chain Panel ──────────────────────────────────────────── */
+/* ΓöÇΓöÇ Options Chain Panel ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 .opt-controls { display: flex; gap: 8px; padding: 8px; border-bottom: 1px solid var(--border); align-items: center; }
 .opt-symbol-input { flex: 1; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 4px; font-size: 12px; }
 .opt-price { font-size: 13px; font-weight: 700; color: var(--text); }
@@ -21394,7 +21244,7 @@ body[data-panel-density="comfortable"] .panel-tabs {
 .opt-strike { font-weight: 600; text-align: center; }
 .opt-last, .opt-bid, .opt-ask, .opt-vol, .opt-oi, .opt-iv { text-align: center; color: var(--text-secondary); }
 
-/* ── Social Sentiment Panel ───────────────────────────────────────── */
+/* ΓöÇΓöÇ Social Sentiment Panel ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
 .ss-controls { padding: 8px; border-bottom: 1px solid var(--border); }
 .ss-symbol-input { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: 4px; font-size: 12px; }
 .ss-content { overflow-y: auto; max-height: calc(100vh - 200px); padding: 8px; }

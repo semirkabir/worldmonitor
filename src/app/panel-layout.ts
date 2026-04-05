@@ -129,6 +129,7 @@ export class PanelLayoutManager implements AppModule {
 
   init(): void {
     this.renderLayout();
+    this.initShellGuidanceAfterRender();
   }
 
   destroy(): void {
@@ -546,6 +547,7 @@ export class PanelLayoutManager implements AppModule {
       saveCustomCategories(this.customCategories);
       overlay.remove();
       this.renderLayout();
+      this.initShellGuidanceAfterRender();
     });
     actions.appendChild(createBtn);
     modal.appendChild(actions);
@@ -574,6 +576,7 @@ export class PanelLayoutManager implements AppModule {
     this.customCategories = this.customCategories.filter(c => c.id !== categoryId);
     saveCustomCategories(this.customCategories);
     this.renderLayout();
+    this.initShellGuidanceAfterRender();
   }
 
   private setupMobileMapToggle(): void {
@@ -2074,5 +2077,17 @@ export class PanelLayoutManager implements AppModule {
     });
     INTEL_SOURCES.forEach(f => sources.add(f.name));
     return Array.from(sources).sort((a, b) => a.localeCompare(b));
+  }
+
+  initShellGuidanceAfterRender(): void {
+    const strip = document.getElementById('shellGuidanceStrip');
+    if (strip) {
+      const shouldHide = this.ctx.isMobile || localStorage.getItem('wm-ui-desktop-onboarding-dismissed') === 'true';
+      strip.hidden = shouldHide;
+      document.getElementById('shellGuidanceDismiss')?.addEventListener('click', () => {
+        localStorage.setItem('wm-ui-desktop-onboarding-dismissed', 'true');
+        strip.hidden = true;
+      });
+    }
   }
 }

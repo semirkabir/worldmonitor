@@ -21,13 +21,10 @@ import {
 import { TechHQRenderer } from '@/components/entity-detail/renderers/tech-hq';
 import { AircraftRenderer } from '@/components/entity-detail/renderers/aircraft';
 import { SpaceportRenderer } from '@/components/entity-detail/renderers/spaceport';
-<<<<<<< HEAD
 import { CompanyRenderer } from '@/components/entity-detail/renderers/company';
 import { WeatherAlertRenderer } from '@/components/entity-detail/renderers/weather';
 import { APTGroupRenderer } from '@/components/entity-detail/renderers/apt';
 import { PredictionMarketRenderer } from '@/components/entity-detail/renderers/prediction-market';
-=======
->>>>>>> 0cb63b6e (fix(types): resolve pre-existing TypeScript errors to unblock CI)
 
 export class EntityIntelManager implements AppModule {
   private ctx: AppContext;
@@ -90,10 +87,7 @@ export class EntityIntelManager implements AppModule {
       base: new MilitaryBaseRenderer(),
       militaryVessel: new MilitaryVesselRenderer(),
       militaryVesselCluster: new MilitaryVesselClusterRenderer(),
-<<<<<<< HEAD
-=======
       hotspot: this.hotspotRenderer,
->>>>>>> 0cb63b6e (fix(types): resolve pre-existing TypeScript errors to unblock CI)
       pipeline: new PipelineRenderer(),
       nuclear: new NuclearRenderer(),
       irradiator: new IrradiatorRenderer(),
@@ -104,14 +98,10 @@ export class EntityIntelManager implements AppModule {
       techHQ: new TechHQRenderer(),
       aircraft: new AircraftRenderer(),
       spaceport: new SpaceportRenderer(),
-<<<<<<< HEAD
       weather: new WeatherAlertRenderer(),
       apt: new APTGroupRenderer(),
-      hotspot: this.hotspotRenderer,
       company: new CompanyRenderer(),
       predictionMarket: new PredictionMarketRenderer(),
-=======
->>>>>>> 0cb63b6e (fix(types): resolve pre-existing TypeScript errors to unblock CI)
     };
   }
 }

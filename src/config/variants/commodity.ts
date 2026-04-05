@@ -110,13 +110,8 @@ export const DEFAULT_MAP_LAYERS: MapLayers = {
   dayNight: false,
   cyberThreats: false,
   // Additional required properties
-<<<<<<< HEAD
   aptGroups: false,
   ciiChoropleth: false,
-=======
-
-  ciiChoropleth: false, aptGroups: false,
->>>>>>> 0cb63b6e (fix(types): resolve pre-existing TypeScript errors to unblock CI)
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -174,13 +169,8 @@ export const MOBILE_DEFAULT_MAP_LAYERS: MapLayers = {
   dayNight: false,
   cyberThreats: false,
   // Additional required properties
-<<<<<<< HEAD
   aptGroups: false,
   ciiChoropleth: false,
-=======
-
-  ciiChoropleth: false, aptGroups: false,
->>>>>>> 0cb63b6e (fix(types): resolve pre-existing TypeScript errors to unblock CI)
 };
 
 export const VARIANT_CONFIG: VariantConfig = {

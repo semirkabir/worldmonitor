@@ -6,6 +6,7 @@ import type { Topology, GeometryCollection } from 'topojson-specification';
 import type { Feature, Geometry } from 'geojson';
 import type { MapLayers, Hotspot, NewsItem, InternetOutage, RelatedAsset, AssetType, AisDisruptionEvent, AisDensityZone, CableAdvisory, RepairShip, SocialUnrestEvent, MilitaryFlight, MilitaryVessel, MilitaryFlightCluster, MilitaryVesselCluster, NaturalEvent, CyberThreat, CableHealthRecord, UcdpGeoEvent } from '@/types';
 import type { AirportDelayAlert, PositionSample } from '@/services/aviation';
+import { filterRenderableAircraftPositions, sampleAircraftPositions } from '@/services/aviation';
 import type { Earthquake } from '@/services/earthquakes';
 import { type IranEvent, getIranEventCssColor, getIranEventSize } from '@/services/conflict';
 import type { TechHubActivity } from '@/services/tech-activity';
@@ -2513,9 +2514,7 @@ export class MapComponent {
 
     // Aircraft positions (simplified dots in SVG fallback, limited by density slider)
     if (this.state.layers.flights) {
-      const density = this.aircraftDensity / 100;
-      const maxCount = Math.max(1, Math.floor(this.aircraftPositions.length * density));
-      this.aircraftPositions.slice(0, Math.min(maxCount, 200)).forEach((ac) => {
+      sampleAircraftPositions(this.aircraftPositions, this.aircraftDensity, 200).forEach((ac) => {
         const pt = projection([ac.lon, ac.lat]);
         if (!pt) return;
 
@@ -3782,7 +3781,7 @@ export class MapComponent {
   }
 
   public setAircraftPositions(positions: PositionSample[]): void {
-    this.aircraftPositions = positions;
+    this.aircraftPositions = filterRenderableAircraftPositions(positions);
     this.render();
   }
 

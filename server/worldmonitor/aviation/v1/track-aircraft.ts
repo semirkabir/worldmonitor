@@ -10,6 +10,8 @@ import { CHROME_UA } from '../../../_shared/constants';
 
 // 120s for anonymous OpenSky tier (~10 req/min limit); TODO: reduce to 10s on commercial tier
 const CACHE_TTL = 120;
+const NEGATIVE_CACHE_TTL = 15;
+const MAX_POSITION_AGE_MS = 20 * 60 * 1000;
 
 interface OpenSkyResponse {
     states?: unknown[][];
@@ -17,42 +19,40 @@ interface OpenSkyResponse {
 
 function parseOpenSkyStates(states: unknown[][]): PositionSample[] {
     const now = Date.now();
-    return states
-        .filter(s => Array.isArray(s) && s[5] != null && s[6] != null)
-        .map((s): PositionSample => ({
-            icao24: String(s[0] ?? ''),
-            callsign: String(s[1] ?? '').trim(),
-            lat: Number(s[6]),
-            lon: Number(s[5]),
-            altitudeM: Number(s[7] ?? 0),
-            groundSpeedKts: Number(s[9] ?? 0) * 1.944,
-            trackDeg: Number(s[10] ?? 0),
-            verticalRate: Number(s[11] ?? 0),
-            onGround: Boolean(s[8]),
+    const latestByHex = new Map<string, PositionSample>();
+
+    for (const state of states) {
+        if (!Array.isArray(state) || state[5] == null || state[6] == null) continue;
+
+        const icao24 = String(state[0] ?? '').trim().toLowerCase();
+        const lon = Number(state[5]);
+        const lat = Number(state[6]);
+        const observedAt = Number(state[4] ?? (now / 1000)) * 1000;
+        if (!icao24 || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+        if (lat < -90 || lat > 90 || lon < -180 || lon > 180) continue;
+        if (Number.isFinite(observedAt) && now - observedAt > MAX_POSITION_AGE_MS) continue;
+
+        const next: PositionSample = {
+            icao24,
+            callsign: String(state[1] ?? '').trim(),
+            lat,
+            lon,
+            altitudeM: Number(state[7] ?? 0),
+            groundSpeedKts: Number(state[9] ?? 0) * 1.944,
+            trackDeg: Number(state[10] ?? 0),
+            verticalRate: Number(state[11] ?? 0),
+            onGround: Boolean(state[8]),
             source: 'POSITION_SOURCE_OPENSKY',
-            observedAt: Number(s[4] ?? (now / 1000)) * 1000,
-        }));
-}
+            observedAt,
+        };
 
-function buildSimulatedPositions(icao24: string, callsign: string, swLat: number, swLon: number, neLat: number, neLon: number): PositionSample[] {
-    const now = Date.now();
-    const latSpan = neLat - swLat;
-    const lonSpan = neLon - swLon;
-    const count = latSpan > 0 && lonSpan > 0 ? Math.floor(Math.random() * 16) + 15 : 10;
+        const prev = latestByHex.get(icao24);
+        if (!prev || next.observedAt >= prev.observedAt) {
+            latestByHex.set(icao24, next);
+        }
+    }
 
-    return Array.from({ length: count }, (_, i) => ({
-        icao24: icao24 || `3c${(0x6543 + i).toString(16)}`,
-        callsign: callsign || `SIM${100 + i}`,
-        lat: swLat + Math.random() * (latSpan || 5),
-        lon: swLon + Math.random() * (lonSpan || 5),
-        altitudeM: 8000 + Math.random() * 3000,
-        groundSpeedKts: 400 + Math.random() * 100,
-        trackDeg: Math.random() * 360,
-        verticalRate: (Math.random() - 0.5) * 5,
-        onGround: false,
-        source: 'POSITION_SOURCE_SIMULATED' as const,
-        observedAt: now,
-    }));
+    return Array.from(latestByHex.values());
 }
 
 const OPENSKY_PUBLIC_BASE = 'https://opensky-network.org/api';
@@ -134,10 +134,10 @@ export async function trackAircraft(
                 }
 
                 return null; // negative-cached briefly
-            }, CACHE_TTL, // negative TTL same as positive — retry quickly
+            }, NEGATIVE_CACHE_TTL,
         );
     } catch {
-        /* Redis unavailable — fall through to simulated */
+        /* Redis unavailable — fall through to direct response handling */
     }
 
     if (result) {
@@ -147,7 +147,5 @@ export async function trackAircraft(
         return { positions, source: result.source, updatedAt: Date.now() };
     }
 
-    // Fallback to simulated data (not cached — random each time)
-    const positions = buildSimulatedPositions(req.icao24, req.callsign, req.swLat, req.swLon, req.neLat, req.neLon);
-    return { positions, source: 'simulated', updatedAt: Date.now() };
+    return { positions: [], source: 'unavailable', updatedAt: Date.now() };
 }

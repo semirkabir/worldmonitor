@@ -410,6 +410,400 @@
   flex-direction: column;
 }
 
+.edp-flight-hero {
+  margin-bottom: 14px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, #4c6fff 16%, transparent), transparent 34%),
+    radial-gradient(circle at bottom left, color-mix(in srgb, #0b1e66 28%, transparent), transparent 42%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, black), color-mix(in srgb, var(--panel-bg) 98%, black));
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--overlay-heavy) 34%, transparent);
+}
+
+.edp-flight-hero-header {
+  margin-bottom: 16px;
+}
+
+.edp-flight-media {
+  margin-top: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  background: color-mix(in srgb, var(--surface) 84%, black);
+}
+
+.edp-flight-media-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: color-mix(in srgb, var(--surface) 70%, black);
+}
+
+.edp-flight-media-credit {
+  padding: 8px 12px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.edp-flight-media-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.edp-flight-media-link:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.edp-flight-hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.edp-flight-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.edp-flight-brand-logo {
+  display: flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff4d4d 0%, #d71818 100%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 25%, transparent), 0 8px 22px color-mix(in srgb, #d71818 26%, transparent);
+}
+
+.edp-flight-brand-logo-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.edp-flight-brand-logo-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edp-flight-brand-logo-loaded {
+  background: color-mix(in srgb, white 88%, transparent);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--overlay-heavy) 20%, transparent);
+}
+
+.edp-flight-brand-logo-loaded .edp-flight-brand-logo-fallback {
+  opacity: 0;
+}
+
+.edp-flight-meta {
+  min-width: 0;
+}
+
+.edp-flight-meta-line {
+  font-size: 12px;
+  color: var(--text-faint);
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
+}
+
+.edp-flight-route-title {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.05;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.edp-flight-meta-subtitle {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.edp-flight-status {
+  flex-shrink: 0;
+  padding: 8px 13px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.edp-flight-status-live {
+  color: #8cf4c5;
+  background: color-mix(in srgb, #22c55e 14%, transparent);
+  border-color: color-mix(in srgb, #22c55e 28%, transparent);
+}
+
+.edp-flight-status-warning {
+  color: #f8cf6a;
+  background: color-mix(in srgb, #f59e0b 14%, transparent);
+  border-color: color-mix(in srgb, #f59e0b 28%, transparent);
+}
+
+.edp-flight-status-critical {
+  color: #ff9b9b;
+  background: color-mix(in srgb, #ef4444 14%, transparent);
+  border-color: color-mix(in srgb, #ef4444 28%, transparent);
+}
+
+.edp-flight-status-dim {
+  color: var(--text-faint);
+  background: color-mix(in srgb, var(--text-faint) 10%, transparent);
+  border-color: color-mix(in srgb, var(--text-faint) 20%, transparent);
+}
+
+.edp-flight-route-section,
+.edp-flight-track-section {
+  margin-bottom: 18px;
+}
+
+.edp-flight-route-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.edp-flight-stop {
+  min-width: 0;
+  padding: 14px 14px 12px;
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  border-radius: 16px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 84%, black), color-mix(in srgb, var(--surface) 74%, black));
+}
+
+.edp-flight-stop-eyebrow {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 50%, black);
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.edp-flight-stop-code {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+
+.edp-flight-stop-name {
+  margin-top: 8px;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.edp-flight-stop-time {
+  margin-top: 6px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #7de8bb;
+}
+
+.edp-flight-route-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.edp-flight-route-line {
+  width: 46px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, color-mix(in srgb, #5f72ff 70%, transparent), color-mix(in srgb, #9fdcff 80%, transparent));
+}
+
+.edp-flight-route-arrow {
+  align-self: center;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
+.edp-flight-snapshot-row,
+.edp-flight-track-stats,
+.edp-flight-facts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.edp-flight-track-note {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 78%, black);
+}
+
+.edp-flight-track-note-title {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.edp-flight-track-note-body {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.edp-flight-fact {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--border) 52%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 80%, black);
+}
+
+.edp-flight-fact-label {
+  margin-bottom: 6px;
+  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.edp-flight-fact-value {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.edp-flight-progress-wrap {
+  margin: 0 0 16px;
+}
+
+.edp-flight-progress-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.edp-flight-progress-label {
+  color: var(--text);
+  font-weight: 600;
+  min-width: 0;
+}
+
+.edp-flight-progress-label-right {
+  text-align: right;
+}
+
+.edp-flight-progress-meta {
+  color: var(--text-faint);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.edp-flight-progress-bar {
+  position: relative;
+  height: 24px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 60%, black);
+  overflow: visible;
+}
+
+.edp-flight-progress-fill {
+  height: 100%;
+  min-width: 8%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #214cff 0%, #2f56ff 35%, #6dd3ff 100%);
+  box-shadow: 0 0 20px color-mix(in srgb, #4b6bff 35%, transparent);
+}
+
+.edp-flight-progress-plane {
+  position: absolute;
+  top: 50%;
+  left: var(--plane-left, 50%);
+  transform: translate(-50%, -50%);
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--overlay-heavy) 25%, transparent);
+}
+
+.edp-flight-hero-skeleton {
+  padding-top: 14px;
+}
+
+@media (max-width: 640px) {
+  .edp-flight-route-title {
+    font-size: 22px;
+  }
+
+  .edp-flight-hero-top,
+  .edp-flight-progress-summary,
+  .edp-flight-brand {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .edp-flight-progress-summary {
+    display: flex;
+  }
+
+  .edp-flight-progress-meta,
+  .edp-flight-progress-label-right {
+    text-align: left;
+  }
+
+  .edp-flight-route-strip,
+  .edp-flight-snapshot-row,
+  .edp-flight-track-stats,
+  .edp-flight-facts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .edp-flight-route-connector {
+    flex-direction: row;
+    justify-content: center;
+  }
+}
+
 .edp-aircraft-photo {
   margin-bottom: 12px;
   background: var(--surface);
@@ -778,8 +1172,6 @@
   line-height: 1.4;
 }
 
-<<<<<<< HEAD
-=======
 /* Clickable vessel rows */
 .edp-vessel-item--clickable {
   cursor: pointer;

@@ -39,7 +39,7 @@ import type {
 import { fetchMilitaryBases, type MilitaryBaseCluster as ServerBaseCluster } from '@/services/military-bases';
 import type { MilitaryBaseType } from '@/types';
 import type { AirportDelayAlert, PositionSample } from '@/services/aviation';
-import { fetchAircraftPositions } from '@/services/aviation';
+import { fetchAircraftPositions, filterRenderableAircraftPositions, sampleAircraftPositions } from '@/services/aviation';
 import { registerAisCallback, unregisterAisCallback, type AisPositionData } from '@/services/maritime';
 import { type IranEvent } from '@/services/conflict';
 import type { GpsJamHex } from '@/services/gps-interference';
@@ -49,17 +49,9 @@ import type { ClimateAnomaly } from '@/services/climate';
 import { ArcLayer } from '@deck.gl/layers';
 import { HeatmapLayer } from '@deck.gl/aggregation-layers';
 import { H3HexagonLayer } from '@deck.gl/geo-layers';
-<<<<<<< HEAD
 import type { WeatherAlert, WeatherCategory } from '@/services/weather';
 import { getWeatherEventCategory } from '@/services/weather';
-=======
-import type { WeatherAlert } from '@/services/weather';
-import { getWeatherAlertIconUrl } from '@/services/weather';
-<<<<<<< HEAD
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
-=======
 import { getNaturalEventIconUrl } from '@/services/eonet';
->>>>>>> b8acca18 (feat(map): add UCDP events layer and improve natural events rendering)
 import { escapeHtml } from '@/utils/sanitize';
 import { tokenizeForMatch, matchKeyword, matchesAnyKeyword, findMatchingKeywords } from '@/utils/keyword-match';
 import { t } from '@/services/i18n';
@@ -1469,11 +1461,7 @@ export class DeckGLMap {
 
     // Weather alerts layer
     if (mapLayers.weather && filteredWeatherAlerts.length > 0) {
-<<<<<<< HEAD
       layers.push(...this.createWeatherLayers(filteredWeatherAlerts));
-=======
-      layers.push(...this.createWeatherLayer(filteredWeatherAlerts));
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
     }
 
     // Internet outages layer
@@ -1806,13 +1794,10 @@ export class DeckGLMap {
   }
 
   private createBasesLayer(): IconLayer {
-<<<<<<< HEAD
-=======
     const highlightedBases = this.highlightedAssets.base;
     const zoom = this.maplibreMap?.getZoom() || 3;
     const alphaScale = Math.min(1, (zoom - 2.5) / 2.5);
     void alphaScale; // alpha scaling reserved for future use
->>>>>>> 0cb63b6e (fix(types): resolve pre-existing TypeScript errors to unblock CI)
     const data = this.getBasesData();
 
     return new IconLayer({
@@ -2037,10 +2022,7 @@ export class DeckGLMap {
   }
 
   private createAircraftPositionsLayer(): IconLayer<PositionSample> {
-    const density = this.aircraftDensity / 100;
-    const data = density >= 1
-      ? this.aircraftPositions
-      : this.aircraftPositions.filter((_, i) => (i / this.aircraftPositions.length) < density);
+    const data = sampleAircraftPositions(this.aircraftPositions, this.aircraftDensity);
     return new IconLayer<PositionSample>({
       id: 'aircraft-positions-layer',
       data,
@@ -2266,17 +2248,12 @@ export class DeckGLMap {
     });
   }
 
-<<<<<<< HEAD
   private createWeatherLayers(alerts: WeatherAlert[]): IconLayer[] {
-=======
-  private createWeatherLayer(alerts: WeatherAlert[]): IconLayer[] {
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
     const alertsWithCoords = alerts.filter(a => a.centroid && a.centroid.length === 2);
     const floodAlerts = alertsWithCoords.filter(a => getWeatherAlertIconUrl(a.event) !== null);
     const otherAlerts = alertsWithCoords.filter(a => getWeatherAlertIconUrl(a.event) === null);
     const sizeFor = (d: WeatherAlert) => d.severity === 'Extreme' ? 18 : d.severity === 'Severe' ? 16 : 14;
 
-<<<<<<< HEAD
     // Group alerts by weather category
     const byCategory = new Map<WeatherCategory, WeatherAlert[]>();
     for (const alert of alertsWithCoords) {
@@ -2309,43 +2286,6 @@ export class DeckGLMap {
         billboard: true,
       });
     });
-=======
-    const layers: IconLayer[] = [];
-
-    if (otherAlerts.length > 0) {
-      layers.push(new IconLayer({
-        id: 'weather-layer',
-        data: otherAlerts,
-        getPosition: (d) => d.centroid as [number, number],
-        getIcon: () => 'marker',
-        iconAtlas: getSharedLayerIconAtlas('weather'),
-        iconMapping: SHARED_LAYER_ICON_MAPPING,
-        getSize: sizeFor,
-        sizeMinPixels: 8,
-        sizeMaxPixels: 20,
-        pickable: true,
-        billboard: true,
-      }));
-    }
-
-    if (floodAlerts.length > 0) {
-      layers.push(new IconLayer({
-        id: 'weather-flood-layer',
-        data: floodAlerts,
-        getPosition: (d) => d.centroid as [number, number],
-        getIcon: () => 'marker',
-        iconAtlas: '/icons/flood-warning.png',
-        iconMapping: { marker: { x: 0, y: 0, width: 512, height: 512, mask: false } },
-        getSize: sizeFor,
-        sizeMinPixels: 8,
-        sizeMaxPixels: 20,
-        pickable: true,
-        billboard: true,
-      }));
-    }
-
-    return layers;
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
   }
 
   private createOutagesLayer(outages: InternetOutage[]): IconLayer {
@@ -3602,7 +3542,6 @@ export class DeckGLMap {
       }
       case 'repair-ships-layer':
         return { html: `<div class="deckgl-tooltip"><strong>${text(obj.name || t('components.deckgl.tooltip.repairShip'))}</strong><br/>${text(obj.status)}</div>` };
-<<<<<<< HEAD
       // All weather sub-layers share the same tooltip
       case 'weather-tornado-layer':
       case 'weather-flood-layer':
@@ -3613,10 +3552,6 @@ export class DeckGLMap {
       case 'weather-fire-layer':
       case 'weather-wind-layer':
       case 'weather-default-layer': {
-=======
-      case 'weather-layer':
-      case 'weather-flood-layer': {
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
         const areaDesc = typeof obj.areaDesc === 'string' ? obj.areaDesc : '';
         const area = areaDesc ? `<br/><small>${text(areaDesc.slice(0, 50))}${areaDesc.length > 50 ? '...' : ''}</small>` : '';
         return { html: `<div class="deckgl-tooltip"><strong>${text(obj.event || t('components.deckgl.layers.weatherAlerts'))}</strong><br/>${text(obj.severity)}${area}</div>` };
@@ -3917,7 +3852,6 @@ export class DeckGLMap {
       'cables-layer': 'cable',
       'pipelines-layer': 'pipeline',
       'earthquakes-layer': 'earthquake',
-<<<<<<< HEAD
       'weather-tornado-layer': 'weather',
       'weather-flood-layer': 'weather',
       'weather-thunderstorm-layer': 'weather',
@@ -3927,10 +3861,6 @@ export class DeckGLMap {
       'weather-fire-layer': 'weather',
       'weather-wind-layer': 'weather',
       'weather-default-layer': 'weather',
-=======
-      'weather-layer': 'weather',
-      'weather-flood-layer': 'weather',
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
       'outages-layer': 'outage',
       'cyber-threats-layer': 'cyberThreat',
       'iran-events-layer': 'iranEvent',
@@ -4083,7 +4013,6 @@ export class DeckGLMap {
       'cables-layer': 'cable',
       'pipelines-layer': 'pipeline',
       'earthquakes-layer': 'earthquake',
-<<<<<<< HEAD
       'weather-tornado-layer': 'weather',
       'weather-flood-layer': 'weather',
       'weather-thunderstorm-layer': 'weather',
@@ -4093,10 +4022,6 @@ export class DeckGLMap {
       'weather-fire-layer': 'weather',
       'weather-wind-layer': 'weather',
       'weather-default-layer': 'weather',
-=======
-      'weather-layer': 'weather',
-      'weather-flood-layer': 'weather',
->>>>>>> 77eca748 (feat(map): enhance weather alert layers with specific icons and improved rendering)
       'outages-layer': 'outage',
       'cyber-threats-layer': 'cyberThreat',
       'iran-events-layer': 'iranEvent',
@@ -4674,8 +4599,6 @@ export class DeckGLMap {
     });
   }
 
-<<<<<<< HEAD
-=======
   /** Open the custom category creation modal */
   protected _openCustomCategoryModal(
     layerConfig: Array<{ key: string; label: string; icon: string; premium?: string }>,
@@ -4770,7 +4693,6 @@ export class DeckGLMap {
     nameInput.focus();
   }
 
->>>>>>> 0cb63b6e (fix(types): resolve pre-existing TypeScript errors to unblock CI)
   /** Clear all active layers */
   private clearAllLayers(): void {
     const layerDefs = getLayersForVariant((SITE_VARIANT || 'full') as MapVariant, 'flat');
@@ -5533,7 +5455,8 @@ export class DeckGLMap {
     this.render('flights');
   }
   public setAircraftPositions(positions: PositionSample[]): void {
-    for (const pos of positions) {
+    const filteredPositions = filterRenderableAircraftPositions(positions);
+    for (const pos of filteredPositions) {
       const hist = this.aircraftHistory.get(pos.icao24) ?? [];
       const last = hist[hist.length - 1];
       if (!last || last[0] !== pos.lon || last[1] !== pos.lat) {
@@ -5542,7 +5465,7 @@ export class DeckGLMap {
         this.aircraftHistory.set(pos.icao24, hist);
       }
     }
-    this.aircraftPositions = positions;
+    this.aircraftPositions = filteredPositions;
     this.render('flights');
   }
 
@@ -5612,7 +5535,7 @@ export class DeckGLMap {
     if (!this.maplibreMap) return;
     if (!this.state.layers.flights) return;
     const zoom = this.maplibreMap.getZoom();
-    if (zoom < 2) {
+    if (zoom < 1.5) {
       if (this.aircraftPositions.length > 0) {
         this.aircraftPositions = [];
         this.render('flights');
@@ -5623,14 +5546,17 @@ export class DeckGLMap {
     const bounds = this.maplibreMap.getBounds();
     const sw = bounds.getSouthWest();
     const ne = bounds.getNorthEast();
+    const latPad = Math.min(12, Math.abs(ne.lat - sw.lat) * 0.2);
+    const lonPad = Math.min(20, Math.abs(ne.lng - sw.lng) * 0.2);
     const seq = ++this.aircraftFetchSeq;
     fetchAircraftPositions({
-      swLat: sw.lat, swLon: sw.lng,
-      neLat: ne.lat, neLon: ne.lng,
+      swLat: Math.max(-85, sw.lat - latPad), swLon: Math.max(-180, sw.lng - lonPad),
+      neLat: Math.min(85, ne.lat + latPad), neLon: Math.min(180, ne.lng + lonPad),
     }).then((positions) => {
       if (seq !== this.aircraftFetchSeq) return; // discard stale response
-      this.aircraftPositions = positions;
-      this.onAircraftPositionsUpdate?.(positions);
+      const filteredPositions = filterRenderableAircraftPositions(positions);
+      this.aircraftPositions = filteredPositions;
+      this.onAircraftPositionsUpdate?.(filteredPositions);
       const center = this.maplibreMap?.getCenter();
       if (center) {
         this.lastAircraftFetchCenter = [center.lng, center.lat];
