@@ -493,19 +493,40 @@ export class IntelligenceFindingsBadge {
     const soundOptions = NOTIFICATION_SOUND_OPTIONS.map(o =>
       `<option value="${o.value}"${o.value === this.notificationSound ? ' selected' : ''}>${escapeHtml(o.label)}</option>`
     ).join('');
-    return `<div class="popup-toggle-row" data-toggle="popup">
-        <span class="popup-toggle-label">🔔 ${escapeHtml(label)}</span>
-        <span class="popup-toggle-switch${checked ? ' on' : ''}"><span class="popup-toggle-knob"></span></span>
-      </div>
-      <div class="popup-toggle-row popup-sound-row${checked ? '' : ' disabled'}">
-        <span class="popup-toggle-label">🎵 Alert sound</span>
-        <select class="popup-sound-select" id="intel-sound-select"${checked ? '' : ' disabled'}>
-          ${soundOptions}
-        </select>
-      </div>
-      <div class="popup-toggle-row" data-toggle="breaking-alerts">
-        <span class="popup-toggle-label">🚨 ${escapeHtml(breakingLabel)}</span>
-        <span class="popup-toggle-switch${breakingSettings.enabled ? ' on' : ''}"><span class="popup-toggle-knob"></span></span>
+    return `<div class="findings-settings-group">
+        <div class="findings-settings-title">Alerts</div>
+        <div class="popup-toggle-row" data-toggle="popup">
+          <span class="popup-toggle-main">
+            <span class="popup-toggle-icon" aria-hidden="true">🔔</span>
+            <span class="popup-toggle-text">
+              <span class="popup-toggle-label">${escapeHtml(label)}</span>
+              <span class="popup-toggle-subtext">Show in-app intelligence finding alerts</span>
+            </span>
+          </span>
+          <span class="popup-toggle-switch${checked ? ' on' : ''}"><span class="popup-toggle-knob"></span></span>
+        </div>
+        <div class="popup-toggle-row popup-sound-row${checked ? '' : ' disabled'}">
+          <span class="popup-toggle-main">
+            <span class="popup-toggle-icon" aria-hidden="true">🎵</span>
+            <span class="popup-toggle-text">
+              <span class="popup-toggle-label">Alert sound</span>
+              <span class="popup-toggle-subtext">Choose the tone used for popup alerts</span>
+            </span>
+          </span>
+          <select class="popup-sound-select" id="intel-sound-select"${checked ? '' : ' disabled'}>
+            ${soundOptions}
+          </select>
+        </div>
+        <div class="popup-toggle-row" data-toggle="breaking-alerts">
+          <span class="popup-toggle-main">
+            <span class="popup-toggle-icon" aria-hidden="true">🚨</span>
+            <span class="popup-toggle-text">
+              <span class="popup-toggle-label">${escapeHtml(breakingLabel)}</span>
+              <span class="popup-toggle-subtext">Push urgent breaking banners to the top of the app</span>
+            </span>
+          </span>
+          <span class="popup-toggle-switch${breakingSettings.enabled ? ' on' : ''}"><span class="popup-toggle-knob"></span></span>
+        </div>
       </div>`;
   }
 
@@ -547,11 +568,19 @@ export class IntelligenceFindingsBadge {
       const icon = this.getTypeIcon(finding.type);
       const priorityClass = finding.priority;
       const insight = this.getInsight(finding);
+      const toneClass = this.getFindingToneClass(finding);
+      const eyebrow = this.getFindingEyebrow(finding);
 
       return `
-        <div class="finding-item ${priorityClass}" data-finding-id="${escapeHtml(finding.id)}">
+        <div class="finding-item ${priorityClass} ${toneClass}" data-finding-id="${escapeHtml(finding.id)}">
           <div class="finding-header">
-            <span class="finding-type">${icon} ${escapeHtml(finding.title)}</span>
+            <span class="finding-type-wrap">
+              <span class="finding-type-icon" aria-hidden="true">${icon}</span>
+              <span class="finding-type-text">
+                <span class="finding-eyebrow">${escapeHtml(eyebrow)}</span>
+                <span class="finding-type">${escapeHtml(finding.title)}</span>
+              </span>
+            </span>
             <span class="finding-confidence ${priorityClass}">${t(`components.intelligenceFindings.priority.${finding.priority}`)}</span>
           </div>
           <div class="finding-description">${escapeHtml(finding.description)}</div>
@@ -620,6 +649,52 @@ export class IntelligenceFindingsBadge {
       composite: '🔗',
     };
     return icons[type] || '📌';
+  }
+
+  private getFindingToneClass(finding: UnifiedFinding): string {
+    const toneMap: Record<string, string> = {
+      breaking_surge: 'tone-breaking',
+      hotspot_escalation: 'tone-breaking',
+      cii_spike: 'tone-risk',
+      cascade: 'tone-risk',
+      sector_cascade: 'tone-risk',
+      silent_divergence: 'tone-divergence',
+      flow_price_divergence: 'tone-divergence',
+      flow_drop: 'tone-divergence',
+      prediction_leads_news: 'tone-market',
+      news_leads_markets: 'tone-market',
+      explained_market_move: 'tone-market',
+      keyword_spike: 'tone-signal',
+      velocity_spike: 'tone-signal',
+      convergence: 'tone-signal',
+      triangulation: 'tone-signal',
+      geo_convergence: 'tone-geo',
+      composite: 'tone-geo',
+    };
+    return toneMap[finding.type] || (finding.source === 'alert' ? 'tone-risk' : 'tone-signal');
+  }
+
+  private getFindingEyebrow(finding: UnifiedFinding): string {
+    const labelMap: Record<string, string> = {
+      breaking_surge: 'Breaking Surge',
+      hotspot_escalation: 'Hotspot Escalation',
+      cii_spike: 'Instability Spike',
+      cascade: 'Cascade Alert',
+      sector_cascade: 'Sector Cascade',
+      silent_divergence: 'Silent Divergence',
+      flow_price_divergence: 'Flow Divergence',
+      flow_drop: 'Flow Drop',
+      prediction_leads_news: 'Prediction Lead',
+      news_leads_markets: 'News Lead',
+      explained_market_move: 'Market Move',
+      keyword_spike: 'Keyword Spike',
+      velocity_spike: 'Velocity Spike',
+      convergence: 'Signal Convergence',
+      triangulation: 'Triangulation',
+      geo_convergence: 'Geo Convergence',
+      composite: 'Composite Alert',
+    };
+    return labelMap[finding.type] || (finding.source === 'alert' ? 'Alert' : 'Signal');
   }
 
   private formatTimeAgo(date: Date): string {

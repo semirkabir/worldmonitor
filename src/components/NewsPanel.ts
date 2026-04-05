@@ -37,11 +37,12 @@ export class NewsPanel extends Panel {
   private renderRequestId = 0;
   private boundScrollHandler: (() => void) | null = null;
   private boundClickHandler: (() => void) | null = null;
-  private sortOrder: 'date' | 'title' | 'source' = 'date';
+  private sortOrder: 'date' | 'title' | 'source' | 'relevance' = 'date';
   private sortDir: 'asc' | 'desc' = 'desc';
   private sortBtn: HTMLButtonElement | null = null;
   private sortDropdown: HTMLElement | null = null;
   private sortOptions = [
+    { key: 'relevance', label: 'Relevance' },
     { key: 'date', label: 'Date' },
     { key: 'title', label: 'Title' },
     { key: 'source', label: 'Source' },
@@ -55,7 +56,8 @@ export class NewsPanel extends Panel {
   private isSummarizing = false;
 
   constructor(id: string, title: string) {
-    super({ id, title, showCount: true, trackActivity: true });
+    super({ id, title, showCount: true, trackActivity: true, showCopyButton: false });
+    this.element.classList.add('news-panel');
     this.createDeviationIndicator();
     this.createSummarizeButton();
     this.createSortButton();
@@ -65,9 +67,23 @@ export class NewsPanel extends Panel {
 
   private createSortButton(): void {
     const btn = document.createElement('button');
-    btn.className = 'icon-btn';
+    btn.className = 'panel-sort-trigger';
     btn.title = 'Sort options';
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="9" y2="18"/></svg>`;
+    btn.setAttribute('aria-label', 'Sort news items');
+    btn.setAttribute('aria-haspopup', 'menu');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.innerHTML = `
+      <span class="panel-sort-trigger-icon" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="6" x2="19" y2="6"/>
+          <circle cx="8" cy="6" r="1.5" fill="currentColor" stroke="none"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+          <circle cx="15" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+          <line x1="5" y1="18" x2="19" y2="18"/>
+          <circle cx="11" cy="18" r="1.5" fill="currentColor" stroke="none"/>
+        </svg>
+      </span>
+    `;
     this.sortBtn = btn;
 
     btn.addEventListener('click', (e) => {
@@ -75,6 +91,7 @@ export class NewsPanel extends Panel {
       if (this.sortDropdown) {
         this.sortDropdown.remove();
         this.sortDropdown = null;
+        this.sortBtn?.setAttribute('aria-expanded', 'false');
       } else {
         this.openSortDropdown();
       }
@@ -85,6 +102,7 @@ export class NewsPanel extends Panel {
       if (this.sortDropdown) {
         this.sortDropdown.remove();
         this.sortDropdown = null;
+        this.sortBtn?.setAttribute('aria-expanded', 'false');
       }
     });
 
@@ -95,22 +113,26 @@ export class NewsPanel extends Panel {
     if (!this.sortBtn) return;
 
     const rect = this.sortBtn.getBoundingClientRect();
+    const viewportPadding = 8;
     const dropdown = document.createElement('div');
     dropdown.className = 'panel-sort-dropdown';
     dropdown.innerHTML = `
       <div class="panel-sort-label">Sort by</div>
       ${this.sortOptions.map(opt => `
         <button class="panel-sort-option${this.sortOrder === opt.key ? ' active' : ''}" data-sort="${opt.key}">
-          ${opt.label}
+          <span>${opt.label}</span>
+          <span class="panel-sort-check" aria-hidden="true">✓</span>
         </button>
       `).join('')}
       <div class="panel-sort-divider"></div>
       <div class="panel-sort-label">Order</div>
       <button class="panel-sort-option${this.sortDir === 'desc' ? ' active' : ''}" data-sort-dir="desc">
-        Newest first
+        <span>Newest first</span>
+        <span class="panel-sort-check" aria-hidden="true">✓</span>
       </button>
       <button class="panel-sort-option${this.sortDir === 'asc' ? ' active' : ''}" data-sort-dir="asc">
-        Oldest first
+        <span>Oldest first</span>
+        <span class="panel-sort-check" aria-hidden="true">✓</span>
       </button>
     `;
 
@@ -120,21 +142,35 @@ export class NewsPanel extends Panel {
     dropdown.style.left = `${rect.left}px`;
     dropdown.style.zIndex = '10000';
     document.body.appendChild(dropdown);
+
+    const dropdownRect = dropdown.getBoundingClientRect();
+    const maxLeft = window.innerWidth - dropdownRect.width - viewportPadding;
+    const clampedLeft = Math.max(viewportPadding, Math.min(rect.left, maxLeft));
+    dropdown.style.left = `${clampedLeft}px`;
+
+    const maxTop = window.innerHeight - dropdownRect.height - viewportPadding;
+    if (rect.bottom + 4 > maxTop) {
+      const aboveTop = Math.max(viewportPadding, rect.top - dropdownRect.height - 4);
+      dropdown.style.top = `${aboveTop}px`;
+    }
+
     this.sortDropdown = dropdown;
+    this.sortBtn.setAttribute('aria-expanded', 'true');
 
     dropdown.addEventListener('click', (e) => e.stopPropagation());
 
     dropdown.querySelectorAll<HTMLElement>('.panel-sort-option[data-sort]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const key = btn.dataset.sort as 'date' | 'title' | 'source';
+        const key = btn.dataset.sort as 'date' | 'title' | 'source' | 'relevance';
         if (key && key !== this.sortOrder) {
           this.sortOrder = key;
-          if (key !== 'date') this.sortDir = 'asc';
+          if (key === 'title' || key === 'source') this.sortDir = 'asc';
           else this.sortDir = 'desc';
           this.reRender();
         }
         dropdown.remove();
         this.sortDropdown = null;
+        this.sortBtn?.setAttribute('aria-expanded', 'false');
       });
     });
 
@@ -147,6 +183,7 @@ export class NewsPanel extends Panel {
         }
         dropdown.remove();
         this.sortDropdown = null;
+        this.sortBtn?.setAttribute('aria-expanded', 'false');
       });
     });
   }
@@ -455,6 +492,9 @@ export class NewsPanel extends Panel {
     const sorted = [...items].sort((a, b) => {
       let cmp = 0;
       switch (this.sortOrder) {
+        case 'relevance':
+          cmp = this.getNewsItemRelevanceScore(b) - this.getNewsItemRelevanceScore(a);
+          break;
         case 'title':
           cmp = a.title.localeCompare(b.title);
           break;
@@ -466,7 +506,7 @@ export class NewsPanel extends Panel {
           cmp = b.pubDate.getTime() - a.pubDate.getTime();
           break;
       }
-      return this.sortDir === 'desc' ? -cmp : cmp;
+      return this.sortDir === 'desc' ? cmp : -cmp;
     });
 
     this.setCount(sorted.length);
@@ -480,7 +520,7 @@ export class NewsPanel extends Panel {
     const html = sorted
       .map(
         (item) => `
-      <div class="item ${item.isAlert ? 'alert' : ''}" ${item.monitorColor ? `style="border-inline-start-color: ${escapeHtml(item.monitorColor)}"` : ''}>
+      <div class="item ${item.isAlert ? 'alert' : ''}" ${item.monitorColor ? `style="--item-accent: ${escapeHtml(item.monitorColor)}"` : ''}>
         <div class="item-source">
           ${escapeHtml(item.source)}
           ${item.lang && item.lang !== getCurrentLanguage() ? `<span class="lang-badge">${item.lang.toUpperCase()}</span>` : ''}
@@ -500,12 +540,25 @@ export class NewsPanel extends Panel {
   }
 
   private renderClusters(clusters: ClusteredEvent[]): void {
-    // Sort by threat priority, then by time within same level
     const sorted = [...clusters].sort((a, b) => {
-      const pa = THREAT_PRIORITY[a.threat?.level ?? 'info'];
-      const pb = THREAT_PRIORITY[b.threat?.level ?? 'info'];
-      if (pb !== pa) return pb - pa;
-      return b.lastUpdated.getTime() - a.lastUpdated.getTime();
+      let cmp = 0;
+      switch (this.sortOrder) {
+        case 'relevance':
+          cmp = this.getClusterRelevanceScore(b) - this.getClusterRelevanceScore(a);
+          break;
+        case 'title':
+          cmp = a.primaryTitle.localeCompare(b.primaryTitle);
+          break;
+        case 'source':
+          cmp = a.primarySource.localeCompare(b.primarySource) || a.primaryTitle.localeCompare(b.primaryTitle);
+          break;
+        case 'date':
+        default:
+          cmp = b.lastUpdated.getTime() - a.lastUpdated.getTime();
+          break;
+      }
+
+      return this.sortDir === 'desc' ? cmp : -cmp;
     });
 
     const totalItems = sorted.reduce((sum, c) => sum + c.sourceCount, 0);
@@ -679,7 +732,7 @@ export class NewsPanel extends Panel {
     ].filter(Boolean).join(' ');
 
     return `
-      <div class="${itemClasses}" ${cluster.monitorColor ? `style="border-inline-start-color: ${escapeHtml(cluster.monitorColor)}"` : ''} data-cluster-id="${escapeHtml(cluster.id)}" data-news-id="${escapeHtml(cluster.primaryLink)}">
+      <div class="${itemClasses}" ${cluster.monitorColor ? `style="--item-accent: ${escapeHtml(cluster.monitorColor)}"` : ''} data-cluster-id="${escapeHtml(cluster.id)}" data-news-id="${escapeHtml(cluster.primaryLink)}">
         <div class="item-source">
           ${tierBadge}
           ${escapeHtml(cluster.primarySource)}
@@ -781,5 +834,24 @@ export class NewsPanel extends Panel {
 
     // Call parent destroy
     super.destroy();
+  }
+
+  private getNewsItemRelevanceScore(item: NewsItem): number {
+    const threatScore = THREAT_PRIORITY[item.threat?.level ?? 'info'] * 100;
+    const alertScore = item.isAlert ? 60 : 0;
+    const tierScore = Math.max(0, 6 - (item.tier ?? 5)) * 8;
+    const ageHours = Math.max(0, (Date.now() - item.pubDate.getTime()) / (1000 * 60 * 60));
+    const recencyScore = Math.max(0, 48 - ageHours);
+    return threatScore + alertScore + tierScore + recencyScore;
+  }
+
+  private getClusterRelevanceScore(cluster: ClusteredEvent): number {
+    const threatScore = THREAT_PRIORITY[cluster.threat?.level ?? 'info'] * 120;
+    const alertScore = cluster.isAlert ? 60 : 0;
+    const sourceScore = Math.min(cluster.sourceCount, 8) * 10;
+    const velocityScore = Math.round(cluster.velocity?.sourcesPerHour ?? 0) * 6;
+    const ageHours = Math.max(0, (Date.now() - cluster.lastUpdated.getTime()) / (1000 * 60 * 60));
+    const recencyScore = Math.max(0, 48 - ageHours);
+    return threatScore + alertScore + sourceScore + velocityScore + recencyScore;
   }
 }

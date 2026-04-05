@@ -49,6 +49,7 @@ export interface PanelOptions {
   trackActivity?: boolean;
   infoTooltip?: string;
   premium?: 'locked' | 'enhanced';
+  showCopyButton?: boolean;
 }
 
 const PANEL_SPANS_KEY = 'worldmonitor-panel-spans';
@@ -305,22 +306,24 @@ export class Panel {
 
     this.header.appendChild(headerLeft);
 
-    // ── Copy-to-clipboard button ──────────────────────────────────────────
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'panel-copy-btn';
-    copyBtn.title = 'Copy panel data to clipboard';
-    copyBtn.setAttribute('aria-label', 'Copy panel data');
-    copyBtn.textContent = '\u29c9'; // ⧉ copy glyph
-    copyBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const text = `[${options.title}] ${new Date().toUTCString()}\n\n${this.content.innerText ?? ''}`;
-      navigator.clipboard.writeText(text).then(() => {
-        copyBtn.textContent = '\u2713'; // ✓
-        if (this.copyResetTimer) clearTimeout(this.copyResetTimer);
-        this.copyResetTimer = setTimeout(() => { copyBtn.textContent = '\u29c9'; }, 1600);
-      }).catch(() => {});
-    });
-    this.header.appendChild(copyBtn);
+    if (options.showCopyButton !== false) {
+      // ── Copy-to-clipboard button ────────────────────────────────────────
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'panel-copy-btn';
+      copyBtn.title = 'Copy panel data to clipboard';
+      copyBtn.setAttribute('aria-label', 'Copy panel data');
+      copyBtn.textContent = '\u29c9'; // ⧉ copy glyph
+      copyBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const text = `[${options.title}] ${new Date().toUTCString()}\n\n${this.content.innerText ?? ''}`;
+        navigator.clipboard.writeText(text).then(() => {
+          copyBtn.textContent = '\u2713'; // ✓
+          if (this.copyResetTimer) clearTimeout(this.copyResetTimer);
+          this.copyResetTimer = setTimeout(() => { copyBtn.textContent = '\u29c9'; }, 1600);
+        }).catch(() => {});
+      });
+      this.header.appendChild(copyBtn);
+    }
 
     const removeBtn = document.createElement('button');
     removeBtn.className = 'panel-remove-btn';
