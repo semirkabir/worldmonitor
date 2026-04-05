@@ -140,14 +140,48 @@ function getHeadingCardinal(trackDeg: number): string {
   return directions[Math.round(normalized / 45) % directions.length] || 'N';
 }
 
-function getProgressEndpoints(status: FlightInstance | null): { left: string; right: string } {
+function getProgressEndpoints(status: FlightInstance | null): {
+  leftCode: string;
+  leftName: string;
+  rightCode: string;
+  rightName: string;
+} {
   if (!status) {
-    return { left: 'Takeoff --', right: 'Destination --' };
+    return {
+      leftCode: '--',
+      leftName: 'Takeoff unknown',
+      rightCode: '--',
+      rightName: 'Destination unknown',
+    };
   }
 
-  const left = status.origin.iata || status.origin.name || 'Takeoff --';
-  const right = status.destination.iata || status.destination.name || 'Destination --';
-  return { left: left.startsWith('Takeoff') ? left : `Takeoff ${left}`, right: right.startsWith('Destination') ? right : `Destination ${right}` };
+  return {
+    leftCode: status.origin.iata || '--',
+    leftName: status.origin.name || 'Takeoff unknown',
+    rightCode: status.destination.iata || '--',
+    rightName: status.destination.name || 'Destination unknown',
+  };
+}
+
+function getCarrierBadgeLabel(
+  status: FlightInstance | null,
+  details: WingbitsAircraftDetails | null,
+  analysis: EnrichedAircraftInfo | null,
+  photo: PlanespottersPhoto | null,
+  pos: PositionSample,
+): string {
+  const code = resolveAirlineCode(status, details, analysis, photo, pos);
+  if (code) return code.slice(0, 3);
+  const callsignPrefix = (pos.callsign || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 2);
+  return callsignPrefix || '✈';
+}
+
+function getCarrierBadgeHue(label: string): number {
+  let hash = 0;
+  for (let i = 0; i < label.length; i++) {
+    hash = ((hash << 5) - hash + label.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash) % 360;
 }
 
 function getTrackNarrative(pos: PositionSample, status: FlightInstance | null): string {
@@ -490,16 +524,23 @@ function buildRouteHero(
   const progressWrap = ctx.el('div', 'edp-flight-progress-wrap');
   const progressEndpoints = getProgressEndpoints(status);
   const progressSummary = ctx.el('div', 'edp-flight-progress-summary');
-  progressSummary.append(ctx.el('span', 'edp-flight-progress-label', progressEndpoints.left));
+  const leftEndpoint = ctx.el('div', 'edp-flight-progress-endpoint');
+  leftEndpoint.append(ctx.el('div', 'edp-flight-progress-code', progressEndpoints.leftCode));
+  leftEndpoint.append(ctx.el('div', 'edp-flight-progress-name', progressEndpoints.leftName));
+  progressSummary.append(leftEndpoint);
   progressSummary.append(ctx.el('span', 'edp-flight-progress-meta', pos.onGround ? 'Ground track' : `${Math.round(pos.groundSpeedKts)} kts • ${fmtAltitude(pos)}`));
-  progressSummary.append(ctx.el('span', 'edp-flight-progress-label edp-flight-progress-label-right', progressEndpoints.right));
+  const rightEndpoint = ctx.el('div', 'edp-flight-progress-endpoint edp-flight-progress-endpoint-right');
+  rightEndpoint.append(ctx.el('div', 'edp-flight-progress-code', progressEndpoints.rightCode));
+  rightEndpoint.append(ctx.el('div', 'edp-flight-progress-name', progressEndpoints.rightName));
+  progressSummary.append(rightEndpoint);
   progressWrap.append(progressSummary);
 
   const progressBar = ctx.el('div', 'edp-flight-progress-bar');
   const progressFill = ctx.el('div', 'edp-flight-progress-fill') as HTMLDivElement;
   const progressPercent = Math.max(8, Math.round(getFlightProgress(pos, status) * 100));
   progressFill.style.width = `${progressPercent}%`;
-  const plane = ctx.el('div', 'edp-flight-progress-plane', 'FLT');
+  const plane = ctx.el('div', 'edp-flight-progress-plane', getCarrierBadgeLabel(status, details, analysis, photo, pos));
+  plane.style.setProperty('--flight-badge-hue', String(getCarrierBadgeHue(plane.textContent || 'FLT')));
   plane.style.setProperty('--plane-left', `${progressPercent}%`);
   progressBar.append(progressFill, plane);
   progressWrap.append(progressBar);

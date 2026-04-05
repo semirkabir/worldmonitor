@@ -2029,6 +2029,9 @@ export class DeckGLMap {
       iconAtlas: AVIATION_PLANE_ICON_ATLAS,
       iconMapping: AVIATION_PLANE_ICON_MAPPING,
       getSize: (d) => d.onGround ? 18 : 24,
+      getColor: (d) => d.onGround
+        ? [156, 163, 175, 210] as [number, number, number, number]
+        : [96, 165, 250, 235] as [number, number, number, number],
       getAngle: (d) => -d.trackDeg,
       sizeMinPixels: 10,
       sizeMaxPixels: 36,
