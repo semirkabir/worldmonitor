@@ -230,7 +230,7 @@ export async function fetchHotspotContext(hotspot: Hotspot): Promise<GdeltArticl
     return [];
   }
   
-  const query = keywords.slice(0, 5).join(' OR ');
+  const query = `(${keywords.slice(0, 5).join(' OR ')})`;
   console.log('[GDELT] Query:', query);
   const articles = await fetchGdeltArticles(query, 8, '48h');
   console.log('[GDELT] Results:', articles.length, 'articles for hotspot:', hotspot.name);

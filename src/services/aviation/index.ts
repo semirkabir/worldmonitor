@@ -103,6 +103,58 @@ export interface PositionSample {
   observedAt: Date;
 }
 
+const POSITION_SOURCE_MAP: Record<string, string> = {
+  POSITION_SOURCE_OPENSKY: 'opensky',
+  POSITION_SOURCE_WINGBITS: 'wingbits',
+  POSITION_SOURCE_SIMULATED: 'simulated',
+};
+
+function stableAircraftHash(pos: PositionSample): number {
+  const key = `${pos.icao24}|${pos.callsign}`;
+  let hash = 2166136261;
+  for (let i = 0; i < key.length; i++) {
+    hash ^= key.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+export function filterRenderableAircraftPositions(positions: PositionSample[]): PositionSample[] {
+  const freshestByHex = new Map<string, PositionSample>();
+  const now = Date.now();
+
+  for (const pos of positions) {
+    if (!pos?.icao24) continue;
+    if (!Number.isFinite(pos.lat) || !Number.isFinite(pos.lon)) continue;
+    if (pos.lat < -90 || pos.lat > 90 || pos.lon < -180 || pos.lon > 180) continue;
+    if ((pos.source || '').toLowerCase() === 'simulated') continue;
+    if (pos.observedAt instanceof Date && Number.isFinite(pos.observedAt.getTime()) && now - pos.observedAt.getTime() > 20 * 60 * 1000) continue;
+
+    const existing = freshestByHex.get(pos.icao24);
+    if (!existing || pos.observedAt.getTime() >= existing.observedAt.getTime()) {
+      freshestByHex.set(pos.icao24, pos);
+    }
+  }
+
+  return Array.from(freshestByHex.values()).sort((a, b) => {
+    if (a.onGround !== b.onGround) return Number(a.onGround) - Number(b.onGround);
+    return stableAircraftHash(a) - stableAircraftHash(b);
+  });
+}
+
+export function sampleAircraftPositions(positions: PositionSample[], densityPercent: number, maxCount = Number.POSITIVE_INFINITY): PositionSample[] {
+  const filtered = filterRenderableAircraftPositions(positions);
+  if (filtered.length === 0) return [];
+
+  const density = Math.max(0, Math.min(100, densityPercent));
+  const capped = Number.isFinite(maxCount) ? Math.max(1, Math.floor(maxCount)) : filtered.length;
+  const targetCount = density >= 100
+    ? filtered.length
+    : Math.max(1, Math.floor(filtered.length * (density / 100)));
+
+  return filtered.slice(0, Math.min(filtered.length, capped, targetCount));
+}
+
 export interface PriceQuote {
   id: string;
   origin: string;
@@ -240,7 +292,7 @@ function toDisplayPosition(p: ProtoPosition): PositionSample {
     icao24: p.icao24, callsign: p.callsign, lat: p.lat, lon: p.lon,
     altitudeFt: Math.round(p.altitudeM * 3.281),
     groundSpeedKts: p.groundSpeedKts, trackDeg: p.trackDeg, onGround: p.onGround,
-    source: p.source, observedAt: new Date(p.observedAt),
+    source: POSITION_SOURCE_MAP[p.source] ?? p.source?.toLowerCase() ?? 'unknown', observedAt: new Date(p.observedAt),
   };
 }
 

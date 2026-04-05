@@ -34,6 +34,8 @@ interface NWSResponse {
   features: NWSAlert[];
 }
 
+const NWS_API = '/api/weather';
+
 export function getWeatherAlertIconUrl(event: string): string | null {
   const lower = event.toLowerCase();
   if (lower.includes('flood')) return '/icons/flood-warning.png';
