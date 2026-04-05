@@ -5,6 +5,7 @@ import { t } from '@/services/i18n';
 import { escapeHtml } from '@/utils/sanitize';
 import type { PanelConfig } from '@/types';
 import { FEATURES } from '@/services/feature-flags';
+import { getUserTier, type FeatureTier } from '@/services/feature-flags';
 import { subscribeToAuth } from '@/services/user-auth';
 import { loginWithGoogle, logoutUser } from '@/services/firebase-auth';
 import { User } from 'firebase/auth';
@@ -40,6 +41,41 @@ export class UnifiedSettings {
   private authUnsubscribe: (() => void) | null = null;
   private currentUser: User | null = null;
   private authLoading = true;
+  private currentTier: FeatureTier = 'free';
+
+  private readonly profilePlans: Array<{
+    key: FeatureTier | 'enterprise';
+    title: string;
+    price: string;
+    features: string[];
+    featured?: boolean;
+  }> = [
+    {
+      key: 'free',
+      title: 'Free',
+      price: '$0',
+      features: ['Core global monitoring', 'Breaking alerts', 'Basic saved settings'],
+    },
+    {
+      key: 'pro',
+      title: 'Pro',
+      price: '$9/mo',
+      features: ['Real-time data', 'Export & API access', '1,000 MCP API calls/mo'],
+    },
+    {
+      key: 'business',
+      title: 'Business',
+      price: '$29/mo',
+      features: ['Everything in Pro', '10,000 MCP API calls/mo', 'Data marketplace access'],
+    },
+    {
+      key: 'enterprise',
+      title: 'Enterprise',
+      price: 'Contact us',
+      features: ['Unlimited API calls', 'Custom datasets', 'Dedicated support'],
+      featured: true,
+    },
+  ];
 
   constructor(config: UnifiedSettingsConfig) {
     this.config = config;
@@ -180,9 +216,10 @@ export class UnifiedSettings {
       console.log('[Settings] Auth state received:', { user: state.user?.email, loading: state.loading, configured: state.isConfigured });
       this.currentUser = state.user as User | null;
       this.authLoading = state.loading;
+      if (!state.user) this.currentTier = 'free';
       if (this.activeTab === 'profile') {
         console.log('[Settings] Rendering profile tab');
-        this.render();
+        void this.renderProfileTab();
       }
     });
   }
@@ -196,7 +233,7 @@ export class UnifiedSettings {
     
     // Ensure profile tab renders if it's the profile tab
     if (this.activeTab === 'profile') {
-      this.renderProfileTab();
+      void this.renderProfileTab();
     }
   }
 
@@ -302,7 +339,7 @@ export class UnifiedSettings {
     this.renderSourcesGrid();
     this.updateSourcesCounter();
     if (this.activeTab === 'profile') {
-      this.renderProfileTab();
+      void this.renderProfileTab();
     }
   }
 
@@ -320,7 +357,7 @@ export class UnifiedSettings {
     });
 
     if (tab === 'profile') {
-      this.renderProfileTab();
+      void this.renderProfileTab();
     }
   }
 
@@ -496,16 +533,41 @@ export class UnifiedSettings {
   private async handleLogin(): Promise<void> {
     const user = await loginWithGoogle();
     if (user) {
-      this.renderProfileTab();
+      void this.renderProfileTab();
     }
   }
 
   private async handleLogout(): Promise<void> {
     await logoutUser();
-    this.renderProfileTab();
+    void this.renderProfileTab();
   }
 
-  private renderProfileTab(): void {
+  private renderPlanCards(): string {
+    return this.profilePlans.map((plan) => {
+      const isCurrent = plan.key === this.currentTier;
+      const classes = ['profile-plan-card', plan.featured ? 'featured' : '', isCurrent ? 'current' : ''].filter(Boolean).join(' ');
+      const buttonLabel = plan.key === 'enterprise'
+        ? 'Contact Sales'
+        : isCurrent
+          ? 'Current Plan'
+          : plan.key === 'free'
+            ? 'Select Free'
+            : `Upgrade to ${plan.title}`;
+
+      return `
+        <div class="${classes}">
+          <h5>${plan.title}</h5>
+          <p class="plan-price">${plan.price}</p>
+          <ul class="plan-features">
+            ${plan.features.map(feature => `<li>${feature}</li>`).join('')}
+          </ul>
+          <button class="profile-upgrade-btn" data-tier="${plan.key}" ${isCurrent && plan.key !== 'enterprise' ? 'disabled' : ''}>${buttonLabel}</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  private async renderProfileTab(): Promise<void> {
     const container = this.overlay.querySelector('#usProfileTab');
     console.log('[Settings] Profile container:', container);
     if (!container) {
@@ -515,6 +577,12 @@ export class UnifiedSettings {
     }
 
     const user = this.currentUser;
+
+    if (user) {
+      this.currentTier = await getUserTier();
+    } else {
+      this.currentTier = 'free';
+    }
 
     // If still loading after timeout, show guest view
     if (this.authLoading) {
@@ -570,47 +638,18 @@ export class UnifiedSettings {
           <h3>${user.displayName || 'User'}</h3>
           <p>${user.email || ''}</p>
         </div>
-        <span class="profile-tier-badge" id="profileTierBadge">Free</span>
+        <span class="profile-tier-badge" id="profileTierBadge">${escapeHtml(this.currentTier.charAt(0).toUpperCase() + this.currentTier.slice(1))}</span>
         <button class="profile-logout-btn" id="profileLogoutBtn">Sign Out</button>
       </div>
 
       <div class="profile-section">
-        <h4>Upgrade Plan</h4>
+        <h4>Plans</h4>
         <div class="profile-plan-grid">
-          <div class="profile-plan-card">
-            <h5>Pro</h5>
-            <p class="plan-price">$9/mo</p>
-            <ul class="plan-features">
-              <li>Real-time data</li>
-              <li>Export & API access</li>
-              <li>1,000 MCP API calls/mo</li>
-            </ul>
-            <button class="profile-upgrade-btn" data-tier="pro">Upgrade to Pro</button>
-          </div>
-          <div class="profile-plan-card">
-            <h5>Business</h5>
-            <p class="plan-price">$29/mo</p>
-            <ul class="plan-features">
-              <li>Everything in Pro</li>
-              <li>10,000 MCP API calls/mo</li>
-              <li>Data marketplace access</li>
-            </ul>
-            <button class="profile-upgrade-btn" data-tier="business">Upgrade to Business</button>
-          </div>
-          <div class="profile-plan-card featured">
-            <h5>Enterprise</h5>
-            <p class="plan-price">Contact us</p>
-            <ul class="plan-features">
-              <li>Unlimited API calls</li>
-              <li>Custom datasets</li>
-              <li>Dedicated support</li>
-            </ul>
-            <button class="profile-upgrade-btn" data-tier="enterprise">Contact Sales</button>
-          </div>
+          ${this.renderPlanCards()}
         </div>
       </div>
         <ul class="profile-feature-list">
-          ${FEATURES.filter(f => f.tier !== 'premium').map(f => `<li>✓ ${f.name}</li>`).join('')}
+          ${FEATURES.map(f => `<li>✓ ${f.name}</li>`).join('')}
         </ul>
       </div>
       
@@ -644,8 +683,8 @@ export class UnifiedSettings {
             </div>
             <span class="profile-linked-check">✓</span>
           </div>
+          <button class="profile-add-account-btn" id="profileLinkAccountBtn">Link Another Account</button>
         </div>
-        <button class="profile-add-account-btn" id="profileLinkAccountBtn">+ Link Another Account</button>
       </div>
       
       <div class="profile-section">
@@ -891,6 +930,10 @@ export class UnifiedSettings {
   }
 
   private async handleUpgrade(tier: string): Promise<void> {
+    if (tier === 'free') {
+      return;
+    }
+
     if (tier === 'enterprise') {
       // Open external email or contact page
       window.open('mailto:sales@worldmonitor.app?subject=Enterprise%20Inquiry', '_blank');
