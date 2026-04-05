@@ -2066,19 +2066,25 @@ export class DeckGLMap {
         }));
       }
 
-      // Heading projection (~500 km forward)
+      // Heading projection rendered as a subtle arc instead of a hard straight line.
       const headingRad = (aircraft.trackDeg * Math.PI) / 180;
-      const distDeg = 4.5;
+      const distDeg = aircraft.onGround ? 0.9 : Math.max(1.4, Math.min(3.2, aircraft.groundSpeedKts / 180));
       const fwdLon = aircraft.lon + Math.sin(headingRad) * distDeg / Math.cos((aircraft.lat * Math.PI) / 180);
       const fwdLat = aircraft.lat + Math.cos(headingRad) * distDeg;
-      layers.push(new PathLayer({
+      layers.push(new ArcLayer<{ source: [number, number]; target: [number, number] }>({
         id: 'aircraft-heading-layer',
-        data: [{ path: [[aircraft.lon, aircraft.lat], [fwdLon, fwdLat]] as [number, number][] }],
-        getPath: (d: { path: [number, number][] }) => d.path,
-        getColor: [100, 210, 255, 160] as [number, number, number, number],
-        getWidth: 1.5,
+        data: [{ source: [aircraft.lon, aircraft.lat], target: [fwdLon, fwdLat] }],
+        getSourcePosition: (d) => d.source,
+        getTargetPosition: (d) => d.target,
+        getSourceColor: aircraft.onGround
+          ? [156, 163, 175, 40] as [number, number, number, number]
+          : [96, 165, 250, 50] as [number, number, number, number],
+        getTargetColor: aircraft.onGround
+          ? [156, 163, 175, 170] as [number, number, number, number]
+          : [125, 211, 252, 210] as [number, number, number, number],
+        getWidth: aircraft.onGround ? 1.5 : 2.25,
         widthMinPixels: 1,
-        widthMaxPixels: 3,
+        widthMaxPixels: 4,
         pickable: false,
       }));
     }
@@ -2102,19 +2108,21 @@ export class DeckGLMap {
         }));
       }
 
-      // Heading projection
+      // Heading projection rendered as an arc for a cleaner projected route.
       const headingRad = (flight.heading * Math.PI) / 180;
-      const distDeg = 4.5;
+      const distDeg = Math.max(1.3, Math.min(3.4, flight.speed / 180));
       const fwdLon = flight.lon + Math.sin(headingRad) * distDeg / Math.cos((flight.lat * Math.PI) / 180);
       const fwdLat = flight.lat + Math.cos(headingRad) * distDeg;
-      layers.push(new PathLayer({
+      layers.push(new ArcLayer<{ source: [number, number]; target: [number, number] }>({
         id: 'aircraft-heading-layer',
-        data: [{ path: [[flight.lon, flight.lat], [fwdLon, fwdLat]] as [number, number][] }],
-        getPath: (d: { path: [number, number][] }) => d.path,
-        getColor: [255, 160, 100, 160] as [number, number, number, number],
-        getWidth: 1.5,
+        data: [{ source: [flight.lon, flight.lat], target: [fwdLon, fwdLat] }],
+        getSourcePosition: (d) => d.source,
+        getTargetPosition: (d) => d.target,
+        getSourceColor: [251, 146, 60, 45] as [number, number, number, number],
+        getTargetColor: [255, 160, 100, 210] as [number, number, number, number],
+        getWidth: 2.25,
         widthMinPixels: 1,
-        widthMaxPixels: 3,
+        widthMaxPixels: 4,
         pickable: false,
       }));
     }

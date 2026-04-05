@@ -1,6 +1,8 @@
 import type { PopupType } from './MapPopup';
 import type { EntityRenderer, EntityRenderContext, EntityRendererRegistry } from './entity-detail/types';
 import { GenericEntityRenderer } from './entity-detail/renderers/generic';
+import { resolveEntityHeroImage, type EntityHeroImage } from '@/services/entity-hero-image';
+import { sanitizeUrl } from '@/utils/sanitize';
 
 /**
  * Right-side detail panel that slides in when a user clicks a map entity.
@@ -77,6 +79,15 @@ export class EntityDetailPanel {
     this.content.replaceChildren(skeleton);
     this.open();
 
+    const imagePromise = resolveEntityHeroImage(type, data, this.abortController.signal)
+      .catch(() => null);
+
+    void imagePromise.then((image) => {
+      if (!this.abortController.signal.aborted && this.currentData === data) {
+        this.injectHeroImage(image);
+      }
+    });
+
     // Kick off async enrichment
     if (renderer.enrich) {
       const signal = this.abortController.signal;
@@ -84,6 +95,11 @@ export class EntityDetailPanel {
         .then((enriched) => {
           if (!signal.aborted && this.currentData === data) {
             renderer.renderEnriched?.(this.content, enriched, ctx);
+            void imagePromise.then((image) => {
+              if (!signal.aborted && this.currentData === data) {
+                this.injectHeroImage(image);
+              }
+            });
           }
         })
         .catch(() => { /* enrichment failed silently */ });
@@ -199,6 +215,39 @@ export class EntityDetailPanel {
       signal: this.abortController.signal,
       navigate: (el) => this.navigateTo(el),
     };
+  }
+
+  private injectHeroImage(image: EntityHeroImage | null): void {
+    if (!image) return;
+    if (this.content.querySelector('.edp-flight-media, .edp-nuclear-photo, .edp-vessel-wiki-wrap, .edp-auto-hero')) return;
+
+    const hero = this.el('section', 'edp-auto-hero');
+    const img = this.el('img', 'edp-auto-hero-img') as HTMLImageElement;
+    img.src = sanitizeUrl(image.imageUrl);
+    img.alt = image.alt;
+    img.loading = 'lazy';
+    hero.append(img);
+
+    const credit = this.el('div', 'edp-auto-hero-credit');
+    if (image.pageUrl) {
+      const link = this.el('a', 'edp-auto-hero-link') as HTMLAnchorElement;
+      link.href = sanitizeUrl(image.pageUrl);
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = image.sourceLabel;
+      credit.append(link);
+    } else {
+      credit.textContent = image.sourceLabel;
+    }
+    hero.append(credit);
+
+    const header = this.content.querySelector('.edp-header');
+    if (header?.parentElement === this.content) {
+      header.insertAdjacentElement('afterend', hero);
+      return;
+    }
+
+    this.content.prepend(hero);
   }
 
   private sectionCard(title: string): [HTMLElement, HTMLElement] {

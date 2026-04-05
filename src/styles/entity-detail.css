@@ -249,6 +249,39 @@
   border-left: 3px solid var(--accent-blue);
 }
 
+.edp-auto-hero {
+  margin: 0 0 14px;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: color-mix(in srgb, var(--surface) 84%, black);
+}
+
+.edp-auto-hero-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: color-mix(in srgb, var(--surface) 72%, black);
+}
+
+.edp-auto-hero-credit {
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--text-faint);
+  border-top: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+}
+
+.edp-auto-hero-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.edp-auto-hero-link:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
 /* ── Weather alert description ──────────────────────────────────────── */
 
 .edp-weather-bullets {
