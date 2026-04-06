@@ -1,5 +1,5 @@
 import type { MilitaryVessel } from '@/types';
-import { row } from '../types';
+import { row, textSection, wikiSection } from '../types';
 import type { EntityRenderer, EntityRenderContext } from '../types';
 
 const VESSEL_TYPE_LABELS: Record<string, string> = {
@@ -286,26 +286,16 @@ export class MilitaryVesselRenderer implements EntityRenderer {
     const { vessel, photo, wikiSummary, wikiUrl } = enrichedData as VesselPanelData;
     container.replaceChildren();
 
-    buildHeader(container, ctx, vessel);
-
-    // Photo
     buildPhoto(container, ctx, photo);
+    buildHeader(container, ctx, vessel);
 
     // Wiki summary
     if (wikiSummary) {
-      container.append(ctx.el('p', 'edp-description', wikiSummary));
-      if (wikiUrl) {
-        const wikiLink = ctx.el('a', 'edp-wiki-link') as HTMLAnchorElement;
-        wikiLink.href = wikiUrl;
-        wikiLink.target = '_blank';
-        wikiLink.rel = 'noopener noreferrer';
-        wikiLink.textContent = 'Read more on Wikipedia →';
-        container.append(wikiLink);
-      }
+      container.append(wikiSection(ctx, wikiSummary, wikiUrl));
     } else if (vessel.usniActivityDescription) {
-      container.append(ctx.el('p', 'edp-description', vessel.usniActivityDescription));
+      container.append(textSection(ctx, 'Overview', vessel.usniActivityDescription));
     } else if (vessel.note) {
-      container.append(ctx.el('p', 'edp-description', vessel.note));
+      container.append(textSection(ctx, 'Overview', vessel.note));
     }
 
     buildLiveStats(container, ctx, vessel);

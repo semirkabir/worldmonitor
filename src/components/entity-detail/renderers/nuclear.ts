@@ -1,5 +1,5 @@
 import type { NuclearFacility, NuclearFacilityType } from '@/types';
-import { row, statusBadgeClass } from '../types';
+import { row, statusBadgeClass, textSection, wikiSection } from '../types';
 import type { EntityRenderer, EntityRenderContext } from '../types';
 
 const TYPE_LABELS: Record<NuclearFacilityType, string> = {
@@ -211,21 +211,13 @@ export class NuclearRenderer implements EntityRenderer {
     const { facility, photo, wikiSummary, wikiUrl } = enrichedData as NuclearPanelData;
     container.replaceChildren();
 
-    buildHeader(container, ctx, facility);
     buildPhoto(container, ctx, photo);
+    buildHeader(container, ctx, facility);
 
     if (wikiSummary) {
-      container.append(ctx.el('p', 'edp-description', wikiSummary));
-      if (wikiUrl) {
-        const wikiLink = ctx.el('a', 'edp-wiki-link') as HTMLAnchorElement;
-        wikiLink.href = wikiUrl;
-        wikiLink.target = '_blank';
-        wikiLink.rel = 'noopener noreferrer';
-        wikiLink.textContent = 'Read more on Wikipedia →';
-        container.append(wikiLink);
-      }
+      container.append(wikiSection(ctx, wikiSummary, wikiUrl));
     } else {
-      container.append(ctx.el('p', 'edp-description', TYPE_DESC[facility.type] ?? 'Nuclear facility.'));
+      container.append(textSection(ctx, 'Overview', TYPE_DESC[facility.type] ?? 'Nuclear facility.'));
     }
 
     const [detailCard, detailBody] = ctx.sectionCard('Facility Info');

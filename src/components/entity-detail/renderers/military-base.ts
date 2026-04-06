@@ -1,5 +1,5 @@
 import type { MilitaryBaseEnriched } from '@/types';
-import { row, statusBadgeClass } from '../types';
+import { row, statusBadgeClass, textSection, wikiSection } from '../types';
 import type { EntityRenderer, EntityRenderContext } from '../types';
 
 const BASE_TYPE_LABELS: Record<string, string> = {
@@ -104,6 +104,8 @@ export class MilitaryBaseRenderer implements EntityRenderer {
     const { base, photo, wikiSummary, wikiUrl } = enrichedData as MilitaryBasePanelData;
     container.replaceChildren();
 
+    buildPhoto(container, ctx, photo);
+
     // Header
     const header = ctx.el('div', 'edp-header');
     header.append(ctx.el('h2', 'edp-title', base.name));
@@ -118,22 +120,11 @@ export class MilitaryBaseRenderer implements EntityRenderer {
     header.append(badgeRow);
     container.append(header);
 
-    // Photo
-    buildPhoto(container, ctx, photo);
-
     // Wiki summary
     if (wikiSummary) {
-      container.append(ctx.el('p', 'edp-description', wikiSummary));
-      if (wikiUrl) {
-        const wikiLink = ctx.el('a', 'edp-wiki-link') as HTMLAnchorElement;
-        wikiLink.href = wikiUrl;
-        wikiLink.target = '_blank';
-        wikiLink.rel = 'noopener noreferrer';
-        wikiLink.textContent = 'Read more on Wikipedia →';
-        container.append(wikiLink);
-      }
+      container.append(wikiSection(ctx, wikiSummary, wikiUrl));
     } else if (base.description) {
-      container.append(ctx.el('p', 'edp-description', base.description));
+      container.append(textSection(ctx, 'Overview', base.description));
     }
 
     // Details

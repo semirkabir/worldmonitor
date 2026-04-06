@@ -55,3 +55,28 @@ export function statusBadgeClass(status: string): string {
   if (['planned', 'construction'].includes(status))                  return 'edp-badge edp-badge-warning';
   return 'edp-badge edp-badge-dim';
 }
+
+/** Shared Wikipedia summary card used by entity renderers with wiki enrichment. */
+export function wikiSection(ctx: EntityRenderContext, summary: string, url: string | null): HTMLElement {
+  const [card, body] = ctx.sectionCard('Wikipedia Brief');
+  body.classList.add('edp-wiki-section');
+  body.append(ctx.el('p', 'edp-description edp-wiki-summary', summary));
+
+  if (url) {
+    const wikiLink = ctx.el('a', 'edp-wiki-link') as HTMLAnchorElement;
+    wikiLink.href = url;
+    wikiLink.target = '_blank';
+    wikiLink.rel = 'noopener noreferrer';
+    wikiLink.textContent = 'Read more on Wikipedia';
+    body.append(wikiLink);
+  }
+
+  return card;
+}
+
+/** Simple narrative card for fallback summaries and overview text. */
+export function textSection(ctx: EntityRenderContext, title: string, text: string): HTMLElement {
+  const [card, body] = ctx.sectionCard(title);
+  body.append(ctx.el('p', 'edp-description', text));
+  return card;
+}

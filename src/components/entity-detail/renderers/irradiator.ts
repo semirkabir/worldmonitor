@@ -1,5 +1,5 @@
 import type { GammaIrradiator } from '@/types';
-import { row } from '../types';
+import { row, textSection, wikiSection } from '../types';
 import type { EntityRenderer, EntityRenderContext } from '../types';
 
 const COUNTRY_RISK: Record<string, { level: string; severity: number }> = {
@@ -186,21 +186,13 @@ export class IrradiatorRenderer implements EntityRenderer {
     const { irradiator, photo, wikiSummary, wikiUrl } = enrichedData as IrradiatorPanelData;
     container.replaceChildren();
 
-    buildHeader(container, ctx, irradiator);
     buildPhoto(container, ctx, photo);
+    buildHeader(container, ctx, irradiator);
 
     if (wikiSummary) {
-      container.append(ctx.el('p', 'edp-description', wikiSummary));
-      if (wikiUrl) {
-        const wikiLink = ctx.el('a', 'edp-wiki-link') as HTMLAnchorElement;
-        wikiLink.href = wikiUrl;
-        wikiLink.target = '_blank';
-        wikiLink.rel = 'noopener noreferrer';
-        wikiLink.textContent = 'Read more on Wikipedia →';
-        container.append(wikiLink);
-      }
+      container.append(wikiSection(ctx, wikiSummary, wikiUrl));
     } else {
-      container.append(ctx.el('p', 'edp-description', `Industrial gamma irradiation facility located in ${irradiator.city}, ${irradiator.country}. These facilities use radioactive sources (typically Cobalt-60 or Cesium-137) for sterilization, food preservation, and materials processing.`));
+      container.append(textSection(ctx, 'Overview', `Industrial gamma irradiation facility located in ${irradiator.city}, ${irradiator.country}. These facilities use radioactive sources (typically Cobalt-60 or Cesium-137) for sterilization, food preservation, and materials processing.`));
     }
 
     const risk = getRiskInfo(irradiator.country);
