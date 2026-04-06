@@ -219,7 +219,7 @@ export class EntityDetailPanel {
 
   private injectHeroImage(image: EntityHeroImage | null): void {
     if (!image) return;
-    if (this.content.querySelector('.edp-flight-media, .edp-nuclear-photo, .edp-vessel-wiki-wrap, .edp-auto-hero')) return;
+    if (this.content.querySelector('.edp-flight-media, .edp-nuclear-photo, .edp-base-photo, .edp-vessel-photo, .edp-vessel-wiki-wrap, .edp-auto-hero')) return;
 
     const hero = this.el('section', 'edp-auto-hero');
     const img = this.el('img', 'edp-auto-hero-img') as HTMLImageElement;
@@ -229,21 +229,23 @@ export class EntityDetailPanel {
     hero.append(img);
 
     const credit = this.el('div', 'edp-auto-hero-credit');
+    credit.append(this.el('span', 'edp-auto-hero-credit-label', 'Source'));
+    const sourceText = image.sourceLabel === 'Image via Wikipedia' ? 'Wikipedia' : image.sourceLabel;
     if (image.pageUrl) {
       const link = this.el('a', 'edp-auto-hero-link') as HTMLAnchorElement;
       link.href = sanitizeUrl(image.pageUrl);
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
-      link.textContent = image.sourceLabel;
+      link.textContent = sourceText;
       credit.append(link);
     } else {
-      credit.textContent = image.sourceLabel;
+      credit.append(this.el('span', 'edp-auto-hero-source', sourceText));
     }
     hero.append(credit);
 
     const header = this.content.querySelector('.edp-header');
-    if (header?.parentElement === this.content) {
-      header.insertAdjacentElement('afterend', hero);
+    if (header) {
+      header.insertAdjacentElement('beforebegin', hero);
       return;
     }
 

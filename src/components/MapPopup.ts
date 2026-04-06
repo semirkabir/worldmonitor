@@ -198,6 +198,9 @@ export class MapPopup {
 
     // Append to body to avoid container overflow clipping
     document.body.appendChild(this.popup);
+    this.popup.scrollTop = 0;
+    const popupBody = this.popup.querySelector<HTMLElement>('.popup-body');
+    if (popupBody) popupBody.scrollTop = 0;
 
     // Close button handler via event delegation on the popup element.
     // This avoids re-querying and re-attaching listeners after innerHTML.

@@ -7,6 +7,7 @@ import { MapboxOverlay } from '@deck.gl/mapbox';
 import type { Layer, LayersList, PickingInfo } from '@deck.gl/core';
 import { GeoJsonLayer, ScatterplotLayer, PathLayer, IconLayer, TextLayer, PolygonLayer } from '@deck.gl/layers';
 import maplibregl from 'maplibre-gl';
+import { PathStyleExtension } from '@deck.gl/extensions';
 import { registerPMTilesProtocol, FALLBACK_DARK_STYLE, FALLBACK_LIGHT_STYLE, getUnifiedTheme, setUnifiedTheme, resolveUnifiedTheme, UNIFIED_THEME_OPTIONS, THEME_LAYER_OVERRIDES, getStyleForProvider, isLightMapTheme, CUSTOM_THEME_FILTERS } from '@/config/basemap';
 import Supercluster from 'supercluster';
 import type {
@@ -48,7 +49,7 @@ import type { Earthquake } from '@/services/earthquakes';
 import type { ClimateAnomaly } from '@/services/climate';
 import { ArcLayer } from '@deck.gl/layers';
 import { HeatmapLayer } from '@deck.gl/aggregation-layers';
-import { H3HexagonLayer } from '@deck.gl/geo-layers';
+import { H3HexagonLayer, TripsLayer } from '@deck.gl/geo-layers';
 import type { WeatherAlert, WeatherCategory } from '@/services/weather';
 import { getWeatherEventCategory } from '@/services/weather';
 import { escapeHtml } from '@/utils/sanitize';
@@ -110,10 +111,37 @@ import type { SpeciesRecovery } from '@/services/conservation-data';
 import { getCountriesGeoJson, getCountryAtCoordinates, getCountryBbox } from '@/services/country-geometry';
 import type { FeatureCollection, Geometry } from 'geojson';
 import { getTrayOpenPreference, setTrayOpenPreference } from '@/app/ui-preferences';
+import type { MarketplaceRuntimeLayer } from '@/types/marketplace';
 
 export type TimeRange = '1h' | '6h' | '24h' | '48h' | '7d' | 'all';
 export type DeckMapView = 'global' | 'america' | 'mena' | 'eu' | 'asia' | 'latam' | 'africa' | 'oceania';
 type MapInteractionMode = 'flat' | '3d';
+
+interface CableFlowTrip {
+  id: string;
+  path: [number, number][];
+  timestamps: number[];
+  color: [number, number, number, number];
+}
+
+function marketplaceHexColor(hex: string | undefined, alpha: number, fallback: [number, number, number, number]): [number, number, number, number] {
+  if (!hex) return fallback;
+  const normalized = hex.trim().replace('#', '');
+  const short = normalized.length === 3;
+  const long = normalized.length === 6;
+  if (!short && !long) return fallback;
+  const expanded = short
+    ? normalized.split('').map((char) => `${char}${char}`).join('')
+    : normalized;
+  const int = Number.parseInt(expanded, 16);
+  if (!Number.isFinite(int)) return fallback;
+  return [
+    (int >> 16) & 255,
+    (int >> 8) & 255,
+    int & 255,
+    Math.round(Math.max(0, Math.min(1, alpha)) * 255),
+  ];
+}
 
 // ─── Custom categories ────────────────────────────────────────────────────────
 interface CustomCategory {
@@ -462,10 +490,12 @@ export class DeckGLMap {
   private onEntityClick?: (type: string, data: unknown) => void;
   private entityClickConsumedAt = 0;
   private onLayerChange?: (layer: keyof MapLayers, enabled: boolean, source: 'user' | 'programmatic') => void;
+  private onMarketplaceLayerToggle?: (itemId: string, enabled: boolean) => void;
   private onStateChange?: (state: DeckMapState) => void;
   private onAircraftPositionsUpdate?: (positions: PositionSample[]) => void;
   private legendEl: HTMLElement | null = null;
   private ciiLegendEl: HTMLElement | null = null;
+  private marketplaceLayers: MarketplaceRuntimeLayer[] = [];
 
   // Highlighted assets
   private highlightedAssets: Record<AssetType, Set<string>> = {
@@ -517,6 +547,7 @@ export class DeckGLMap {
   private protestSuperclusterSource: SocialUnrestEvent[] = [];
   private newsPulseIntervalId: ReturnType<typeof setInterval> | null = null;
   private dayNightIntervalId: ReturnType<typeof setInterval> | null = null;
+  private cableFlowIntervalId: ReturnType<typeof setInterval> | null = null;
   private cachedNightPolygon: [number, number][] | null = null;
   private readonly startupTime = Date.now();
   private lastCableHighlightSignature = '';
@@ -1372,6 +1403,7 @@ export class DeckGLMap {
     // Undersea cables layer
     if (mapLayers.cables) {
       layers.push(this.createCablesLayer());
+      layers.push(this.createCableFlowLayer());
     } else {
       this.layerCache.delete('cables-layer');
     }
@@ -1450,12 +1482,6 @@ export class DeckGLMap {
     // Satellite fires layer (NASA FIRMS)
     if (mapLayers.fires && this.firmsFireData.length > 0) {
       layers.push(this.createFiresLayer());
-    }
-
-    // Iran events layer
-    if (mapLayers.iranAttacks && this.iranEvents.length > 0) {
-      layers.push(this.createIranEventsLayer());
-      layers.push(this.createGhostLayer('iran-events-layer', this.iranEvents, d => [d.longitude, d.latitude], { radiusMinPixels: 12 }));
     }
 
     // Weather alerts layer
@@ -1670,6 +1696,10 @@ export class DeckGLMap {
       layers.push(this.createRenewableInstallationsLayer());
     }
 
+    if (this.marketplaceLayers.length > 0) {
+      layers.push(...this.createMarketplaceLayers());
+    }
+
     // News geo-locations (tied to conflicts layer)
     if (mapLayers.conflicts && this.newsLocations.length > 0) {
       layers.push(...this.createNewsLocationsLayer());
@@ -1681,6 +1711,39 @@ export class DeckGLMap {
       console.warn(`[DeckGLMap] buildLayers took ${elapsed.toFixed(2)}ms (>16ms budget), ${result.length} layers`);
     }
     return result;
+  }
+
+  private createMarketplaceLayers(): Layer[] {
+    return this.marketplaceLayers
+      .filter((layer) => layer.enabled && layer.variantCompatible && layer.featureCollection.features.length > 0)
+      .map((layer) => {
+        const fill = marketplaceHexColor(
+          layer.surface.style?.color,
+          layer.surface.geometryType === 'polygon' ? (layer.surface.style?.opacity ?? 0.34) : (layer.surface.style?.opacity ?? 0.72),
+          [88, 242, 255, layer.surface.geometryType === 'polygon' ? 86 : 184],
+        );
+        const stroke = marketplaceHexColor(
+          layer.surface.style?.strokeColor ?? layer.surface.style?.color,
+          layer.surface.style?.opacity ?? 0.92,
+          [214, 248, 255, 235],
+        );
+        return new GeoJsonLayer({
+          id: `marketplace-layer-${layer.itemId}`,
+          data: layer.featureCollection as any,
+          pickable: true,
+          filled: true,
+          stroked: true,
+          pointType: 'circle',
+          lineWidthUnits: 'pixels',
+          getPointRadius: layer.surface.style?.pointRadius ?? 12000,
+          pointRadiusMinPixels: 5,
+          pointRadiusMaxPixels: 16,
+          getFillColor: fill,
+          getLineColor: stroke,
+          getLineWidth: layer.surface.style?.strokeWidth ?? 2,
+          lineWidthMinPixels: 2,
+        });
+      });
   }
 
   // Layer creation methods
@@ -1711,9 +1774,13 @@ export class DeckGLMap {
         if (h?.status === 'degraded') return 2;
         return 1;
       },
+      getDashArray: () => [1, 0],
       widthMinPixels: 1,
       widthMaxPixels: 5,
       pickable: true,
+      capRounded: true,
+      jointRounded: true,
+      extensions: [new PathStyleExtension({ dash: true })],
       updateTriggers: { highlighted: highlightSignature, health: healthSignature },
     });
 
@@ -1721,6 +1788,49 @@ export class DeckGLMap {
     this.lastCableHealthSignature = healthSignature;
     this.layerCache.set(cacheKey, layer);
     return layer;
+  }
+
+  private getCableFlowColor(cableId: string): [number, number, number, number] {
+    if (this.highlightedAssets.cable.has(cableId)) return [255, 244, 244, 255];
+    const health = this.healthByCableId[cableId];
+    if (health?.status === 'fault') return [255, 150, 150, 245];
+    if (health?.status === 'degraded') return [255, 224, 140, 235];
+    return [198, 248, 255, 235];
+  }
+
+  private createCableFlowLayer(): TripsLayer<CableFlowTrip> {
+    const loopSpan = 180;
+    const currentTime = ((Date.now() - this.startupTime) % 4200) / 4200 * loopSpan;
+    const trips: CableFlowTrip[] = UNDERSEA_CABLES.flatMap((cable, cableIndex) => {
+      if (cable.points.length < 2) return [];
+      return [0, 90].map((offset, streamIndex) => ({
+        id: `${cable.id}-flow-${streamIndex}`,
+        path: cable.points,
+        timestamps: cable.points.map((_, pointIndex, points) => {
+          const denom = Math.max(1, points.length - 1);
+          return offset + (pointIndex / denom) * 72 + (cableIndex % 4) * 4;
+        }),
+        color: this.getCableFlowColor(cable.id),
+      }));
+    });
+
+    return new TripsLayer<CableFlowTrip>({
+      id: 'cable-flow-layer',
+      data: trips,
+      getPath: (d) => d.path,
+      getTimestamps: (d) => d.timestamps,
+      getColor: (d) => d.color,
+      opacity: 0.95,
+      widthMinPixels: 2,
+      widthMaxPixels: 4,
+      rounded: true,
+      capRounded: true,
+      jointRounded: true,
+      fadeTrail: true,
+      trailLength: 18,
+      currentTime,
+      pickable: false,
+    });
   }
 
   private createPipelinesLayer(): PathLayer {
@@ -1775,7 +1885,9 @@ export class DeckGLMap {
 
 
   private getBasesData(): MilitaryBaseEnriched[] {
-    return this.serverBasesLoaded ? this.serverBases : MILITARY_BASES as MilitaryBaseEnriched[];
+    return this.serverBasesLoaded && this.serverBases.length > 0
+      ? this.serverBases
+      : MILITARY_BASES as MilitaryBaseEnriched[];
   }
 
   // @ts-expect-error kept for potential future use
@@ -1807,6 +1919,7 @@ export class DeckGLMap {
       sizeMinPixels: 10,
       sizeMaxPixels: 24,
       pickable: true,
+      billboard: true,
     });
   }
 
@@ -1835,6 +1948,7 @@ export class DeckGLMap {
       sizeMinPixels: 10,
       sizeMaxPixels: 24,
       pickable: true,
+      billboard: true,
     }));
 
     // Count badge: small red circle + white text, offset to top-right
@@ -3951,6 +4065,19 @@ export class DeckGLMap {
       return;
     }
 
+    if (layerId.startsWith('marketplace-layer-')) {
+      const props = (info.object as { properties?: Record<string, unknown> }).properties ?? {};
+      const itemId = typeof props.itemId === 'string' ? props.itemId : '';
+      const datasetId = typeof props.datasetId === 'string' ? props.datasetId : '';
+      const recordId = typeof props.recordId === 'string' ? props.recordId : '';
+      if (!itemId || !datasetId || !recordId) return;
+      this.popup.hide();
+      this.entityClickConsumedAt = Date.now();
+      this.zoomToEntity(info, layerId);
+      this.onEntityClick('marketplaceRecord', { itemId, datasetId, recordId });
+      return;
+    }
+
     // Reuse the same layerToPopupType mapping
     const layerToPopupType: Record<string, string> = {
       'hotspots-layer': 'hotspot',
@@ -4016,6 +4143,10 @@ export class DeckGLMap {
       'species-recovery-layer': 'speciesRecovery',
       'renewable-installations-layer': 'renewableInstallation',
     };
+
+    if (layerId.startsWith('marketplace-layer-')) {
+      return;
+    }
 
     const popupType = layerToPopupType[layerId];
     if (!popupType) return;
@@ -4261,6 +4392,23 @@ export class DeckGLMap {
       this.clearAllLayers();
     });
 
+    const layersMarketplaceBtn = document.createElement('button');
+    layersMarketplaceBtn.className = 'layers-row-marketplace';
+    layersMarketplaceBtn.title = 'Layer marketplace';
+    layersMarketplaceBtn.setAttribute('aria-label', 'Layer marketplace');
+    layersMarketplaceBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 10.5V18a1.5 1.5 0 0 0 1.5 1.5h13A1.5 1.5 0 0 0 20 18v-7.5"/>
+        <path d="M3 7.5h18"/>
+        <path d="M5 7.5 6.4 4.9A1.5 1.5 0 0 1 7.7 4h8.6a1.5 1.5 0 0 1 1.3.9L19 7.5"/>
+        <path d="M9.5 12.5h5"/>
+      </svg>
+    `;
+    layersMarketplaceBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.dispatchEvent(new CustomEvent('wm:open-layer-marketplace'));
+    });
+
     const layersHelpBtn = document.createElement('button');
     layersHelpBtn.className = 'layer-help-btn layers-row-help';
     layersHelpBtn.title = t('components.deckgl.layerGuide');
@@ -4272,6 +4420,7 @@ export class DeckGLMap {
 
     layersRow.appendChild(layersToggleBtn);
     layersRow.appendChild(layersClearBtn);
+    layersRow.appendChild(layersMarketplaceBtn);
     layersRow.appendChild(layersHelpBtn);
     slider.appendChild(layersRow);
 
@@ -4336,6 +4485,16 @@ export class DeckGLMap {
     status.className = 'map-tray-status';
     header.append(title, status);
     layersPanel.appendChild(header);
+
+    const searchWrap = document.createElement('div');
+    searchWrap.className = 'map-tray-search';
+    const searchInput = document.createElement('input');
+    searchInput.className = 'map-tray-search-input';
+    searchInput.type = 'search';
+    searchInput.placeholder = 'Search layers';
+    searchInput.setAttribute('aria-label', 'Search layers');
+    searchWrap.appendChild(searchInput);
+    layersPanel.appendChild(searchWrap);
 
     // Build layer list
     const list = document.createElement('div');
@@ -4413,8 +4572,51 @@ export class DeckGLMap {
 
     // Render existing custom categories
     this.renderCustomCategories(list, status, layersPanel, layerConfig);
+    this.renderMarketplaceLayerToggles(list, layersPanel);
 
+    const noResults = document.createElement('div');
+    noResults.className = 'map-tray-empty';
+    noResults.textContent = 'No matching layers';
+    noResults.style.display = 'none';
+
+    layersPanel.appendChild(noResults);
     layersPanel.appendChild(list);
+
+    const updateStatus = () => {
+      status.textContent = `${layersPanel.querySelectorAll('.layer-toggle input:checked').length} active`;
+    };
+
+    const applyLayerFilter = () => {
+      const query = searchInput.value.trim().toLowerCase();
+      let visibleCount = 0;
+      let visibleCustomCount = 0;
+      let visibleMarketplaceCount = 0;
+
+      list.querySelectorAll<HTMLElement>('.layer-toggle').forEach((toggle) => {
+        const labelText = toggle.querySelector('.toggle-label')?.textContent?.toLowerCase() ?? '';
+        const matches = !query || labelText.includes(query);
+        toggle.style.display = matches ? '' : 'none';
+        if (matches) {
+          visibleCount += 1;
+          if (toggle.classList.contains('custom-category-item')) visibleCustomCount += 1;
+          if (toggle.classList.contains('marketplace-layer-item')) visibleMarketplaceCount += 1;
+        }
+      });
+
+      list.querySelectorAll<HTMLElement>('.custom-category-divider').forEach((divider) => {
+        divider.style.display = visibleCustomCount > 0 ? '' : 'none';
+      });
+      list.querySelectorAll<HTMLElement>('.marketplace-layer-divider').forEach((divider) => {
+        divider.style.display = visibleMarketplaceCount > 0 ? '' : 'none';
+      });
+
+      noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+    };
+
+    searchInput.addEventListener('input', () => {
+      applyLayerFilter();
+      this.enforceLayerLimit();
+    });
 
     // Keep reference for event binding below
     const toggles = layersPanel;
@@ -4434,12 +4636,13 @@ export class DeckGLMap {
           }
           this.refreshLegend();
           this.enforceLayerLimit();
-          status.textContent = `${layersPanel.querySelectorAll('.layer-toggle input:checked').length} active`;
+          updateStatus();
         }
       });
     });
     this.enforceLayerLimit();
-    status.textContent = `${layersPanel.querySelectorAll('.layer-toggle input:checked').length} active`;
+    updateStatus();
+    applyLayerFilter();
 
     // Manual scroll: intercept wheel, prevent map zoom, scroll the list ourselves
     const toggleList = toggles.querySelector('.toggle-list');
@@ -4451,6 +4654,44 @@ export class DeckGLMap {
       }, { passive: false });
       toggles.addEventListener('touchmove', (e) => e.stopPropagation(), { passive: false });
     }
+  }
+
+  private updateLayerTrayStatus(layersPanel: HTMLElement): void {
+    const status = layersPanel.querySelector<HTMLElement>('.map-tray-status');
+    if (!status) return;
+    status.textContent = `${layersPanel.querySelectorAll('.layer-toggle input:checked').length} active`;
+  }
+
+  private applyLayerTrayFilter(layersPanel: HTMLElement): void {
+    const list = layersPanel.querySelector<HTMLElement>('.toggle-list');
+    const searchInput = layersPanel.querySelector<HTMLInputElement>('.map-tray-search-input');
+    const noResults = layersPanel.querySelector<HTMLElement>('.map-tray-empty');
+    if (!list || !searchInput || !noResults) return;
+
+    const query = searchInput.value.trim().toLowerCase();
+    let visibleCount = 0;
+    let visibleCustomCount = 0;
+    let visibleMarketplaceCount = 0;
+
+    list.querySelectorAll<HTMLElement>('.layer-toggle').forEach((toggle) => {
+      const labelText = toggle.querySelector('.toggle-label')?.textContent?.toLowerCase() ?? '';
+      const matches = !query || labelText.includes(query);
+      toggle.style.display = matches ? '' : 'none';
+      if (matches) {
+        visibleCount += 1;
+        if (toggle.classList.contains('custom-category-item')) visibleCustomCount += 1;
+        if (toggle.classList.contains('marketplace-layer-item')) visibleMarketplaceCount += 1;
+      }
+    });
+
+    list.querySelectorAll<HTMLElement>('.custom-category-divider').forEach((divider) => {
+      divider.style.display = visibleCustomCount > 0 ? '' : 'none';
+    });
+    list.querySelectorAll<HTMLElement>('.marketplace-layer-divider').forEach((divider) => {
+      divider.style.display = visibleMarketplaceCount > 0 ? '' : 'none';
+    });
+
+    noResults.style.display = visibleCount === 0 ? 'block' : 'none';
   }
 
   /** Render custom category items into the toggle list */
@@ -4510,12 +4751,13 @@ export class DeckGLMap {
         this.render();
         this.refreshLegend();
         this.enforceLayerLimit();
-        status.textContent = `${layersPanel.querySelectorAll('.layer-toggle input:checked').length} active`;
+        this.updateLayerTrayStatus(layersPanel);
         // Sync individual toggles in the panel
         cat.layers.forEach(l => {
           const cb = layersPanel.querySelector<HTMLInputElement>(`.layer-toggle[data-layer="${l}"] input`);
           if (cb) cb.checked = checkbox.checked;
         });
+        this.applyLayerTrayFilter(layersPanel);
       });
 
       // 3-second hover to reveal delete button
@@ -4543,11 +4785,62 @@ export class DeckGLMap {
         this.renderCustomCategories(list, status, layersPanel, layerConfig);
         this.render();
         this.refreshLegend();
-        status.textContent = `${layersPanel.querySelectorAll('.layer-toggle input:checked').length} active`;
+        this.updateLayerTrayStatus(layersPanel);
+        this.applyLayerTrayFilter(layersPanel);
       });
 
       list.appendChild(item);
     });
+
+    this.applyLayerTrayFilter(layersPanel);
+  }
+
+  private renderMarketplaceLayerToggles(list: HTMLElement, layersPanel: HTMLElement): void {
+    list.querySelectorAll('.marketplace-layer-item, .marketplace-layer-divider').forEach((el) => el.remove());
+    if (this.marketplaceLayers.length === 0) return;
+
+    const divider = document.createElement('div');
+    divider.className = 'marketplace-layer-divider';
+    divider.textContent = 'Marketplace';
+    list.appendChild(divider);
+
+    this.marketplaceLayers.forEach((layer) => {
+      const item = document.createElement('label');
+      item.className = 'layer-toggle marketplace-layer-item';
+      item.dataset.marketplaceLayer = layer.itemId;
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = layer.enabled;
+      checkbox.disabled = !layer.variantCompatible;
+      item.appendChild(checkbox);
+
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'toggle-icon';
+      iconSpan.style.color = layer.surface.style?.color || '#58f2ff';
+      iconSpan.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/></svg>';
+      item.appendChild(iconSpan);
+
+      const labelSpan = document.createElement('span');
+      labelSpan.className = 'toggle-label';
+      labelSpan.textContent = layer.name;
+      item.appendChild(labelSpan);
+
+      checkbox.addEventListener('change', () => {
+        const next = checkbox.checked;
+        const match = this.marketplaceLayers.find((entry) => entry.itemId === layer.itemId);
+        if (match) match.enabled = next;
+        this.onMarketplaceLayerToggle?.(layer.itemId, next);
+        this.render();
+        this.refreshLegend();
+        this.updateLayerTrayStatus(layersPanel);
+        this.applyLayerTrayFilter(layersPanel);
+      });
+
+      list.appendChild(item);
+    });
+
+    this.applyLayerTrayFilter(layersPanel);
   }
 
   /** Clear all active layers */
@@ -4564,9 +4857,20 @@ export class DeckGLMap {
     this.container.querySelectorAll<HTMLInputElement>('.layer-toggle input[type="checkbox"]').forEach(cb => {
       cb.checked = false;
     });
+    this.marketplaceLayers.forEach((layer) => {
+      if (layer.enabled) {
+        layer.enabled = false;
+        this.onMarketplaceLayerToggle?.(layer.itemId, false);
+      }
+    });
     // Hide CII legend if it was visible
     const ciiLeg = this.container.querySelector('#ciiChoroplethLegend') as HTMLElement | null;
     if (ciiLeg) ciiLeg.style.display = 'none';
+    const layersPanel = this.container.querySelector('#layersPanel') as HTMLElement | null;
+    if (layersPanel) {
+      this.updateLayerTrayStatus(layersPanel);
+      this.applyLayerTrayFilter(layersPanel);
+    }
     // Stop flights timer if running
     this.manageAircraftTimer(false);
     this.layerWarningShown = false;
@@ -4715,7 +5019,6 @@ export class DeckGLMap {
       helpItem('7D / ALL', 'timeExtended'),
     ], 'timeAffects')}
         ${helpSection('geopolitical', [
-      helpItem(label('iranAttacks'), 'geoIranAttacks'),
       helpItem(label('intelHotspots'), 'geoHotspots'),
       helpItem(label('conflictZones'), 'geoConflicts'),
       helpItem(label('protests'), 'geoProtests'),
@@ -4841,11 +5144,13 @@ export class DeckGLMap {
     const theme = getCurrentTheme() === 'light' ? 'light' : 'dark';
     const layerDefs = getLayersForVariant((SITE_VARIANT || 'full') as MapVariant, 'flat');
     const activeLayerDefs = layerDefs.filter(def => this.state.layers[def.key]);
+    const activeMarketplaceLayers = this.marketplaceLayers.filter((layer) => layer.enabled && layer.variantCompatible);
     if (status) {
-      status.textContent = activeLayerDefs.length === 0 ? 'No active layers' : `${activeLayerDefs.length} active`;
+      const activeCount = activeLayerDefs.length + activeMarketplaceLayers.length;
+      status.textContent = activeCount === 0 ? 'No active layers' : `${activeCount} active`;
     }
 
-    if (activeLayerDefs.length === 0) {
+    if (activeLayerDefs.length === 0 && activeMarketplaceLayers.length === 0) {
       itemsRoot.innerHTML = '<span class="legend-item"><span class="legend-label">No active layers</span></span>';
     } else {
       itemsRoot.innerHTML = activeLayerDefs
@@ -4871,6 +5176,11 @@ export class DeckGLMap {
             : `<span class="legend-icon" style="color:${color}">${def.icon}</span>`;
           return [`<span class="legend-item">${iconHtml}<span class="legend-label">${label}</span></span>`];
         })
+        .concat(activeMarketplaceLayers.map((layer) => {
+          const color = layer.surface.style?.color || '#58f2ff';
+          const iconHtml = `<span class="legend-icon" style="color:${color}"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/></svg></span>`;
+          return `<span class="legend-item">${iconHtml}<span class="legend-label">${escapeHtml(layer.name)}</span></span>`;
+        }))
         .join('');
     }
 
@@ -4907,11 +5217,13 @@ export class DeckGLMap {
     if (paused) {
       this.stopPulseAnimation();
       this.stopDayNightTimer();
+      this.manageCableFlowAnimation(false);
       return;
     }
 
     this.syncPulseAnimation();
     if (this.state.layers.dayNight) this.startDayNightTimer();
+    this.manageCableFlowAnimation(this.state.layers.cables);
     if (!paused && this.renderPending) {
       this.renderPending = false;
       this.render();
@@ -4920,6 +5232,7 @@ export class DeckGLMap {
 
   private updateLayers(): void {
     if (this.renderPaused || this.webglLost || !this.maplibreMap) return;
+    this.manageCableFlowAnimation(this.state.layers.cables);
     const startTime = performance.now();
     const dirty = this.dirtyLayers.size > 0 ? new Set(this.dirtyLayers) : undefined;
     this.dirtyLayers.clear();
@@ -5029,6 +5342,13 @@ export class DeckGLMap {
       const toggle = this.container.querySelector(`.layer-toggle[data-layer="${key}"] input`) as HTMLInputElement;
       if (toggle) toggle.checked = value;
     });
+    this.refreshLegend();
+  }
+
+  public setMarketplaceLayers(layers: MarketplaceRuntimeLayer[]): void {
+    this.marketplaceLayers = layers.map((layer) => ({ ...layer }));
+    this.render();
+    this.createLayerToggles();
     this.refreshLegend();
   }
 
@@ -5372,6 +5692,20 @@ export class DeckGLMap {
         this.aircraftFetchTimer = null;
       }
       this.aircraftPositions = [];
+    }
+  }
+
+  private manageCableFlowAnimation(enabled: boolean): void {
+    if (enabled) {
+      if (!this.cableFlowIntervalId) {
+        this.cableFlowIntervalId = setInterval(() => {
+          if (this.renderPaused || this.webglLost || !this.maplibreMap) return;
+          this.render('cables');
+        }, 240);
+      }
+    } else if (this.cableFlowIntervalId) {
+      clearInterval(this.cableFlowIntervalId);
+      this.cableFlowIntervalId = null;
     }
   }
 
@@ -5884,6 +6218,10 @@ export class DeckGLMap {
 
   public setOnEntityClick(cb: (type: string, data: unknown) => void): void {
     this.onEntityClick = cb;
+  }
+
+  public setOnMarketplaceLayerToggle(cb: (itemId: string, enabled: boolean) => void): void {
+    this.onMarketplaceLayerToggle = cb;
   }
 
   private resolveCountryFromCoordinate(lon: number, lat: number): { code: string; name: string } | null {
@@ -6415,6 +6753,7 @@ export class DeckGLMap {
     }
     this.stopPulseAnimation();
     this.stopDayNightTimer();
+    this.manageCableFlowAnimation(false);
     if (this.aircraftFetchTimer) {
       clearInterval(this.aircraftFetchTimer);
       this.aircraftFetchTimer = null;

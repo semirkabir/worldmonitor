@@ -1,0 +1,52 @@
+{
+  "records": [
+    {
+      "symbol": "PLTR",
+      "name": "Palantir Technologies",
+      "price": 23.14,
+      "changePct": 1.8,
+      "marketCap": 52.4,
+      "theme": "Defense autonomy",
+      "summary": "Decision systems, battlefield software, and government AI integration demand.",
+      "country": "United States",
+      "tags": ["defense", "software", "ai"],
+      "aliases": ["palantir", "palantir technologies"]
+    },
+    {
+      "symbol": "KTOS",
+      "name": "Kratos Defense",
+      "price": 21.67,
+      "changePct": -0.9,
+      "marketCap": 3.2,
+      "theme": "Autonomous systems",
+      "summary": "Drone, tactical networking, and low-cost attritable systems exposure.",
+      "country": "United States",
+      "tags": ["drones", "autonomy", "defense"],
+      "aliases": ["kratos", "kratos defense"]
+    },
+    {
+      "symbol": "SATL",
+      "name": "Orbital Edge Networks",
+      "price": 14.02,
+      "changePct": 2.6,
+      "marketCap": 1.1,
+      "theme": "Satellite relay",
+      "summary": "Small-sat relay and resilient tactical comms exposure tied to defense bandwidth demand.",
+      "country": "United States",
+      "tags": ["satellite", "comms", "space"],
+      "aliases": ["orbital edge", "satl"]
+    },
+    {
+      "symbol": "NVDA",
+      "name": "NVIDIA",
+      "price": 132.85,
+      "changePct": 0.7,
+      "marketCap": 3270.0,
+      "theme": "AI compute",
+      "summary": "AI infrastructure bellwether with downstream demand from sovereign and defense compute stacks.",
+      "country": "United States",
+      "tags": ["ai", "chips", "compute"],
+      "aliases": ["nvidia", "gpu"]
+    }
+  ]
+}

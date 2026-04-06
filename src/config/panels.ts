@@ -96,6 +96,7 @@ const FULL_PANELS: Record<string, PanelConfig> = {
   'insider-trading':     p2('Insider Trading'),
   'social-sentiment':    p2('Social Sentiment'),
   'options-chain':       p2('Options Chain'),
+  marketplace:           { name: 'Marketplace Data', enabled: false, priority: 2 },
 };
 
 const FULL_MAP_LAYERS: MapLayers = {
@@ -163,6 +164,7 @@ const TECH_PANELS: Record<string, PanelConfig> = {
   'tech-readiness': p1('Tech Readiness Index'),
   'world-clock':    p2('World Clock'),
   monitors:         p2('My Monitors'),
+  marketplace:      { name: 'Marketplace Data', enabled: false, priority: 2 },
 };
 
 const TECH_MAP_LAYERS: MapLayers = {
@@ -222,6 +224,7 @@ const FINANCE_PANELS: Record<string, PanelConfig> = {
   'insider-trading':  p2('Insider Trading'),
   'social-sentiment': p2('Social Sentiment'),
   'options-chain':    p2('Options Chain'),
+  marketplace:        { name: 'Marketplace Data', enabled: false, priority: 2 },
 };
 
 const FINANCE_MAP_LAYERS: MapLayers = {
@@ -257,6 +260,7 @@ const HAPPY_PANELS: Record<string, PanelConfig> = {
   species:         p1('Conservation Wins'),
   renewable:       p1('Renewable Energy'),
   giving:          p1('Global Giving'),
+  marketplace:     { name: 'Marketplace Data', enabled: false, priority: 2 },
 };
 
 const HAPPY_MAP_LAYERS: MapLayers = {
@@ -300,6 +304,7 @@ const COMMODITY_PANELS: Record<string, PanelConfig> = {
   polymarket:             p2('Commodity Predictions'),
   'world-clock':          p2('World Clock'),
   monitors:               p2('My Monitors'),
+  marketplace:            { name: 'Marketplace Data', enabled: false, priority: 2 },
 };
 
 const COMMODITY_MAP_LAYERS: MapLayers = {
@@ -353,6 +358,7 @@ const CONFLICTS_PANELS: Record<string, PanelConfig> = {
   polymarket:            p2('Conflict Predictions'),
   monitors:              p2('My Monitors'),
   'world-clock':         p2('World Clock'),
+  marketplace:          { name: 'Marketplace Data', enabled: false, priority: 2 },
 };
 
 const CONFLICTS_MAP_LAYERS: MapLayers = {

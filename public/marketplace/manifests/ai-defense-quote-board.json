@@ -1,0 +1,78 @@
+{
+  "id": "ai-defense-quote-board",
+  "slug": "ai-defense-quote-board",
+  "name": "AI & Defense Quote Board",
+  "version": "1.0.0",
+  "author": "World Monitor Curated",
+  "description": "Curated equities tied to defense autonomy, satellite infrastructure, and AI compute demand.",
+  "license": "WM Curated Data License",
+  "category": "markets",
+  "tags": ["equities", "ai", "defense", "quotes"],
+  "sourceType": "catalog",
+  "visibility": "public",
+  "compatibility": {
+    "variants": ["full", "tech", "finance"]
+  },
+  "datasets": [
+    {
+      "id": "quotes",
+      "name": "Tracked Quotes",
+      "format": "json",
+      "url": "/marketplace/data/ai-defense-quote-board.json",
+      "recordPath": "records",
+      "primaryIdField": "symbol",
+      "pollingIntervalMs": 120000,
+      "fieldMap": {
+        "symbol": "symbol",
+        "name": "name",
+        "price": "price",
+        "changePct": "changePct",
+        "marketCap": "marketCap",
+        "theme": "theme",
+        "summary": "summary",
+        "country": "country",
+        "tags": "tags",
+        "aliases": "aliases"
+      },
+      "transforms": {
+        "price": "number",
+        "changePct": "number",
+        "marketCap": "number",
+        "tags": "tags",
+        "aliases": "aliases"
+      }
+    }
+  ],
+  "surfaces": {
+    "search": {
+      "datasetId": "quotes",
+      "titleField": "symbol",
+      "subtitleField": "name",
+      "aliasesField": "aliases",
+      "tagsField": "tags",
+      "locationLabelField": "country"
+    },
+    "panel": {
+      "datasetId": "quotes",
+      "template": "quote-board",
+      "titleField": "symbol",
+      "subtitleField": "name",
+      "descriptionField": "summary",
+      "metrics": [
+        { "label": "Price", "field": "price" },
+        { "label": "Change %", "field": "changePct" },
+        { "label": "Market Cap", "field": "marketCap" },
+        { "label": "Theme", "field": "theme" }
+      ]
+    }
+  },
+  "assets": {
+    "previews": [
+      {
+        "type": "card",
+        "title": "Quote-board template",
+        "body": "Finance-oriented cards for thematic baskets, custom quotes, and analyst watchlists."
+      }
+    ]
+  }
+}

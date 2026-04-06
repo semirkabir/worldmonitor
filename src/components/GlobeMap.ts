@@ -708,10 +708,10 @@ export class GlobeMap {
         if (d.pathType === 'gas')   return 'rgba(80,220,120,0.6)';
         return 'rgba(180,160,255,0.6)';
       })
-      .pathStroke((d: GlobePath) => d.pathType === 'cable' ? 0.3 : 0.6)
-      .pathDashLength((d: GlobePath) => d.pathType === 'cable' ? 1 : 0.6)
-      .pathDashGap((d: GlobePath) => d.pathType === 'cable' ? 0 : 0.25)
-      .pathDashAnimateTime((d: GlobePath) => d.pathType === 'cable' ? 0 : 5000)
+      .pathStroke((d: GlobePath) => d.pathType === 'cable' ? 0.38 : 0.6)
+      .pathDashLength((d: GlobePath) => d.pathType === 'cable' ? 0.14 : 0.6)
+      .pathDashGap((d: GlobePath) => d.pathType === 'cable' ? 0.1 : 0.25)
+      .pathDashAnimateTime((d: GlobePath) => d.pathType === 'cable' ? 3200 : 5000)
       .pathLabel((d: GlobePath) => d.name);
 
     // Polygon accessors — set once
@@ -1412,7 +1412,6 @@ export class GlobeMap {
     if (this.layers.minerals) markers.push(...this.mineralMarkers);
     if (this.layers.flights) markers.push(...this.flightDelayMarkers);
     if (this.layers.ais) markers.push(...this.aisMarkers);
-    if (this.layers.iranAttacks) markers.push(...this.iranMarkers);
     if (this.layers.outages) markers.push(...this.outageMarkers);
     if (this.layers.cyberThreats) markers.push(...this.cyberMarkers);
     if (this.layers.fires) markers.push(...this.fireMarkers);
@@ -2488,7 +2487,7 @@ export class GlobeMap {
       (this.globe as any).pathDashAnimateTime(0);
     } else {
       (this.globe as any).arcDashAnimateTime(5000);
-      (this.globe as any).pathDashAnimateTime((d: GlobePath) => d.pathType === 'cable' ? 0 : 5000);
+      (this.globe as any).pathDashAnimateTime((d: GlobePath) => d.pathType === 'cable' ? 3200 : 5000);
     }
 
     if (profile.disableAtmosphere) {

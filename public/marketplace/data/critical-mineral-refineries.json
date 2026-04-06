@@ -1,0 +1,64 @@
+{
+  "records": [
+    {
+      "id": "mp-materials-texas",
+      "name": "MP Materials Separation Plant",
+      "summary": "Rare earth separation and magnet feedstock expansion tied to US industrial policy.",
+      "country": "United States",
+      "city": "Fort Worth, TX",
+      "lat": 32.7555,
+      "lon": -97.3308,
+      "mineral": "Rare Earths",
+      "operator": "MP Materials",
+      "status": "expanding",
+      "capacityMt": 1.2,
+      "tags": ["rare earths", "magnets", "us"],
+      "aliases": ["mp materials", "fort worth separation"]
+    },
+    {
+      "id": "lynas-kuantan",
+      "name": "Lynas Kuantan Refinery",
+      "summary": "Heavy rare earth processing site feeding magnet supply chains across Asia-Pacific.",
+      "country": "Malaysia",
+      "city": "Kuantan",
+      "lat": 3.8077,
+      "lon": 103.326,
+      "mineral": "Rare Earths",
+      "operator": "Lynas",
+      "status": "active",
+      "capacityMt": 1.4,
+      "tags": ["rare earths", "asia", "processing"],
+      "aliases": ["lynas malaysia", "kuantan refinery"]
+    },
+    {
+      "id": "qinghai-lithium",
+      "name": "Qinghai Lithium Conversion Complex",
+      "summary": "Large-scale lithium conversion cluster serving battery cathode supply chains.",
+      "country": "China",
+      "city": "Golmud",
+      "lat": 36.406,
+      "lon": 94.902,
+      "mineral": "Lithium",
+      "operator": "Provincial consortium",
+      "status": "active",
+      "capacityMt": 2.8,
+      "tags": ["lithium", "battery", "china"],
+      "aliases": ["qinghai lithium", "golmud conversion"]
+    },
+    {
+      "id": "kokkola-cobalt",
+      "name": "Kokkola Cobalt Refinery",
+      "summary": "European cobalt refining node supporting EV and defense battery chemistries.",
+      "country": "Finland",
+      "city": "Kokkola",
+      "lat": 63.8365,
+      "lon": 23.1317,
+      "mineral": "Cobalt",
+      "operator": "Freeport Cobalt",
+      "status": "active",
+      "capacityMt": 0.35,
+      "tags": ["cobalt", "europe", "battery"],
+      "aliases": ["kokkola cobalt", "freeport cobalt"]
+    }
+  ]
+}

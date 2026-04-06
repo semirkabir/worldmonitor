@@ -39,6 +39,7 @@ import type { SpeciesRecovery } from '@/services/conservation-data';
 import type { RenewableInstallation } from '@/services/renewable-installations';
 import type { GpsJamHex } from '@/services/gps-interference';
 import type { IranEvent } from '@/services/conflict';
+import type { MarketplaceRuntimeLayer } from '@/types/marketplace';
 
 export type TimeRange = '1h' | '6h' | '24h' | '48h' | '7d' | 'all';
 export type MapView = 'global' | 'america' | 'mena' | 'eu' | 'asia' | 'latam' | 'africa' | 'oceania';
@@ -91,6 +92,7 @@ export class MapContainer {
   private cachedOnEntityClicked: ((type: string, data: unknown) => void) | null = null;
   private cachedOnHotspotClicked: ((hotspot: Hotspot) => void) | null = null;
   private cachedOnAircraftPositionsUpdate: ((positions: PositionSample[]) => void) | null = null;
+  private cachedOnMarketplaceLayerToggle: ((itemId: string, enabled: boolean) => void) | null = null;
 
   // ─── Data cache (survives map mode switches) ───────────────────────────────
   private cachedEarthquakes: Earthquake[] | null = null;
@@ -127,6 +129,7 @@ export class MapContainer {
   private cachedHotspotActivity: NewsItem[] | null = null;
   private cachedEscalationFlights: MilitaryFlight[] | null = null;
   private cachedEscalationVessels: MilitaryVessel[] | null = null;
+  private cachedMarketplaceLayers: MarketplaceRuntimeLayer[] | null = null;
 
   constructor(container: HTMLElement, initialState: MapContainerState, preferGlobe = false) {
     this.container = container;
@@ -263,6 +266,7 @@ export class MapContainer {
     if (this.cachedOnEntityClicked) this.onEntityClicked(this.cachedOnEntityClicked);
     if (this.cachedOnHotspotClicked) this.onHotspotClicked(this.cachedOnHotspotClicked);
     if (this.cachedOnAircraftPositionsUpdate) this.setOnAircraftPositionsUpdate(this.cachedOnAircraftPositionsUpdate);
+    if (this.cachedOnMarketplaceLayerToggle) this.setOnMarketplaceLayerToggle(this.cachedOnMarketplaceLayerToggle);
 
     // 2. Re-push all cached data
     if (this.cachedEarthquakes) this.setEarthquakes(this.cachedEarthquakes);
@@ -294,6 +298,7 @@ export class MapContainer {
     if (this.cachedRenewableInstallations) this.setRenewableInstallations(this.cachedRenewableInstallations);
     if (this.cachedHotspotActivity) this.updateHotspotActivity(this.cachedHotspotActivity);
     if (this.cachedEscalationFlights && this.cachedEscalationVessels) this.updateMilitaryForEscalation(this.cachedEscalationFlights, this.cachedEscalationVessels);
+    if (this.cachedMarketplaceLayers) this.setMarketplaceLayers(this.cachedMarketplaceLayers);
   }
 
   public isGlobeMode(): boolean {
@@ -601,6 +606,13 @@ export class MapContainer {
     }
   }
 
+  public setMarketplaceLayers(layers: MarketplaceRuntimeLayer[]): void {
+    this.cachedMarketplaceLayers = layers;
+    if (this.useDeckGL) {
+      this.deckGLMap?.setMarketplaceLayers(layers);
+    }
+  }
+
   public getHotspotDynamicScore(hotspotId: string) {
     if (this.useDeckGL) {
       return this.deckGLMap?.getHotspotDynamicScore(hotspotId);
@@ -795,6 +807,13 @@ export class MapContainer {
   public onEntityClicked(callback: (type: string, data: unknown) => void): void {
     this.cachedOnEntityClicked = callback;
     if (this.useDeckGL) { this.deckGLMap?.setOnEntityClick(callback); } else { this.svgMap?.setOnEntityClick(callback); }
+  }
+
+  public setOnMarketplaceLayerToggle(callback: (itemId: string, enabled: boolean) => void): void {
+    this.cachedOnMarketplaceLayerToggle = callback;
+    if (this.useDeckGL) {
+      this.deckGLMap?.setOnMarketplaceLayerToggle(callback);
+    }
   }
 
   public fitCountry(code: string): void {

@@ -40,6 +40,7 @@ export function getSearchResultActionLabel(type: SearchResultType): string {
     centralbank: 'Inspect central bank',
     commodityhub: 'Inspect commodity hub',
     company: 'Open company detail panel',
+    marketplace: 'Open marketplace dataset panel',
   };
   return labels[type];
 }

@@ -25,6 +25,7 @@ import type { GoodThingsDigestPanel } from '@/components/GoodThingsDigestPanel';
 import type { SpeciesComebackPanel } from '@/components/SpeciesComebackPanel';
 import type { RenewableEnergyPanel } from '@/components/RenewableEnergyPanel';
 import type { TvModeController } from '@/services/tv-mode';
+import type { MarketplaceManager } from './marketplace-manager';
 
 export interface CountryBriefSignals {
   criticalNews: number;
@@ -107,6 +108,7 @@ export interface AppContext {
   notificationCenter: import('@/components/NotificationCenter').NotificationCenter | null;
   countryBriefPage: CountryBriefPanel | null;
   entityDetailPanel: import('@/components/EntityDetailPanel').EntityDetailPanel | null;
+  marketplace: MarketplaceManager | null;
   predictionBriefPage: PredictionBriefPage | null;
   countryTimeline: CountryTimeline | null;
 

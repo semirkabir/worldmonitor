@@ -1,5 +1,5 @@
 const DB_NAME = 'worldmonitor_db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 interface BaselineEntry {
   key: string;
@@ -36,6 +36,14 @@ export async function initDB(): Promise<IDBDatabase> {
       if (!database.objectStoreNames.contains('snapshots')) {
         const store = database.createObjectStore('snapshots', { keyPath: 'timestamp' });
         store.createIndex('by_time', 'timestamp');
+      }
+
+      if (!database.objectStoreNames.contains('marketplace_installed')) {
+        database.createObjectStore('marketplace_installed');
+      }
+
+      if (!database.objectStoreNames.contains('marketplace_submissions')) {
+        database.createObjectStore('marketplace_submissions', { keyPath: 'id' });
       }
     };
   });

@@ -1,0 +1,68 @@
+{
+  "id": "maritime-insurance-corridors",
+  "slug": "maritime-insurance-corridors",
+  "name": "Maritime Insurance Corridors",
+  "version": "1.0.0",
+  "author": "World Monitor Curated",
+  "description": "High-risk shipping corridors with premium deltas and current insurer posture summaries.",
+  "license": "WM Curated Data License",
+  "category": "maritime-risk",
+  "tags": ["shipping", "insurance", "red sea", "routing"],
+  "sourceType": "catalog",
+  "visibility": "public",
+  "compatibility": {
+    "variants": ["full", "finance", "conflicts", "commodity"]
+  },
+  "datasets": [
+    {
+      "id": "corridors",
+      "name": "Corridor Routes",
+      "format": "geojson",
+      "url": "/marketplace/data/maritime-insurance-corridors.geojson",
+      "primaryIdField": "id",
+      "pollingIntervalMs": 600000
+    }
+  ],
+  "surfaces": {
+    "map": {
+      "datasetId": "corridors",
+      "geometryType": "line",
+      "coordinatesField": "coordinates",
+      "style": {
+        "color": "#ffb84d",
+        "strokeColor": "#ffe6b8",
+        "strokeWidth": 3,
+        "opacity": 0.82,
+        "visibleByDefault": true
+      }
+    },
+    "search": {
+      "datasetId": "corridors",
+      "titleField": "name",
+      "subtitleField": "riskSummary",
+      "tagsField": "tags",
+      "locationLabelField": "region"
+    },
+    "panel": {
+      "datasetId": "corridors",
+      "template": "record-detail",
+      "titleField": "name",
+      "subtitleField": "region",
+      "descriptionField": "riskSummary",
+      "metrics": [
+        { "label": "Premium Delta", "field": "premiumDelta" },
+        { "label": "Status", "field": "status" },
+        { "label": "Region", "field": "region" }
+      ]
+    }
+  },
+  "assets": {
+    "previews": [
+      {
+        "type": "card",
+        "title": "GeoJSON corridor rendering",
+        "body": "Useful for shipping, sanctions, war risk, and routing products without shipping custom code."
+      }
+    ]
+  }
+}

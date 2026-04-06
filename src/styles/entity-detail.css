@@ -89,6 +89,21 @@
 
 .edp-header {
   margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  border-radius: 20px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 95%, black 5%), color-mix(in srgb, var(--surface) 90%, black 10%));
+  box-shadow: 0 16px 40px color-mix(in srgb, var(--overlay-heavy) 16%, transparent);
+}
+
+.edp-header-card {
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent-blue, #60a5fa) 14%, transparent), transparent 44%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, black 4%), color-mix(in srgb, var(--surface) 90%, black 10%));
+  box-shadow: 0 20px 44px color-mix(in srgb, var(--overlay-heavy) 20%, transparent);
 }
 
 .edp-title {
@@ -144,6 +159,81 @@
   border-color: color-mix(in srgb, var(--accent-red) 30%, transparent);
 }
 
+.edp-header-summary {
+  margin-top: 16px;
+  color: color-mix(in srgb, var(--text) 90%, var(--text-dim) 10%);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.edp-auto-hero {
+  position: relative;
+  margin: 0 0 18px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 22px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--surface) 88%, black 12%);
+  box-shadow: 0 22px 52px color-mix(in srgb, var(--overlay-heavy) 24%, transparent);
+}
+
+.edp-auto-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 30%, rgba(5, 10, 18, 0.16) 58%, rgba(5, 10, 18, 0.9) 100%);
+  pointer-events: none;
+}
+
+.edp-auto-hero-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  background: color-mix(in srgb, var(--surface) 70%, black);
+}
+
+.edp-auto-hero-credit {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  max-width: calc(100% - 28px);
+  padding: 9px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(5, 10, 18, 0.68);
+  backdrop-filter: blur(10px);
+}
+
+.edp-auto-hero-credit-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.edp-auto-hero-link,
+.edp-auto-hero-source {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.edp-auto-hero-link:hover {
+  color: white;
+  text-decoration: underline;
+}
+
 /* ── Cards ─────────────────────────────────────────────────────────── */
 
 .edp-card {
@@ -168,6 +258,213 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.edp-fact-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.edp-fact-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--border) 64%, transparent);
+  background: color-mix(in srgb, var(--bg) 24%, var(--surface) 76%);
+}
+
+.edp-fact-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.edp-fact-value {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.edp-callout {
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--border) 64%, transparent);
+}
+
+.edp-callout-attention {
+  background: linear-gradient(180deg, rgba(255, 196, 87, 0.12), rgba(255, 196, 87, 0.06));
+  border-color: rgba(255, 196, 87, 0.24);
+}
+
+.edp-callout-text {
+  color: color-mix(in srgb, var(--text) 94%, white 6%);
+  font-style: italic;
+}
+
+.edp-hotspot-detail .edp-card:last-child {
+  margin-bottom: 0;
+}
+
+.edp-hotspot-score-card .edp-card-body {
+  gap: 14px;
+}
+
+.edp-hotspot-score-top {
+  display: grid;
+  grid-template-columns: minmax(0, 164px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.edp-hotspot-score-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  min-height: 132px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.edp-hotspot-score-watch {
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.88), rgba(21, 128, 61, 0.88));
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.edp-hotspot-score-elevated {
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.94), rgba(194, 120, 3, 0.94));
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+.edp-hotspot-score-critical {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.94), rgba(153, 27, 27, 0.94));
+  border-color: rgba(239, 68, 68, 0.28);
+}
+
+.edp-hotspot-score-value {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  color: white;
+}
+
+.edp-hotspot-score-label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.edp-hotspot-score-meta {
+  display: grid;
+  gap: 10px;
+}
+
+.edp-hotspot-inline-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: color-mix(in srgb, var(--bg) 28%, var(--surface) 72%);
+}
+
+.edp-hotspot-inline-rising {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.04));
+  border-color: rgba(239, 68, 68, 0.18);
+}
+
+.edp-hotspot-inline-falling {
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.12), rgba(34, 197, 94, 0.04));
+  border-color: rgba(34, 197, 94, 0.18);
+}
+
+.edp-hotspot-inline-stable {
+  background: linear-gradient(180deg, rgba(96, 165, 250, 0.12), rgba(96, 165, 250, 0.04));
+  border-color: rgba(96, 165, 250, 0.18);
+}
+
+.edp-hotspot-inline-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.edp-hotspot-inline-value {
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.edp-hotspot-components {
+  display: grid;
+  gap: 10px;
+}
+
+.edp-hotspot-component {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) 30px;
+  align-items: center;
+  gap: 10px;
+}
+
+.edp-hotspot-component-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.edp-hotspot-component-meter {
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--border) 62%, transparent);
+}
+
+.edp-hotspot-component-fill {
+  height: 100%;
+  border-radius: inherit;
+}
+
+.edp-hotspot-component-fill-news {
+  background: linear-gradient(90deg, #60a5fa, #22d3ee);
+}
+
+.edp-hotspot-component-fill-cii {
+  background: linear-gradient(90deg, #f59e0b, #facc15);
+}
+
+.edp-hotspot-component-fill-geo {
+  background: linear-gradient(90deg, #f97316, #ef4444);
+}
+
+.edp-hotspot-component-fill-military {
+  background: linear-gradient(90deg, #a78bfa, #60a5fa);
+}
+
+.edp-hotspot-component-value {
+  font-size: 12px;
+  color: var(--text);
+  text-align: right;
+}
+
+.edp-hotspot-history {
+  gap: 0;
 }
 
 /* ── Detail rows ───────────────────────────────────────────────────── */
@@ -547,6 +844,389 @@
   text-decoration: underline;
 }
 
+/* ── Flight detail ───────────────────────────────────────────────────── */
+
+.edp-flight-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--accent-blue, #60a5fa) 12%, transparent), transparent 42%),
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, black 4%), color-mix(in srgb, var(--surface) 90%, black 10%));
+  box-shadow: 0 20px 44px color-mix(in srgb, var(--overlay-heavy) 18%, transparent);
+}
+
+.edp-flight-hero-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.edp-flight-meta-line {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.edp-flight-media {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  background: color-mix(in srgb, var(--surface) 86%, black 14%);
+  box-shadow: 0 18px 40px color-mix(in srgb, var(--overlay-heavy) 24%, transparent);
+}
+
+.edp-flight-media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 34%, rgba(5, 10, 18, 0.18) 62%, rgba(5, 10, 18, 0.92) 100%);
+  pointer-events: none;
+}
+
+.edp-flight-media-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  background: color-mix(in srgb, var(--surface) 70%, black);
+}
+
+.edp-flight-media-credit {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  max-width: calc(100% - 24px);
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(5, 10, 18, 0.72);
+  backdrop-filter: blur(10px);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.edp-flight-media-link {
+  color: inherit;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.edp-flight-media-link:hover {
+  color: white;
+  text-decoration: underline;
+}
+
+.edp-flight-hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.edp-flight-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.edp-flight-brand-logo {
+  position: relative;
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 88%, black 12%), color-mix(in srgb, var(--bg) 24%, var(--surface) 76%));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.edp-flight-brand-logo-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 10px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.edp-flight-brand-logo-loaded .edp-flight-brand-logo-img {
+  opacity: 1;
+}
+
+.edp-flight-brand-logo-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(var(--flight-badge-hue, 188) 82% 76%);
+}
+
+.edp-flight-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.edp-flight-route-title {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: var(--text);
+  text-transform: uppercase;
+}
+
+.edp-flight-meta-subtitle {
+  font-size: 14px;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--text) 82%, var(--text-dim) 18%);
+}
+
+.edp-flight-status {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.edp-flight-status-live {
+  background: color-mix(in srgb, var(--accent-green) 15%, transparent);
+  border-color: color-mix(in srgb, var(--accent-green) 28%, transparent);
+  color: var(--accent-green);
+}
+
+.edp-flight-status-warning {
+  background: color-mix(in srgb, var(--accent-yellow, #f5c518) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent-yellow, #f5c518) 30%, transparent);
+  color: var(--accent-yellow, #f5c518);
+}
+
+.edp-flight-status-critical {
+  background: color-mix(in srgb, var(--accent-red) 15%, transparent);
+  border-color: color-mix(in srgb, var(--accent-red) 28%, transparent);
+  color: var(--accent-red);
+}
+
+.edp-flight-status-dim {
+  background: color-mix(in srgb, var(--text-faint) 10%, transparent);
+  border-color: color-mix(in srgb, var(--text-faint) 18%, transparent);
+  color: var(--text-faint);
+}
+
+.edp-flight-route-section,
+.edp-flight-track-section,
+.edp-flight-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--border) 64%, transparent);
+  background: color-mix(in srgb, var(--bg) 20%, var(--surface) 80%);
+}
+
+.edp-flight-route-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.edp-flight-stop {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.edp-flight-stop-eyebrow,
+.edp-flight-fact-label,
+.edp-flight-progress-meta {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.edp-flight-stop-code,
+.edp-flight-progress-code {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text);
+  text-transform: uppercase;
+}
+
+.edp-flight-stop-name,
+.edp-flight-progress-name {
+  font-size: 13px;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--text) 84%, var(--text-dim) 16%);
+}
+
+.edp-flight-stop-time {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-blue, #60a5fa);
+}
+
+.edp-flight-route-connector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 72px;
+}
+
+.edp-flight-route-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--border) 24%, transparent), color-mix(in srgb, var(--accent-blue, #60a5fa) 46%, transparent), color-mix(in srgb, var(--border) 24%, transparent));
+}
+
+.edp-flight-route-arrow {
+  font-size: 13px;
+  color: var(--accent-blue, #60a5fa);
+  letter-spacing: 0.08em;
+}
+
+.edp-flight-snapshot-row,
+.edp-flight-track-stats,
+.edp-flight-facts-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.edp-flight-facts-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.edp-flight-fact {
+  min-width: 0;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 62%, transparent);
+  background: color-mix(in srgb, var(--surface) 92%, black 8%);
+}
+
+.edp-flight-fact-value {
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 700;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.edp-flight-track-note {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.edp-flight-track-note-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.edp-flight-track-note-body {
+  font-size: 14px;
+  line-height: 1.65;
+  color: color-mix(in srgb, var(--text) 82%, var(--text-dim) 18%);
+}
+
+.edp-flight-progress-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.edp-flight-progress-endpoint {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.edp-flight-progress-endpoint-right {
+  text-align: right;
+}
+
+.edp-flight-progress-bar {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  overflow: visible;
+  background: color-mix(in srgb, var(--border) 60%, transparent);
+}
+
+.edp-flight-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent-blue, #60a5fa) 68%, white 12%), color-mix(in srgb, var(--accent-green) 72%, white 8%));
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent-blue, #60a5fa) 20%, transparent);
+}
+
+.edp-flight-progress-plane {
+  position: absolute;
+  top: 50%;
+  left: var(--plane-left, 50%);
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, hsl(var(--flight-badge-hue, 188) 84% 68%) 38%, transparent);
+  background: color-mix(in srgb, var(--surface) 90%, black 10%);
+  color: hsl(var(--flight-badge-hue, 188) 86% 74%);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--overlay-heavy) 18%, transparent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.edp-flight-hero-skeleton {
+  min-height: 220px;
+}
+
 /* ── Launch schedule items ──────────────────────────────────────────── */
 
 .edp-launch-item {
@@ -753,6 +1433,57 @@
   .entity-detail-panel {
     width: 100vw;
     right: -100vw;
+  }
+
+  .edp-panel-content {
+    padding: 16px;
+    padding-top: 72px;
+  }
+
+  .edp-fact-grid,
+  .edp-hotspot-score-top {
+    grid-template-columns: 1fr;
+  }
+
+  .edp-hotspot-component {
+    grid-template-columns: 48px minmax(0, 1fr) 26px;
+  }
+
+  .edp-detail-row {
+    align-items: flex-start;
+  }
+
+  .edp-flight-hero {
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .edp-flight-hero-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .edp-flight-route-strip,
+  .edp-flight-progress-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .edp-flight-route-title {
+    font-size: 24px;
+  }
+
+  .edp-flight-route-connector {
+    width: 100%;
+  }
+
+  .edp-flight-snapshot-row,
+  .edp-flight-track-stats,
+  .edp-flight-facts-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .edp-flight-progress-endpoint-right {
+    text-align: left;
   }
 }
 

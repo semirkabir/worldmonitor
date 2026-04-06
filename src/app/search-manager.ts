@@ -213,6 +213,10 @@ export class SearchManager implements AppModule {
         data: { ticker: e.id, name: e.name },
       })));
 
+    if (this.ctx.marketplace) {
+      this.ctx.searchModal.registerSource('marketplace', this.ctx.marketplace.getSearchItems());
+    }
+
     this.ctx.searchModal.setActivePanels(Object.keys(this.ctx.panels));
     this.ctx.searchModal.setQuickActionIds(getQuickActionCommandIds(SITE_VARIANT));
     this.ctx.searchModal.setOnSelect((result) => this.handleSearchResult(result));
@@ -408,6 +412,10 @@ export class SearchManager implements AppModule {
         this.ctx.entityDetailPanel?.show('company' as PopupType, { ticker, name });
         break;
       }
+      case 'marketplace': {
+        this.ctx.marketplace?.openSearchResult(result.data as import('@/types/marketplace').MarketplaceSearchResultData);
+        break;
+      }
     }
   }
 
@@ -576,6 +584,10 @@ export class SearchManager implements AppModule {
         subtitle: `$${m.price?.toFixed(2) || 'N/A'}`,
         data: m,
       })));
+    }
+
+    if (this.ctx.marketplace) {
+      this.ctx.searchModal.registerSource('marketplace', this.ctx.marketplace.getSearchItems());
     }
   }
 

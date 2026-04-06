@@ -47,6 +47,7 @@ import {
   OptionsChainPanel,
 } from '@/components';
 import { SatelliteFiresPanel } from '@/components/SatelliteFiresPanel';
+import { MarketplacePanel } from '@/components/MarketplacePanel';
 import { focusInvestmentOnMap } from '@/services/investments-focus';
 import { debounce, saveToStorage, loadFromStorage } from '@/utils';
 import { escapeHtml } from '@/utils/sanitize';
@@ -82,6 +83,7 @@ export interface CustomCategory {
 }
 
 const CUSTOM_CATEGORIES_KEY = 'wm-custom-categories-v1';
+const NEWS_REFRESH_SWEEP_EVENT = 'wm:news-refresh-sweep';
 
 function loadCustomCategories(): CustomCategory[] {
   try {
@@ -117,6 +119,7 @@ export class PanelLayoutManager implements AppModule {
   private readonly applyTimeRangeFilterDebounced: (() => void) & { cancel(): void };
   private customCategories: CustomCategory[] = [];
   private hoverTimers: Map<string, number> = new Map();
+  private newsRefreshSweepCleanup: (() => void) | null = null;
 
   constructor(ctx: AppContext, callbacks: PanelLayoutCallbacks) {
     this.ctx = ctx;
@@ -129,12 +132,15 @@ export class PanelLayoutManager implements AppModule {
 
   init(): void {
     this.renderLayout();
+    this.setupNewsRefreshSweepEffect();
     this.initShellGuidanceAfterRender();
   }
 
   destroy(): void {
     clearAllPendingCalls();
     this.applyTimeRangeFilterDebounced.cancel();
+    this.newsRefreshSweepCleanup?.();
+    this.newsRefreshSweepCleanup = null;
     this.panelDragCleanupHandlers.forEach((cleanup) => cleanup());
     this.panelDragCleanupHandlers = [];
     if (this.criticalBannerEl) {
@@ -1074,6 +1080,8 @@ export class PanelLayoutManager implements AppModule {
     const insightsPanel = new InsightsPanel();
     this.ctx.panels['insights'] = insightsPanel;
 
+    this.ctx.panels['marketplace'] = new MarketplacePanel();
+
     // Global Giving panel (all variants)
     this.lazyPanel('giving', () =>
       import('@/components/GivingPanel').then(m => new m.GivingPanel()),
@@ -1470,6 +1478,53 @@ export class PanelLayoutManager implements AppModule {
 
     updateIcon();
     updateBottomIcon();
+  }
+
+  private setupNewsRefreshSweepEffect(): void {
+    this.newsRefreshSweepCleanup?.();
+
+    let resetTimer: number | null = null;
+
+    const clearSweep = (): void => {
+      const mainContent = document.querySelector('.main-content') as HTMLElement | null;
+      if (!mainContent) return;
+      mainContent.classList.remove('news-refresh-sweep');
+      mainContent.style.removeProperty('--news-rail-duration');
+    };
+
+    const onSweep = (event: Event): void => {
+      const mainContent = document.querySelector('.main-content') as HTMLElement | null;
+      if (!mainContent) return;
+
+      const detail = (event as CustomEvent<{ count?: number }>).detail;
+      const count = Math.max(1, Math.min(6, Math.round(detail?.count ?? 1)));
+      const durationMs = 1280 + Math.min(300, (count - 1) * 55);
+
+      if (resetTimer !== null) {
+        window.clearTimeout(resetTimer);
+        resetTimer = null;
+      }
+
+      clearSweep();
+      mainContent.style.setProperty('--news-rail-duration', `${durationMs}ms`);
+      void mainContent.offsetWidth;
+      mainContent.classList.add('news-refresh-sweep');
+
+      resetTimer = window.setTimeout(() => {
+        clearSweep();
+        resetTimer = null;
+      }, durationMs + 140);
+    };
+
+    window.addEventListener(NEWS_REFRESH_SWEEP_EVENT, onSweep as EventListener);
+    this.newsRefreshSweepCleanup = () => {
+      if (resetTimer !== null) {
+        window.clearTimeout(resetTimer);
+        resetTimer = null;
+      }
+      clearSweep();
+      window.removeEventListener(NEWS_REFRESH_SWEEP_EVENT, onSweep as EventListener);
+    };
   }
 
   private addWidgetBtn: HTMLButtonElement | null = null;

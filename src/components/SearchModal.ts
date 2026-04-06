@@ -53,7 +53,7 @@ function resolveCategoryLabel(cmd: Command): string {
   return key ? t(key, { defaultValue: cmd.category }) : cmd.category;
 }
 
-export type SearchResultType = 'country' | 'news' | 'hotspot' | 'market' | 'prediction' | 'conflict' | 'base' | 'pipeline' | 'cable' | 'datacenter' | 'earthquake' | 'outage' | 'nuclear' | 'irradiator' | 'techcompany' | 'ailab' | 'startup' | 'techevent' | 'techhq' | 'accelerator' | 'exchange' | 'financialcenter' | 'centralbank' | 'commodityhub' | 'company';
+export type SearchResultType = 'country' | 'news' | 'hotspot' | 'market' | 'prediction' | 'conflict' | 'base' | 'pipeline' | 'cable' | 'datacenter' | 'earthquake' | 'outage' | 'nuclear' | 'irradiator' | 'techcompany' | 'ailab' | 'startup' | 'techevent' | 'techhq' | 'accelerator' | 'exchange' | 'financialcenter' | 'centralbank' | 'commodityhub' | 'company' | 'marketplace';
 
 export interface SearchResult {
   type: SearchResultType;
@@ -155,6 +155,20 @@ export class SearchModal {
     this.input?.focus();
     this.showRecentOrEmpty();
     if (this.isMobile) this.renderChips();
+  }
+
+  public openWithQuery(query: string): void {
+    const normalized = query.trim();
+    this.open();
+    if (!this.input) return;
+    this.input.value = normalized;
+    if (normalized) {
+      this.handleSearch();
+    } else {
+      this.showRecentOrEmpty();
+    }
+    this.input.focus();
+    this.input.setSelectionRange(this.input.value.length, this.input.value.length);
   }
 
   public close(): void {
@@ -338,6 +352,7 @@ export class SearchModal {
       'base', 'pipeline', 'cable', 'datacenter', 'nuclear', 'irradiator',
       'techcompany', 'ailab', 'startup', 'techevent', 'techhq', 'accelerator',
       'exchange', 'financialcenter', 'centralbank', 'commodityhub', 'company',
+      'marketplace',
     ];
 
     const maxResults = this.isMobile ? 5 : MAX_RESULTS;
@@ -515,6 +530,7 @@ export class SearchModal {
       financialcenter: 'Financial Centers', centralbank: 'Central Banks',
       commodityhub: 'Commodity Hubs',
       company: 'Companies & Indices',
+      marketplace: 'Marketplace Data',
     };
     return labels[type] || type;
   }
@@ -579,6 +595,7 @@ export class SearchModal {
       techhq: '\u{1F984}', accelerator: '\u{1F680}', exchange: '\u{1F3DB}\uFE0F',
       financialcenter: '\u{1F4B0}', centralbank: '\u{1F3E6}', commodityhub: '\u{1F4E6}',
       company: '\u{1F4C8}',
+      marketplace: '\u{1F6D2}',
     };
 
     const frag = document.createDocumentFragment();

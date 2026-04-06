@@ -1,0 +1,53 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[32.4, 29.9], [40.2, 15.5], [43.3, 12.6]]
+      },
+      "properties": {
+        "id": "suez-bab-el-mandeb",
+        "name": "Suez to Bab el-Mandeb",
+        "region": "Red Sea",
+        "riskSummary": "War-risk premiums remain elevated due to intermittent strike and interdiction concerns.",
+        "premiumDelta": "+32%",
+        "status": "heightened",
+        "tags": ["red sea", "war risk", "insurance"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[51.0, 26.5], [56.4, 25.8], [60.5, 24.7]]
+      },
+      "properties": {
+        "id": "gulf-of-oman-lanes",
+        "name": "Gulf of Oman Transfer Lane",
+        "region": "Gulf",
+        "riskSummary": "Insurers are watching strait security, tanker routing changes, and escort posture.",
+        "premiumDelta": "+18%",
+        "status": "watch",
+        "tags": ["gulf", "tankers", "escort"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[103.5, 1.4], [100.7, 2.1], [98.8, 3.0]]
+      },
+      "properties": {
+        "id": "strait-of-malacca-core",
+        "name": "Strait of Malacca Core Route",
+        "region": "Southeast Asia",
+        "riskSummary": "Premiums are stable, but congestion and rerouting clauses are tightening around key windows.",
+        "premiumDelta": "+6%",
+        "status": "stable",
+        "tags": ["malacca", "congestion", "asia"]
+      }
+    }
+  ]
+}

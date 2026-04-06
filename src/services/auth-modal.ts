@@ -85,6 +85,7 @@ export function checkFeatureAccess(feature: string): boolean {
     'custom-widgets',
     'intelligence-findings',
     'alert-rules',
+    'marketplace',
   ];
   
   if (restrictedFeatures.includes(feature)) {

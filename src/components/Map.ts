@@ -8,7 +8,7 @@ import type { MapLayers, Hotspot, NewsItem, InternetOutage, RelatedAsset, AssetT
 import type { AirportDelayAlert, PositionSample } from '@/services/aviation';
 import { filterRenderableAircraftPositions, sampleAircraftPositions } from '@/services/aviation';
 import type { Earthquake } from '@/services/earthquakes';
-import { type IranEvent, getIranEventCssColor, getIranEventSize } from '@/services/conflict';
+import { type IranEvent } from '@/services/conflict';
 import type { TechHubActivity } from '@/services/tech-activity';
 import type { GeoHubActivity } from '@/services/geo-activity';
 import { getNaturalEventIcon, getNaturalEventIconUrl } from '@/services/eonet';
@@ -374,7 +374,6 @@ export class MapComponent {
 
   private getVariantLayerKeys(): (keyof MapLayers)[] {
     const fullLayers: (keyof MapLayers)[] = [
-      'iranAttacks',
       'conflicts', 'hotspots', 'sanctions', 'protests',
       'bases', 'nuclear', 'irradiators',
       'military',
@@ -1238,7 +1237,7 @@ export class MapComponent {
     if (!this.dynamicLayerGroup) return;
     const cableGroup = this.dynamicLayerGroup.append('g').attr('class', 'cables');
 
-    UNDERSEA_CABLES.forEach((cable) => {
+    UNDERSEA_CABLES.forEach((cable, index) => {
       const lineGenerator = d3
         .line<[number, number]>()
         .x((d) => projection(d)?.[0] ?? 0)
@@ -1256,6 +1255,12 @@ export class MapComponent {
         .append('path')
         .attr('class', `cable-path ${advisoryClass} ${healthClass} ${highlightClass}`.trim())
         .attr('d', lineGenerator(cable.points));
+
+      cableGroup
+        .append('path')
+        .attr('class', `cable-flow-path ${advisoryClass} ${healthClass} ${highlightClass}`.trim())
+        .attr('d', lineGenerator(cable.points))
+        .style('animation-delay', `${index * -0.22}s`);
 
       path.append('title').text(cable.name);
 
@@ -1533,39 +1538,6 @@ export class MapComponent {
         });
 
         this.overlays.appendChild(clickArea);
-      });
-    }
-
-    // Iran events (severity-colored circles matching DeckGL layer)
-    if (this.state.layers.iranAttacks && this.iranEvents.length > 0) {
-      this.iranEvents.forEach((ev) => {
-        const pos = projection([ev.longitude, ev.latitude]);
-        if (!pos || !Number.isFinite(pos[0]) || !Number.isFinite(pos[1])) return;
-
-        const size = getIranEventSize(ev.severity);
-        const color = getIranEventCssColor(ev);
-
-        const div = document.createElement('div');
-        div.className = 'iran-event-marker';
-        div.style.left = `${pos[0]}px`;
-        div.style.top = `${pos[1]}px`;
-        div.style.width = `${size}px`;
-        div.style.height = `${size}px`;
-        div.style.background = color;
-        div.title = `${ev.title} (${ev.category})`;
-
-        div.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const rect = this.container.getBoundingClientRect();
-          this.popup.show({
-            type: 'iranEvent',
-            data: ev,
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top,
-          });
-        });
-
-        this.overlays.appendChild(div);
       });
     }
 

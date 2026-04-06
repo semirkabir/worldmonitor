@@ -1,0 +1,99 @@
+{
+  "id": "critical-mineral-refineries",
+  "slug": "critical-mineral-refineries",
+  "name": "Critical Mineral Refineries",
+  "version": "1.0.0",
+  "author": "World Monitor Curated",
+  "description": "Refinery and processing nodes across rare earth, lithium, cobalt, and nickel supply chains.",
+  "license": "WM Curated Data License",
+  "category": "supply-chain",
+  "tags": ["minerals", "refining", "supply chain", "processing"],
+  "sourceType": "catalog",
+  "visibility": "public",
+  "compatibility": {
+    "variants": ["full", "finance", "commodity"]
+  },
+  "datasets": [
+    {
+      "id": "sites",
+      "name": "Refinery Sites",
+      "format": "json",
+      "url": "/marketplace/data/critical-mineral-refineries.json",
+      "recordPath": "records",
+      "primaryIdField": "id",
+      "pollingIntervalMs": 300000,
+      "fieldMap": {
+        "id": "id",
+        "name": "name",
+        "summary": "summary",
+        "country": "country",
+        "city": "city",
+        "lat": "lat",
+        "lon": "lon",
+        "mineral": "mineral",
+        "operator": "operator",
+        "status": "status",
+        "capacityMt": "capacityMt",
+        "tags": "tags",
+        "aliases": "aliases"
+      },
+      "transforms": {
+        "lat": "number",
+        "lon": "number",
+        "capacityMt": "number",
+        "tags": "tags",
+        "aliases": "aliases"
+      }
+    }
+  ],
+  "surfaces": {
+    "map": {
+      "datasetId": "sites",
+      "geometryType": "point",
+      "latField": "lat",
+      "lonField": "lon",
+      "style": {
+        "color": "#64d2ff",
+        "strokeColor": "#dff8ff",
+        "pointRadius": 26000,
+        "opacity": 0.72,
+        "visibleByDefault": true
+      }
+    },
+    "search": {
+      "datasetId": "sites",
+      "titleField": "name",
+      "subtitleField": "summary",
+      "aliasesField": "aliases",
+      "tagsField": "tags",
+      "locationLabelField": "country"
+    },
+    "panel": {
+      "datasetId": "sites",
+      "template": "record-detail",
+      "titleField": "name",
+      "subtitleField": "city",
+      "descriptionField": "summary",
+      "metrics": [
+        { "label": "Mineral", "field": "mineral" },
+        { "label": "Operator", "field": "operator" },
+        { "label": "Status", "field": "status" },
+        { "label": "Capacity Mt", "field": "capacityMt" }
+      ]
+    }
+  },
+  "assets": {
+    "previews": [
+      {
+        "type": "card",
+        "title": "Map nodes with click-through detail",
+        "body": "Built to drop cleanly into map overlays, global search, and the shared panel host."
+      },
+      {
+        "type": "card",
+        "title": "Supply chain monitoring",
+        "body": "Track refinery concentration, operator posture, and capacity bottlenecks."
+      }
+    ]
+  }
+}

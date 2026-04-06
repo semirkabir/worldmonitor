@@ -4,6 +4,8 @@ export interface DeductContextDetail {
   autoSubmit?: boolean;
 }
 
+export * from './marketplace';
+
 export type PropagandaRisk = 'low' | 'medium' | 'high';
 
 export interface Feed {

@@ -1,0 +1,47 @@
+[
+  {
+    "id": "critical-mineral-refineries",
+    "slug": "critical-mineral-refineries",
+    "name": "Critical Mineral Refineries",
+    "version": "1.0.0",
+    "author": "World Monitor Curated",
+    "description": "Refinery and processing nodes across rare earth, lithium, cobalt, and nickel supply chains.",
+    "category": "supply-chain",
+    "tags": ["minerals", "refining", "supply chain", "processing"],
+    "surfaces": ["map", "search", "panel"],
+    "compatibility": {
+      "variants": ["full", "finance", "commodity"]
+    },
+    "manifestUrl": "/marketplace/manifests/critical-mineral-refineries.json"
+  },
+  {
+    "id": "maritime-insurance-corridors",
+    "slug": "maritime-insurance-corridors",
+    "name": "Maritime Insurance Corridors",
+    "version": "1.0.0",
+    "author": "World Monitor Curated",
+    "description": "High-risk shipping corridors with premium deltas and current insurer posture summaries.",
+    "category": "maritime-risk",
+    "tags": ["shipping", "insurance", "red sea", "routing"],
+    "surfaces": ["map", "search", "panel"],
+    "compatibility": {
+      "variants": ["full", "finance", "conflicts", "commodity"]
+    },
+    "manifestUrl": "/marketplace/manifests/maritime-insurance-corridors.json"
+  },
+  {
+    "id": "ai-defense-quote-board",
+    "slug": "ai-defense-quote-board",
+    "name": "AI & Defense Quote Board",
+    "version": "1.0.0",
+    "author": "World Monitor Curated",
+    "description": "Curated equities tied to defense autonomy, satellite infrastructure, and AI compute demand.",
+    "category": "markets",
+    "tags": ["equities", "ai", "defense", "quotes"],
+    "surfaces": ["search", "panel"],
+    "compatibility": {
+      "variants": ["full", "tech", "finance"]
+    },
+    "manifestUrl": "/marketplace/manifests/ai-defense-quote-board.json"
+  }
+]

@@ -11,8 +11,6 @@ import {
   SITE_VARIANT,
   LAYER_TO_SOURCE,
 } from '@/config';
-import { INTEL_HOTSPOTS, CONFLICT_ZONES } from '@/config/geo';
-import { tokenizeForMatch, matchKeyword } from '@/utils/keyword-match';
 import {
   fetchCategoryFeeds,
   getFeedFailures,
@@ -81,6 +79,8 @@ import { debounce, getCircuitBreakerCooldownInfo } from '@/utils';
 import { isFeatureAvailable, isFeatureEnabled } from '@/services/runtime-config';
 import { isDesktopRuntime } from '@/services/runtime';
 import { getAiFlowSettings } from '@/services/ai-flow-settings';
+
+const NEWS_REFRESH_SWEEP_EVENT = 'wm:news-refresh-sweep';
 import { t, getCurrentLanguage } from '@/services/i18n';
 import { getHydratedData } from '@/services/bootstrap';
 import { canQueueAiClassification, AI_CLASSIFY_MAX_PER_FEED } from '@/services/ai-classify-queue';
@@ -408,7 +408,6 @@ export class DataLoaderManager implements AppModule {
     if (SITE_VARIANT !== 'happy' && this.ctx.mapLayers.cables) tasks.push({ name: 'cableHealth', task: runGuarded('cableHealth', () => this.loadCableHealth()) });
     if (SITE_VARIANT !== 'happy' && this.ctx.mapLayers.flights) tasks.push({ name: 'flights', task: runGuarded('flights', () => this.loadFlightDelays()) });
     if (SITE_VARIANT !== 'happy' && CYBER_LAYER_ENABLED && this.ctx.mapLayers.cyberThreats) tasks.push({ name: 'cyberThreats', task: runGuarded('cyberThreats', () => this.loadCyberThreats()) });
-    if (SITE_VARIANT !== 'happy' && !isDesktopRuntime()) tasks.push({ name: 'iranAttacks', task: runGuarded('iranAttacks', () => this.loadIranEvents()) });
     if (SITE_VARIANT !== 'happy' && (this.ctx.mapLayers.techEvents || SITE_VARIANT === 'tech')) tasks.push({ name: 'techEvents', task: runGuarded('techEvents', () => this.loadTechEvents()) });
 
     if (SITE_VARIANT === 'tech') {
@@ -532,43 +531,11 @@ export class DataLoaderManager implements AppModule {
     }
   }
 
-  private findFlashLocation(title: string): { lat: number; lon: number } | null {
-    const tokens = tokenizeForMatch(title);
-    let bestMatch: { lat: number; lon: number; matches: number } | null = null;
-
-    const countKeywordMatches = (keywords: string[] | undefined): number => {
-      if (!keywords) return 0;
-      let matches = 0;
-      for (const keyword of keywords) {
-        const cleaned = keyword.trim().toLowerCase();
-        if (cleaned.length >= 3 && matchKeyword(tokens, cleaned)) {
-          matches++;
-        }
-      }
-      return matches;
-    };
-
-    for (const hotspot of INTEL_HOTSPOTS) {
-      const matches = countKeywordMatches(hotspot.keywords);
-      if (matches > 0 && (!bestMatch || matches > bestMatch.matches)) {
-        bestMatch = { lat: hotspot.lat, lon: hotspot.lon, matches };
-      }
-    }
-
-    for (const conflict of CONFLICT_ZONES) {
-      const matches = countKeywordMatches(conflict.keywords);
-      if (matches > 0 && (!bestMatch || matches > bestMatch.matches)) {
-        bestMatch = { lat: conflict.center[1], lon: conflict.center[0], matches };
-      }
-    }
-
-    return bestMatch;
-  }
-
   private flashMapForNews(items: NewsItem[]): void {
     if (!this.ctx.map || !this.ctx.initialLoadComplete) return;
     if (!getAiFlowSettings().mapNewsFlash) return;
     const now = Date.now();
+    let freshItemCount = 0;
 
     for (const [key, timestamp] of this.mapFlashCache.entries()) {
       if (now - timestamp > this.MAP_FLASH_COOLDOWN_MS) {
@@ -583,11 +550,14 @@ export class DataLoaderManager implements AppModule {
         continue;
       }
 
-      const location = this.findFlashLocation(item.title);
-      if (!location) continue;
-
-      this.ctx.map.flashLocation(location.lat, location.lon);
       this.mapFlashCache.set(cacheKey, now);
+      freshItemCount += 1;
+    }
+
+    if (freshItemCount > 0) {
+      window.dispatchEvent(new CustomEvent(NEWS_REFRESH_SWEEP_EVENT, {
+        detail: { count: Math.min(freshItemCount, 6) },
+      }));
     }
   }
 

@@ -80,7 +80,7 @@ const def = (
 ): LayerDefinition => ({ key, icon, i18nSuffix, fallbackLabel, renderers, ...(premium && { premium }) });
 
 export const LAYER_REGISTRY: Record<keyof MapLayers, LayerDefinition> = {
-  iranAttacks:              def('iranAttacks',              ICONS.target,    'iranAttacks',            'Iran Attacks', ['flat', 'globe'], _desktop ? 'locked' : undefined),
+  iranAttacks:              def('iranAttacks',              ICONS.target,    'iranAttacks',            'Iran Attacks', [], _desktop ? 'locked' : undefined),
   hotspots:                 def('hotspots',                 '<img src="/icons/spy-icon.png" width="16" height="16" style="display:block;object-fit:contain" />', 'intelHotspots', 'Intel Hotspots'),
   conflicts:                def('conflicts',                ICONS.flags,     'conflictZones',          'Conflict Zones'),
   bases:                    def('bases',                    ICONS.fort,      'militaryBases',          'Military Bases'),
@@ -201,8 +201,7 @@ export function resolveLayerAccentColor(key: keyof MapLayers, theme: 'light' | '
     case 'commodityPorts': return light ? '#0f766e' : '#5eead4';
     case 'aptGroups': return light ? '#991b1b' : '#f87171';
     case 'conflicts':
-    case 'ucdpEvents':
-    case 'iranAttacks': return light ? '#b91c1c' : '#f87171';
+    case 'ucdpEvents': return light ? '#b91c1c' : '#f87171';
     case 'bases':
     case 'military': return light ? '#1d4ed8' : '#93c5fd';
     case 'nuclear':
@@ -217,7 +216,7 @@ export function resolveLayerIcon(key: keyof MapLayers): string {
 
 const VARIANT_LAYER_ORDER: Record<MapVariant, Array<keyof MapLayers>> = {
   full: [
-    'iranAttacks', 'hotspots', 'conflicts',
+    'hotspots', 'conflicts',
     'bases', 'nuclear', 'irradiators', 'spaceports',
     'cables', 'pipelines', 'datacenters', 'military',
     'ais', 'tradeRoutes', 'flights', 'protests',
@@ -245,7 +244,7 @@ const VARIANT_LAYER_ORDER: Record<MapVariant, Array<keyof MapLayers>> = {
     'natural', 'weather',
   ],
   conflicts: [
-    'iranAttacks', 'hotspots', 'conflicts',
+    'hotspots', 'conflicts',
     'bases', 'nuclear', 'irradiators', 'gpsJamming',
     'military', 'ais', 'flights', 'protests',
     'ucdpEvents', 'displacement', 'ciiChoropleth',

@@ -44,6 +44,11 @@ export class EntityIntelManager implements AppModule {
     this.ctx.entityDetailPanel = this.panel;
 
     this.ctx.map?.onEntityClicked((type: string, data: unknown) => {
+      if (type === 'marketplaceRecord') {
+        this.ctx.countryBriefPage?.hide();
+        this.ctx.marketplace?.openMarketplaceRecord(data as import('@/types/marketplace').MarketplacePanelSelection, false);
+        return;
+      }
       this.ctx.countryBriefPage?.hide();
       this.panel!.show(type as PopupType, data);
     });

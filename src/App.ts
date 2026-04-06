@@ -43,6 +43,7 @@ import { PanelLayoutManager } from '@/app/panel-layout';
 import { DataLoaderManager } from '@/app/data-loader';
 import { EventHandlerManager } from '@/app/event-handlers';
 import { resolveUserRegion, resolvePreciseUserCoordinates, type PreciseCoordinates } from '@/utils/user-location';
+import { MarketplaceManager } from '@/app/marketplace-manager';
 
 const CYBER_LAYER_ENABLED = import.meta.env.VITE_ENABLE_CYBER_LAYER === 'true';
 
@@ -62,6 +63,7 @@ export class App {
   private entityIntel: EntityIntelManager;
   private refreshScheduler: RefreshScheduler;
   private desktopUpdater: DesktopUpdater;
+  private marketplace: MarketplaceManager;
 
   private modules: { destroy(): void }[] = [];
   private unsubAiFlow: (() => void) | null = null;
@@ -375,6 +377,7 @@ export class App {
       notificationCenter: null,
       countryBriefPage: null,
       entityDetailPanel: null,
+      marketplace: null,
       predictionBriefPage: null,
       countryTimeline: null,
       positivePanel: null,
@@ -412,6 +415,10 @@ export class App {
       openCountryBriefByCode: (code, country) => this.countryIntel.openCountryBriefByCode(code, country),
     });
 
+    this.marketplace = new MarketplaceManager(this.state, {
+      updateSearchIndex: () => this.searchManager.updateSearchIndex(),
+    });
+
     this.panelLayout = new PanelLayoutManager(this.state, {
       openCountryStory: (code, name) => this.countryIntel.openCountryStory(code, name),
       openCountryBrief: (code) => {
@@ -446,6 +453,7 @@ export class App {
       this.panelLayout,
       this.countryIntel,
       this.entityIntel,
+      this.marketplace,
       this.searchManager,
       this.dataLoader,
       this.refreshScheduler,
@@ -544,6 +552,9 @@ export class App {
       getNews:    () => this.state.allNews,
       getMarkets: () => this.state.latestMarkets,
     });
+    this.state.findingPanel.setSearchHandler((query) => {
+      this.state.searchModal?.openWithQuery(query);
+    });
     this.state.predictionBriefPage = new PredictionBriefPage();
     if (!this.state.isMobile) {
       this.state.findingsBadge = new IntelligenceGapBadge();
@@ -569,6 +580,7 @@ export class App {
     this.eventHandlers.setupUnifiedSettings();
 
     // Phase 4: SearchManager, MapLayerHandlers, CountryIntel
+    await this.marketplace.init();
     this.searchManager.init();
     this.eventHandlers.setupMapLayerHandlers();
     this.countryIntel.init();
