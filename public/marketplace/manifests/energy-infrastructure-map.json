@@ -1,0 +1,94 @@
+{
+  "id": "energy-infrastructure-map",
+  "slug": "energy-infrastructure-map",
+  "name": "Energy Infrastructure Map",
+  "version": "1.0.0",
+  "author": "World Monitor Curated",
+  "description": "Global oil, gas, and LNG infrastructure including pipelines, terminals, and critical chokepoints.",
+  "license": "WM Curated Data License",
+  "category": "energy",
+  "tags": ["oil", "gas", "pipeline", "lng", "terminal", "critical infrastructure", "energy security", "opec", "refinery", "chokepoint", "natural gas", "petrochemical"],
+  "sourceType": "catalog",
+  "visibility": "public",
+  "compatibility": {
+    "variants": ["full", "commodity", "finance"]
+  },
+  "datasets": [
+    {
+      "id": "facilities",
+      "name": "Energy Facilities",
+      "format": "json",
+      "url": "/marketplace/data/energy-infrastructure-map.json",
+      "recordPath": "records",
+      "primaryIdField": "id",
+      "pollingIntervalMs": 86400000,
+      "fieldMap": {
+        "id": "id",
+        "name": "name",
+        "type": "type",
+        "operator": "operator",
+        "country": "country",
+        "lat": "lat",
+        "lon": "lon",
+        "capacity": "capacity",
+        "status": "status",
+        "tags": "tags"
+      },
+      "transforms": {
+        "lat": "number",
+        "lon": "number",
+        "capacity": "number",
+        "tags": "tags"
+      }
+    }
+  ],
+  "surfaces": {
+    "map": {
+      "datasetId": "facilities",
+      "geometryType": "point",
+      "latField": "lat",
+      "lonField": "lon",
+      "style": {
+        "color": "#ffaa00",
+        "strokeColor": "#fff3d0",
+        "pointRadius": 22000,
+        "opacity": 0.75,
+        "visibleByDefault": true
+      }
+    },
+    "search": {
+      "datasetId": "facilities",
+      "titleField": "name",
+      "subtitleField": "type",
+      "tagsField": "tags",
+      "locationLabelField": "country"
+    },
+    "panel": {
+      "datasetId": "facilities",
+      "template": "record-detail",
+      "titleField": "name",
+      "subtitleField": "country",
+      "descriptionField": "type",
+      "metrics": [
+        { "label": "Type", "field": "type" },
+        { "label": "Operator", "field": "operator" },
+        { "label": "Status", "field": "status" },
+        { "label": "Capacity", "field": "capacity" }
+      ]
+    }
+  },
+  "assets": {
+    "previews": [
+      {
+        "type": "card",
+        "title": "Pipeline and terminal coverage",
+        "body": "Major trunk pipelines, LNG export/import terminals, and offshore platforms."
+      },
+      {
+        "type": "card",
+        "title": "Chokepoint risk overlays",
+        "body": "Strait of Hormuz, Bab el-Mandeb, Bosphorus, and Malacca highlighted."
+      }
+    ]
+  }
+}

@@ -22,6 +22,7 @@ export type SignalType =
   | 'satellite_fire'        // NASA FIRMS thermal anomalies
   | 'temporal_anomaly'      // Baseline deviation alerts
   | 'active_strike'         // Iran attack / military conflict events
+  | 'supplemental'          // Generic signals from SupplementalSignalBus (new data sources)
 
 export interface GeoSignal {
   type: SignalType;
@@ -405,6 +406,51 @@ class SignalAggregator {
     }
   }
 
+  /**
+   * Generic ingestion for SupplementalSignalBus signals.
+   * Called by the bus listener — new data sources automatically participate
+   * in geographic signal clustering and convergence analysis without any
+   * per-source wiring in this file.
+   *
+   * Only high/critical signals with known coordinates are added to avoid noise.
+   * Signals for the same sourceId are replaced on each call.
+   */
+  ingestGeneric(sourceId: string, signals: Array<{
+    country: string;
+    sourceName: string;
+    severity: 'low' | 'medium' | 'high' | 'critical';
+    label: string;
+    timestamp: Date;
+    lat?: number;
+    lon?: number;
+  }>): void {
+    // Remove previous signals from this source
+    this.signals = this.signals.filter(s => !(s.type === 'supplemental' && (s as GeoSignal & { sourceId?: string }).sourceId === sourceId));
+
+    for (const s of signals) {
+      if (s.severity === 'low' || s.lat == null || s.lon == null) continue;
+
+      const lat = s.lat;
+      const lon = s.lon;
+      const country = s.country || this.coordsToCountry(lat, lon);
+      if (country === 'XX') continue;
+
+      const signal: GeoSignal & { sourceId: string } = {
+        type: 'supplemental',
+        sourceId,
+        country,
+        countryName: getCountryNameByCode(country) || country,
+        lat,
+        lon,
+        severity: s.severity === 'critical' ? 'high' : s.severity,
+        title: `${s.sourceName}: ${s.label}`,
+        timestamp: s.timestamp,
+      };
+      this.signals.push(signal);
+    }
+    this.pruneOld();
+  }
+
   private coordsToCountry(lat: number, lon: number): string {
     const hit = getCountryAtCoordinates(lat, lon);
     return hit?.code ?? 'XX';
@@ -481,6 +527,7 @@ class SignalAggregator {
           satellite_fire: 'thermal anomalies',
           temporal_anomaly: 'baseline anomalies',
           active_strike: 'active strikes',
+          supplemental: 'supplemental signals',
         };
 
         const typeDescriptions = [...allTypes].map(t => typeLabels[t]).join(', ');
@@ -537,6 +584,7 @@ class SignalAggregator {
       satellite_fire: 0,
       temporal_anomaly: 0,
       active_strike: 0,
+      supplemental: 0,
     };
 
     for (const s of this.signals) {
@@ -563,4 +611,3 @@ class SignalAggregator {
 }
 
 export const signalAggregator = new SignalAggregator();
-

@@ -154,6 +154,9 @@ export const COMMANDS: Command[] = [
   { id: 'panel:strategic-posture', keywords: ['strategic posture', 'military posture'], label: 'Panel: Strategic Posture', icon: '\u{1F396}\uFE0F', category: 'panels' },
   { id: 'panel:sanctions', keywords: ['sanctions', 'sanctions tracker'], label: 'Panel: Sanctions Tracker', icon: '\u{1F6AB}', category: 'panels' },
 
+  // App actions
+  { id: 'actions:open-marketplace', keywords: ['marketplace', 'data packages', 'open marketplace', 'catalog', 'datasets', 'install data', 'marketplace catalog'], label: 'Open Marketplace', icon: '🛒', category: 'actions' },
+
   // View / settings
   { id: 'view:dark', keywords: ['dark', 'dark mode', 'night'], label: 'Switch to dark mode', icon: '\u{1F319}', category: 'view' },
   { id: 'view:light', keywords: ['light', 'light mode', 'day'], label: 'Switch to light mode', icon: '\u2600\uFE0F', category: 'view' },

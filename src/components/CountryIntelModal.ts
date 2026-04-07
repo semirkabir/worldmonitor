@@ -3,7 +3,6 @@
  */
 import { escapeHtml } from '@/utils/sanitize';
 import { t } from '@/services/i18n';
-import { getCSSColor } from '@/utils';
 import type { CountryScore } from '@/services/country-instability';
 import type { PredictionMarket } from '@/services/prediction';
 import { formatBriefRichText } from './country-brief-format';
@@ -83,21 +82,20 @@ export class CountryIntelModal {
     }
   }
 
-  private levelBadge(level: string): string {
-    const varMap: Record<string, string> = {
-      critical: '--semantic-critical',
-      high: '--semantic-high',
-      elevated: '--semantic-elevated',
-      normal: '--semantic-normal',
-      low: '--semantic-low',
-    };
-    const color = getCSSColor(varMap[level] || '--text-dim');
+  private getScoreColor(score: number): string {
+    const clamped = Math.max(0, Math.min(100, score));
+    const hue = 120 - (clamped * 1.2);
+    return `hsl(${hue} 82% 52%)`;
+  }
+
+  private levelBadge(level: string, scoreValue: number): string {
+    const color = this.getScoreColor(scoreValue);
     return `<span class="cii-badge" style="background:${color}20;color:${color};border:1px solid ${color}40">${level.toUpperCase()}</span>`;
   }
 
   private scoreBar(score: number): string {
     const pct = Math.min(100, Math.max(0, score));
-    const color = pct >= 70 ? getCSSColor('--semantic-critical') : pct >= 50 ? getCSSColor('--semantic-high') : pct >= 30 ? getCSSColor('--semantic-elevated') : getCSSColor('--semantic-normal');
+    const color = this.getScoreColor(pct);
     return `
       <div class="cii-score-bar">
         <div class="cii-score-fill" style="width:${pct}%;background:${color}"></div>
@@ -134,7 +132,7 @@ export class CountryIntelModal {
     this.headerEl.innerHTML = `
       <span class="country-flag">${flag}</span>
       <span class="country-name">${escapeHtml(country)}</span>
-      ${score ? this.levelBadge(score.level) : ''}
+      ${score ? this.levelBadge(score.level, score.score) : ''}
       <button class="country-intel-share-btn" title="${t('modals.story.shareTitle')}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg></button>
     `;
 

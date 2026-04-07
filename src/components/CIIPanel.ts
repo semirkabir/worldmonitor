@@ -1,5 +1,4 @@
 import { Panel } from './Panel';
-import { getCSSColor } from '@/utils';
 import { calculateCII, type CountryScore } from '@/services/country-instability';
 import { t } from '../services/i18n';
 import { h, replaceChildren, rawHtml } from '@/utils/dom-utils';
@@ -32,24 +31,10 @@ export class CIIPanel extends Panel {
     this.onCountryClick = handler;
   }
 
-  private getLevelColor(level: CountryScore['level']): string {
-    switch (level) {
-      case 'critical': return getCSSColor('--semantic-critical');
-      case 'high': return getCSSColor('--semantic-high');
-      case 'elevated': return getCSSColor('--semantic-elevated');
-      case 'normal': return getCSSColor('--semantic-normal');
-      case 'low': return getCSSColor('--semantic-low');
-    }
-  }
-
-  private getLevelEmoji(level: CountryScore['level']): string {
-    switch (level) {
-      case 'critical': return '🔴';
-      case 'high': return '🟠';
-      case 'elevated': return '🟡';
-      case 'normal': return '🟢';
-      case 'low': return '⚪';
-    }
+  private getScoreColor(score: number): string {
+    const clamped = Math.max(0, Math.min(100, score));
+    const hue = 120 - (clamped * 1.2);
+    return `hsl(${hue} 82% 52%)`;
   }
 
   private static readonly SHARE_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
@@ -61,8 +46,7 @@ export class CIIPanel extends Panel {
   }
 
   private buildCountry(country: CountryScore): HTMLElement {
-    const color = this.getLevelColor(country.level);
-    const emoji = this.getLevelEmoji(country.level);
+    const color = this.getScoreColor(country.score);
 
     const shareBtn = h('button', {
       className: 'cii-share-btn',
@@ -79,9 +63,9 @@ export class CIIPanel extends Panel {
 
     return h('div', { className: 'cii-country', dataset: { code: country.code } },
       h('div', { className: 'cii-header' },
-        h('span', { className: 'cii-emoji' }, emoji),
+        h('span', { className: 'cii-score-dot', style: `background:${color}; box-shadow: 0 0 10px ${color}55;` }),
         h('span', { className: 'cii-name' }, country.name),
-        h('span', { className: 'cii-score' }, String(country.score)),
+        h('span', { className: 'cii-score', style: `color:${color}` }, String(country.score)),
         this.buildTrendArrow(country.trend, country.change24h),
         vsBtn,
         shareBtn,
@@ -139,13 +123,12 @@ export class CIIPanel extends Panel {
   }
 
   private buildCompareCard(country: CountryScore, other: CountryScore): HTMLElement {
-    const color = this.getLevelColor(country.level);
-    const emoji = this.getLevelEmoji(country.level);
+    const color = this.getScoreColor(country.score);
     const isWinner = country.score < other.score; // lower = more stable
 
     const card = h('div', { className: `cii-compare-card${isWinner ? ' cii-compare-winner' : ''}` },
       h('div', { className: 'cii-compare-name' },
-        h('span', {}, emoji),
+        h('span', { className: 'cii-score-dot', style: `background:${color}; box-shadow: 0 0 10px ${color}55;` }),
         h('strong', {}, country.name),
         isWinner ? h('span', { className: 'cii-compare-tag' }, 'MORE STABLE') : h('span', {}),
       ),

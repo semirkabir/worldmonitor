@@ -1218,6 +1218,11 @@
           "commodityWeather": "Severe weather affecting commodity production or transport",
           "commodityOutages": "Internet and power outages at commodity infrastructure"
         },
+        "controls": {
+          "clearDesc": "Clear all active layers",
+          "marketplaceDesc": "Browse & install data packages (Marketplace)",
+          "helpDesc": "Toggle this layer guide"
+        },
         "notes": {
           "timeAffects": "Affects: Earthquakes, Weather, Protests, Outages, Fires"
         }

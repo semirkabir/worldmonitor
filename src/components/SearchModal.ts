@@ -53,7 +53,7 @@ function resolveCategoryLabel(cmd: Command): string {
   return key ? t(key, { defaultValue: cmd.category }) : cmd.category;
 }
 
-export type SearchResultType = 'country' | 'news' | 'hotspot' | 'market' | 'prediction' | 'conflict' | 'base' | 'pipeline' | 'cable' | 'datacenter' | 'earthquake' | 'outage' | 'nuclear' | 'irradiator' | 'techcompany' | 'ailab' | 'startup' | 'techevent' | 'techhq' | 'accelerator' | 'exchange' | 'financialcenter' | 'centralbank' | 'commodityhub' | 'company' | 'marketplace';
+export type SearchResultType = 'country' | 'news' | 'hotspot' | 'market' | 'prediction' | 'conflict' | 'base' | 'pipeline' | 'cable' | 'datacenter' | 'earthquake' | 'outage' | 'nuclear' | 'irradiator' | 'techcompany' | 'ailab' | 'startup' | 'techevent' | 'techhq' | 'accelerator' | 'exchange' | 'financialcenter' | 'centralbank' | 'commodityhub' | 'company' | 'marketplace' | 'sanction';
 
 export interface SearchResult {
   type: SearchResultType;
@@ -349,6 +349,7 @@ export class SearchModal {
     const priority: SearchResultType[] = [
       'news', 'prediction', 'market', 'earthquake', 'outage',
       'conflict', 'hotspot', 'country',
+      'sanction',
       'base', 'pipeline', 'cable', 'datacenter', 'nuclear', 'irradiator',
       'techcompany', 'ailab', 'startup', 'techevent', 'techhq', 'accelerator',
       'exchange', 'financialcenter', 'centralbank', 'commodityhub', 'company',
@@ -529,6 +530,7 @@ export class SearchModal {
       techhq: 'Tech HQs', accelerator: 'Accelerators', exchange: 'Exchanges',
       financialcenter: 'Financial Centers', centralbank: 'Central Banks',
       commodityhub: 'Commodity Hubs',
+      sanction: 'Sanctions',
       company: 'Companies & Indices',
       marketplace: 'Marketplace Data',
     };
@@ -596,6 +598,7 @@ export class SearchModal {
       financialcenter: '\u{1F4B0}', centralbank: '\u{1F3E6}', commodityhub: '\u{1F4E6}',
       company: '\u{1F4C8}',
       marketplace: '\u{1F6D2}',
+      sanction: '\u{1F6AB}',
     };
 
     const frag = document.createDocumentFragment();

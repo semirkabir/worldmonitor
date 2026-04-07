@@ -252,6 +252,26 @@ export interface ConflictZone {
   location?: string;
   description?: string;
   keyDevelopments?: string[];
+  costTracking?: {
+    strikeStart: string;
+    firstPhaseCostUsd: number;
+    firstPhaseDays: number;
+    ongoingDailyCostUsd: number;
+    sourceLabel: string;
+    sourceUrl?: string;
+    note?: string;
+    lastUpdated?: string;
+  };
+  casualtyBreakdown?: {
+    lastUpdated?: string;
+    sourceSummary?: string;
+    note?: string;
+    usServiceMembersKilled?: number | string;
+    usServiceMembersWounded?: number | string;
+    militaryKilled?: number | string;
+    civilianKilled?: number | string;
+    civilianWounded?: number | string;
+  };
 }
 
 

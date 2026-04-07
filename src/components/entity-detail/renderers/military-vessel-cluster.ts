@@ -1,6 +1,7 @@
 import type { MilitaryVesselCluster, MilitaryVessel } from '@/types';
 import { row } from '../types';
 import type { EntityRenderer, EntityRenderContext } from '../types';
+import { MilitaryVesselRenderer } from './military-vessel';
 
 const VESSEL_TYPE_LABELS: Record<string, string> = {
   carrier: 'Carrier',
@@ -40,8 +41,43 @@ const OPERATOR_LABELS: Record<string, string> = {
   other: 'Other',
 };
 
+const DEPLOYMENT_STATUS_LABELS: Record<string, string> = {
+  deployed: 'Deployed',
+  underway: 'Underway',
+  'in-port': 'In Port',
+  unknown: 'Unknown',
+};
+
+const DEPLOYMENT_STATUS_CLASS: Record<string, string> = {
+  deployed: 'edp-badge edp-badge-deployed edp-vessel-status',
+  underway: 'edp-badge edp-badge-warning edp-vessel-status',
+  'in-port': 'edp-badge edp-badge-dim edp-vessel-status',
+  unknown: 'edp-badge edp-badge-dim edp-vessel-status',
+};
+
+const vesselRenderer = new MilitaryVesselRenderer();
+
+function openVesselDetail(vessel: MilitaryVessel, ctx: EntityRenderContext): void {
+  const detail = vesselRenderer.renderSkeleton(vessel, ctx);
+  ctx.navigate(detail);
+
+  if (vesselRenderer.enrich && vesselRenderer.renderEnriched) {
+    void vesselRenderer.enrich(vessel, ctx.signal)
+      .then((enriched) => {
+        if (!ctx.signal.aborted) {
+          vesselRenderer.renderEnriched?.(detail, enriched, ctx);
+        }
+      })
+      .catch(() => {});
+  }
+}
+
 function renderVesselRow(vessel: MilitaryVessel, ctx: EntityRenderContext): HTMLElement {
-  const item = ctx.el('div', 'edp-vessel-item');
+  const item = ctx.el('button', 'edp-vessel-item edp-vessel-item-button') as HTMLButtonElement;
+  item.type = 'button';
+  item.title = `Open ${vessel.name || vessel.id}`;
+  item.setAttribute('aria-label', `Open vessel details for ${vessel.name || vessel.id}`);
+  item.addEventListener('click', () => openVesselDetail(vessel, ctx));
 
   const nameRow = ctx.el('div', 'edp-vessel-name-row');
   const name = ctx.el('span', 'edp-vessel-name', vessel.name || vessel.id);
@@ -53,7 +89,11 @@ function renderVesselRow(vessel: MilitaryVessel, ctx: EntityRenderContext): HTML
   if (vessel.isDark) {
     nameRow.append(ctx.badge('DARK', 'edp-badge edp-badge-severity edp-vessel-status'));
   } else if (vessel.usniDeploymentStatus && vessel.usniDeploymentStatus !== 'unknown') {
-    nameRow.append(ctx.badge(vessel.usniDeploymentStatus.toUpperCase(), 'edp-badge edp-badge-dim edp-vessel-status'));
+    const status = vessel.usniDeploymentStatus;
+    nameRow.append(ctx.badge(
+      DEPLOYMENT_STATUS_LABELS[status] ?? status,
+      DEPLOYMENT_STATUS_CLASS[status] ?? 'edp-badge edp-badge-dim edp-vessel-status',
+    ));
   }
   item.append(nameRow);
 
@@ -70,6 +110,9 @@ function renderVesselRow(vessel: MilitaryVessel, ctx: EntityRenderContext): HTML
   if (vessel.note) {
     item.append(ctx.el('div', 'edp-vessel-note', vessel.note));
   }
+
+  const affordance = ctx.el('div', 'edp-vessel-open-hint', 'Open vessel details');
+  item.append(affordance);
 
   return item;
 }

@@ -711,13 +711,25 @@ export class MapComponent {
       <div class="map-tray-header">
         <span class="map-tray-title">Legend</span>
         <span class="map-tray-status"></span>
+        <button class="map-tray-collapse" type="button" aria-label="Collapse legend" aria-expanded="true">−</button>
       </div>
       <div class="map-legend-items map-tray-body"></div>
     `;
 
     const header = legend.querySelector('.map-tray-header');
+    const body = legend.querySelector('.map-tray-body') as HTMLElement | null;
+    const collapseBtn = legend.querySelector('.map-tray-collapse') as HTMLButtonElement | null;
+    const applyCollapsedState = (collapsed: boolean) => {
+      body?.classList.toggle('collapsed', collapsed);
+      legend.classList.toggle('collapsed', collapsed);
+      if (collapseBtn) {
+        collapseBtn.textContent = collapsed ? '+' : '−';
+        collapseBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      }
+    };
+
     header?.addEventListener('click', () => {
-      legend.classList.toggle('collapsed');
+      applyCollapsedState(!legend.classList.contains('collapsed'));
     });
 
     this.legendEl = legend;

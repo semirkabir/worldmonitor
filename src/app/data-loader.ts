@@ -54,6 +54,8 @@ import {
   fetchShippingRates,
   fetchChokepointStatus,
   fetchCriticalMinerals,
+  fetchSanctions,
+  fetchSolarWeather,
 } from '@/services';
 import { getMarketWatchlistEntries } from '@/services/market-watchlist';
 import { checkBatchForBreakingAlerts, dispatchOrefBreakingAlert } from '@/services/breaking-news-alerts';
@@ -61,14 +63,16 @@ import { mlWorker } from '@/services/ml-worker';
 import { clusterNewsHybrid } from '@/services/clustering';
 import { ingestProtests, ingestFlights, ingestVessels, ingestEarthquakes, detectGeoConvergence, geoConvergenceToSignal } from '@/services/geo-convergence';
 import { signalAggregator } from '@/services/signal-aggregator';
+import { supplementalBus, type SupplementalSignal } from '@/services/supplemental-signal-bus';
 import { updateAndCheck, consumeServerAnomalies, fetchLiveAnomalies } from '@/services/temporal-baseline';
 import { fetchAllFires, flattenFires, computeRegionStats, toMapFires } from '@/services/wildfires';
 import { analyzeFlightsForSurge, surgeAlertToSignal, detectForeignMilitaryPresence, foreignPresenceToSignal, type TheaterPostureSummary } from '@/services/military-surge';
 import { fetchCachedTheaterPosture } from '@/services/cached-theater-posture';
-import { ingestProtestsForCII, ingestMilitaryForCII, ingestNewsForCII, ingestOutagesForCII, ingestConflictsForCII, ingestUcdpForCII, ingestHapiForCII, ingestDisplacementForCII, ingestClimateForCII, ingestStrikesForCII, ingestOrefForCII, ingestAviationForCII, ingestAdvisoriesForCII, ingestGpsJammingForCII, ingestAisDisruptionsForCII, ingestSatelliteFiresForCII, ingestCyberThreatsForCII, ingestTemporalAnomaliesForCII, isInLearningMode, resetHotspotActivity, setIntelligenceSignalsLoaded, hasAnyIntelligenceData, calculateCII } from '@/services/country-instability';
+import { ingestProtestsForCII, ingestMilitaryForCII, ingestNewsForCII, ingestOutagesForCII, ingestUcdpForCII, ingestHapiForCII, ingestDisplacementForCII, ingestClimateForCII, ingestStrikesForCII, ingestOrefForCII, ingestAviationForCII, ingestAdvisoriesForCII, ingestGpsJammingForCII, ingestAisDisruptionsForCII, ingestSatelliteFiresForCII, ingestCyberThreatsForCII, ingestTemporalAnomaliesForCII, isInLearningMode, resetHotspotActivity, setIntelligenceSignalsLoaded, hasAnyIntelligenceData, calculateCII } from '@/services/country-instability';
 import { fetchGpsInterference } from '@/services/gps-interference';
 import { dataFreshness, type DataSourceId } from '@/services/data-freshness';
-import { fetchConflictEvents, fetchUcdpClassifications, fetchHapiSummary, fetchUcdpEvents, deduplicateAgainstAcled, fetchIranEvents } from '@/services/conflict';
+import { createSupplementalAlert } from '@/services/cross-module-integration';
+import { fetchUcdpClassifications, fetchHapiSummary, fetchUcdpEvents, deduplicateAgainstAcled, fetchIranEvents } from '@/services/conflict';
 import { fetchUnhcrPopulation } from '@/services/displacement';
 import { fetchClimateAnomalies } from '@/services/climate';
 import { fetchSecurityAdvisories } from '@/services/security-advisories';
@@ -79,6 +83,10 @@ import { debounce, getCircuitBreakerCooldownInfo } from '@/utils';
 import { isFeatureAvailable, isFeatureEnabled } from '@/services/runtime-config';
 import { isDesktopRuntime } from '@/services/runtime';
 import { getAiFlowSettings } from '@/services/ai-flow-settings';
+import { matchCountryNamesInText } from '@/services/country-geometry';
+import type { PredictionMarket } from '@/services/prediction';
+import type { GetShippingRatesResponse, GetChokepointStatusResponse } from '@/services/supply-chain';
+import type { SolarWeatherSnapshot } from '@/services/solar-weather';
 
 const NEWS_REFRESH_SWEEP_EVENT = 'wm:news-refresh-sweep';
 import { t, getCurrentLanguage } from '@/services/i18n';
@@ -104,6 +112,7 @@ import {
   UcdpEventsPanel,
   TradePolicyPanel,
   SupplyChainPanel,
+  SanctionsTrackerPanel,
 } from '@/components';
 import { SatelliteFiresPanel } from '@/components/SatelliteFiresPanel';
 import { classifyNewsItem } from '@/services/positive-classifier';
@@ -208,6 +217,7 @@ export class DataLoaderManager implements AppModule {
   private readonly perFeedFallbackIntelFeedLimit = 6;
   private readonly perFeedFallbackBatchSize = 2;
   private lastGoodDigest: ListFeedDigestResponse | null = null;
+  private supplementalListenersWired = false;
 
   constructor(ctx: AppContext, callbacks: DataLoaderCallbacks) {
     this.ctx = ctx;
@@ -219,6 +229,25 @@ export class DataLoaderManager implements AppModule {
       void this.loadMarkets();
     };
     window.addEventListener('wm-market-watchlist-changed', this.boundMarketWatchlistHandler as EventListener);
+
+    if (!this.supplementalListenersWired) {
+      this.supplementalListenersWired = true;
+
+      // Geographic clustering for supplemental sources with coordinates.
+      supplementalBus.onEmit((sourceId, signals) => {
+        signalAggregator.ingestGeneric(sourceId, signals);
+      });
+
+      // Auto-inject high-severity supplemental signals into the shared alert feed.
+      supplementalBus.onEmit((_sourceId, signals) => {
+        signals
+          .filter(signal => signal.severity === 'high' || signal.severity === 'critical')
+          .slice(0, 12)
+          .forEach(signal => {
+            createSupplementalAlert(signal);
+          });
+      });
+    }
   }
 
   destroy(): void {
@@ -240,6 +269,32 @@ export class DataLoaderManager implements AppModule {
 
   private refreshCiiAndBrief(_forceLocal = false): void {
     this.debouncedRefreshCiiAndBrief();
+  }
+
+  private publishSupplementalSignals(options: {
+    sourceId: string;
+    sourceName: string;
+    signals: SupplementalSignal[];
+    dataSourceId?: DataSourceId;
+    baseline?: { mean: number; stdDev: number };
+    itemCount?: number;
+  }): void {
+    if (options.baseline) {
+      supplementalBus.registerBaseline(options.sourceId, options.baseline.mean, options.baseline.stdDev, options.sourceName);
+    }
+    supplementalBus.emit(options.sourceId, options.signals);
+
+    if (options.dataSourceId) {
+      const itemCount = options.itemCount ?? options.signals.length;
+      if (itemCount > 0) {
+        dataFreshness.recordUpdate(options.dataSourceId, itemCount);
+      }
+    }
+  }
+
+  private clearSupplementalSignals(sourceId: string, dataSourceId: DataSourceId | undefined, error: string): void {
+    supplementalBus.clear(sourceId);
+    if (dataSourceId) dataFreshness.recordError(dataSourceId, error);
   }
 
   private async tryFetchDigest(): Promise<ListFeedDigestResponse | null> {
@@ -341,6 +396,9 @@ export class DataLoaderManager implements AppModule {
         tasks.push({ name: 'tradePolicy', task: runGuarded('tradePolicy', () => this.loadTradePolicy()) });
         tasks.push({ name: 'supplyChain', task: runGuarded('supplyChain', () => this.loadSupplyChain()) });
       }
+
+      tasks.push({ name: 'sanctions', task: runGuarded('sanctions', () => this.loadSanctions()) });
+      tasks.push({ name: 'solarWeather', task: runGuarded('solarWeather', () => this.loadSolarWeather()) });
     }
 
     // Progress charts data (happy variant only)
@@ -1091,6 +1149,13 @@ export class DataLoaderManager implements AppModule {
       const predictions = await fetchPredictions();
       this.ctx.latestPredictions = predictions;
       (this.ctx.panels['polymarket'] as PredictionPanel).renderPredictions(predictions);
+      this.publishSupplementalSignals({
+        sourceId: 'predictions_deep',
+        sourceName: 'Prediction Markets',
+        signals: this.buildPredictionSignals(predictions),
+        dataSourceId: undefined,
+        baseline: { mean: 2, stdDev: 1 },
+      });
 
       this.ctx.statusPanel?.updateFeed('Polymarket', { status: 'ok', itemCount: predictions.length });
       this.ctx.statusPanel?.updateApi('Polymarket', { status: 'ok' });
@@ -1101,6 +1166,7 @@ export class DataLoaderManager implements AppModule {
     } catch (error) {
       this.ctx.statusPanel?.updateFeed('Polymarket', { status: 'error', errorMessage: String(error) });
       this.ctx.statusPanel?.updateApi('Polymarket', { status: 'error' });
+       supplementalBus.clear('predictions_deep');
       dataFreshness.recordError('polymarket', String(error));
       dataFreshness.recordError('predictions', String(error));
     }
@@ -2027,6 +2093,24 @@ export class DataLoaderManager implements AppModule {
       if (chokepointData) scPanel.updateChokepointStatus(chokepointData);
       if (mineralsData) scPanel.updateCriticalMinerals(mineralsData);
 
+      const chokepointSignals = chokepointData ? this.buildChokepointSignals(chokepointData) : [];
+      const shippingSignals = shippingData ? this.buildShippingSignals(shippingData) : [];
+      this.publishSupplementalSignals({
+        sourceId: 'chokepoints',
+        sourceName: 'Chokepoint Status',
+        signals: chokepointSignals,
+        dataSourceId: undefined,
+        baseline: { mean: 4, stdDev: 1.5 },
+        itemCount: (chokepointData?.chokepoints.length || 0) + (shippingData?.indices.length || 0) + (mineralsData?.minerals.length || 0),
+      });
+      this.publishSupplementalSignals({
+        sourceId: 'shipping',
+        sourceName: 'Shipping Rates',
+        signals: shippingSignals,
+        dataSourceId: undefined,
+        baseline: { mean: 2, stdDev: 1 },
+      });
+
       const totalItems = (shippingData?.indices.length || 0) + (chokepointData?.chokepoints.length || 0) + (mineralsData?.minerals.length || 0);
       const anyUnavailable = shippingData?.upstreamUnavailable || chokepointData?.upstreamUnavailable || mineralsData?.upstreamUnavailable;
 
@@ -2040,8 +2124,197 @@ export class DataLoaderManager implements AppModule {
     } catch (e) {
       console.error('[App] Supply chain failed:', e);
       this.ctx.statusPanel?.updateApi('SupplyChain', { status: 'error' });
-      dataFreshness.recordError('supply_chain', String(e));
+      this.clearSupplementalSignals('chokepoints', 'supply_chain', String(e));
+      supplementalBus.clear('shipping');
     }
+  }
+
+  async loadSanctions(): Promise<void> {
+    const panel = this.ctx.panels['sanctions-tracker'] as SanctionsTrackerPanel | undefined;
+    if (!panel) return;
+
+    try {
+      const entities = await fetchSanctions();
+      panel.setEntities(entities);
+      this.updateSearchIndex();
+      this.ctx.statusPanel?.updateApi('Sanctions', { status: entities.length > 0 ? 'ok' : 'warning' });
+      this.publishSupplementalSignals({
+        sourceId: 'sanctions',
+        sourceName: 'Sanctions Radar',
+        signals: this.buildSanctionsSignals(entities),
+        dataSourceId: 'sanctions',
+        baseline: { mean: 4, stdDev: 1.5 },
+        itemCount: entities.length,
+      });
+    } catch (error) {
+      console.error('[App] Sanctions load failed:', error);
+      this.ctx.statusPanel?.updateApi('Sanctions', { status: 'error' });
+      this.clearSupplementalSignals('sanctions', 'sanctions', String(error));
+    }
+  }
+
+  async loadSolarWeather(): Promise<void> {
+    const panel = this.ctx.panels['solar-weather'] as { setData?: (data: SolarWeatherSnapshot) => void } | undefined;
+    if (!panel) return;
+
+    try {
+      const snapshot = await fetchSolarWeather();
+      panel.setData?.(snapshot);
+      this.ctx.statusPanel?.updateApi('NOAA SWPC', { status: 'ok' });
+      this.publishSupplementalSignals({
+        sourceId: 'solar',
+        sourceName: 'Solar Weather',
+        signals: this.buildSolarWeatherSignals(snapshot),
+        dataSourceId: 'solar_weather',
+        baseline: { mean: 1, stdDev: 0.75 },
+        itemCount: snapshot.alerts.length || 1,
+      });
+    } catch (error) {
+      console.error('[App] Solar weather failed:', error);
+      this.ctx.statusPanel?.updateApi('NOAA SWPC', { status: 'error' });
+      this.clearSupplementalSignals('solar', 'solar_weather', String(error));
+    }
+  }
+
+  private buildSanctionsSignals(entities: Awaited<ReturnType<typeof fetchSanctions>>): SupplementalSignal[] {
+    const byCountry = new Map<string, number>();
+    for (const entity of entities) {
+      for (const country of entity.countries) {
+        if (!country || country === 'UNKNOWN') continue;
+        byCountry.set(country, (byCountry.get(country) ?? 0) + 1);
+      }
+    }
+
+    return [...byCountry.entries()].map(([country, count]) => ({
+      sourceId: 'sanctions',
+      sourceName: 'Sanctions Radar',
+      country,
+      value: Math.min(100, count * 20),
+      severity: count >= 3 ? 'critical' : count >= 2 ? 'high' : 'medium',
+      label: `${count} sanctioned entities`,
+      timestamp: new Date(),
+      tags: ['geopolitical', 'sanctions'],
+    }));
+  }
+
+  private buildChokepointSignals(data: GetChokepointStatusResponse): SupplementalSignal[] {
+    const fallbackCountries: Record<string, string> = {
+      suez: 'EG',
+      panama: 'PA',
+      hormuz: 'IR',
+      malacca: 'MY',
+      'bab el-mandeb': 'YE',
+    };
+
+    return data.chokepoints.map(cp => {
+      const matchedCountry = matchCountryNamesInText(`${cp.name} ${cp.affectedRoutes.join(' ')}`)[0]
+        || Object.entries(fallbackCountries).find(([key]) => cp.name.toLowerCase().includes(key))?.[1]
+        || 'XX';
+      const severity: SupplementalSignal['severity'] = cp.disruptionScore >= 80 ? 'critical'
+        : cp.disruptionScore >= 60 ? 'high'
+        : cp.disruptionScore >= 40 ? 'medium'
+        : 'low';
+      return {
+        sourceId: 'chokepoints',
+        sourceName: 'Chokepoint Status',
+        country: matchedCountry,
+        value: cp.disruptionScore,
+        severity,
+        label: `${cp.name} disruption score ${cp.disruptionScore}`,
+        timestamp: new Date(),
+        lat: cp.lat,
+        lon: cp.lon,
+        tags: ['supply_chain'],
+      };
+    });
+  }
+
+  private buildShippingSignals(data: GetShippingRatesResponse): SupplementalSignal[] {
+    const laneCountries: Array<{ match: RegExp; countries: string[] }> = [
+      { match: /china.*us west/i, countries: ['CN', 'US'] },
+      { match: /china.*us east/i, countries: ['CN', 'US'] },
+      { match: /china.*europe/i, countries: ['CN', 'DE'] },
+      { match: /europe.*us east/i, countries: ['DE', 'US'] },
+    ];
+
+    return data.indices.flatMap(index => {
+      const route = laneCountries.find(entry => entry.match.test(index.name));
+      const severity: SupplementalSignal['severity'] = index.changePct >= 50 ? 'critical'
+        : index.changePct >= 20 || index.spikeAlert ? 'high'
+        : index.changePct >= 10 ? 'medium'
+        : 'low';
+      return (route?.countries ?? ['XX']).map(country => ({
+        sourceId: 'shipping',
+        sourceName: 'Shipping Rates',
+        country,
+        value: Math.max(0, Math.min(100, index.changePct + 50)),
+        severity,
+        label: `${index.name} ${index.changePct >= 0 ? '+' : ''}${index.changePct.toFixed(1)}%`,
+        timestamp: new Date(),
+        tags: ['supply_chain'],
+      }));
+    });
+  }
+
+  private buildPredictionSignals(predictions: PredictionMarket[]): SupplementalSignal[] {
+    return predictions
+      .filter(prediction => (prediction.volume ?? 0) >= 1_000_000)
+      .flatMap(prediction => {
+        const countries = matchCountryNamesInText(prediction.title);
+        if (countries.length === 0) return [];
+
+        const lower = prediction.title.toLowerCase();
+        const instabilitySignal = /(war|conflict|ceasefire|election|sanction|regime|collapse|invasion|strike)/.test(lower);
+        if (!instabilitySignal) return [];
+
+        const severity: SupplementalSignal['severity'] = (prediction.volume ?? 0) >= 5_000_000 ? 'critical' : 'high';
+        return countries.map(country => ({
+          sourceId: 'predictions_deep',
+          sourceName: 'Prediction Markets',
+          country,
+          value: Math.min(100, Math.round(prediction.yesPrice)),
+          severity,
+          label: `${Math.round(prediction.yesPrice)}% · ${(prediction.volume ?? 0) >= 1_000_000 ? `$${((prediction.volume ?? 0) / 1_000_000).toFixed(1)}M` : 'high volume'}`,
+          timestamp: new Date(),
+          tags: ['signal', 'markets'],
+        }));
+      });
+  }
+
+  private buildSolarWeatherSignals(snapshot: SolarWeatherSnapshot): SupplementalSignal[] {
+    const severity: SupplementalSignal['severity'] = snapshot.kpIndex >= 7 ? 'critical'
+      : snapshot.kpIndex >= 5 ? 'high'
+      : snapshot.kpIndex >= 4 ? 'medium'
+      : 'low';
+
+    return [{
+      sourceId: 'solar',
+      sourceName: 'Solar Weather',
+      country: 'XX',
+      value: Math.min(100, snapshot.kpIndex * 12),
+      severity,
+      label: `Kp ${snapshot.kpIndex.toFixed(1)}${snapshot.solarWindSpeed ? ` · wind ${snapshot.solarWindSpeed.toFixed(0)} km/s` : ''}`,
+      timestamp: new Date(snapshot.fetchedAt),
+      tags: ['space', 'infra'],
+    }];
+  }
+
+  private buildRenewableSignals(data: Awaited<ReturnType<typeof fetchRenewableEnergyData>>): SupplementalSignal[] {
+    const latest = data.historicalData[data.historicalData.length - 1];
+    const previous = data.historicalData[data.historicalData.length - 2];
+    const delta = latest && previous ? latest.value - previous.value : 0;
+    const severity: SupplementalSignal['severity'] = delta <= -2 ? 'high' : delta <= -1 ? 'medium' : 'low';
+
+    return [{
+      sourceId: 'energy_mix',
+      sourceName: 'Renewable Energy Mix',
+      country: 'XX',
+      value: Math.min(100, Math.max(0, data.globalPercentage)),
+      severity,
+      label: `Global renewables ${data.globalPercentage.toFixed(1)}%${delta ? ` (${delta > 0 ? '+' : ''}${delta.toFixed(1)}pp)` : ''}`,
+      timestamp: new Date(),
+      tags: ['energy'],
+    }];
   }
 
   updateMonitorResults(): void {
@@ -2171,6 +2444,10 @@ export class DataLoaderManager implements AppModule {
     if (isOutagesConfigured() === false) {
       dataFreshness.setEnabled('outages', false);
     }
+
+    dataFreshness.setEnabled('sanctions', SITE_VARIANT !== 'happy');
+    dataFreshness.setEnabled('solar_weather', SITE_VARIANT !== 'happy');
+    dataFreshness.setEnabled('renewable_mix', SITE_VARIANT === 'happy');
   }
 
   private static readonly HAPPY_ITEMS_CACHE_KEY = 'happy-all-items';
@@ -2313,6 +2590,14 @@ export class DataLoaderManager implements AppModule {
   private async loadRenewableData(): Promise<void> {
     const data = await fetchRenewableEnergyData();
     this.callPanel('renewable', 'setData', data);
+    this.publishSupplementalSignals({
+      sourceId: 'energy_mix',
+      sourceName: 'Renewable Energy Mix',
+      signals: this.buildRenewableSignals(data),
+      dataSourceId: 'renewable_mix',
+      baseline: { mean: 1, stdDev: 0.5 },
+      itemCount: data.regions.length || 1,
+    });
     if (SITE_VARIANT === 'happy' && data?.globalPercentage) {
       checkMilestones({
         renewablePercent: data.globalPercentage,

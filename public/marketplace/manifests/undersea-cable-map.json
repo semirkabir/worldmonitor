@@ -1,0 +1,94 @@
+{
+  "id": "undersea-cable-map",
+  "slug": "undersea-cable-map",
+  "name": "Undersea Cable Infrastructure",
+  "version": "1.0.0",
+  "author": "World Monitor Curated",
+  "description": "Global submarine cable network with landing stations, cable system operators, capacity tiers, and known vulnerability zones.",
+  "license": "WM Curated Data License",
+  "category": "infrastructure",
+  "tags": ["submarine cable", "internet", "telecom", "fiber", "bandwidth", "critical infrastructure", "landing station", "cable cut", "sabotage", "pacific", "atlantic", "resilience"],
+  "sourceType": "catalog",
+  "visibility": "public",
+  "compatibility": {
+    "variants": ["full", "tech"]
+  },
+  "datasets": [
+    {
+      "id": "stations",
+      "name": "Landing Stations",
+      "format": "json",
+      "url": "/marketplace/data/undersea-cable-map.json",
+      "recordPath": "records",
+      "primaryIdField": "id",
+      "pollingIntervalMs": 86400000,
+      "fieldMap": {
+        "id": "id",
+        "name": "name",
+        "country": "country",
+        "city": "city",
+        "lat": "lat",
+        "lon": "lon",
+        "cables": "cables",
+        "capacityTbps": "capacityTbps",
+        "owner": "owner",
+        "riskTier": "riskTier",
+        "tags": "tags"
+      },
+      "transforms": {
+        "lat": "number",
+        "lon": "number",
+        "capacityTbps": "number",
+        "tags": "tags"
+      }
+    }
+  ],
+  "surfaces": {
+    "map": {
+      "datasetId": "stations",
+      "geometryType": "point",
+      "latField": "lat",
+      "lonField": "lon",
+      "style": {
+        "color": "#4a9eff",
+        "strokeColor": "#cce4ff",
+        "pointRadius": 18000,
+        "opacity": 0.8,
+        "visibleByDefault": false
+      }
+    },
+    "search": {
+      "datasetId": "stations",
+      "titleField": "name",
+      "subtitleField": "cables",
+      "tagsField": "tags",
+      "locationLabelField": "country"
+    },
+    "panel": {
+      "datasetId": "stations",
+      "template": "record-detail",
+      "titleField": "name",
+      "subtitleField": "city",
+      "metrics": [
+        { "label": "Owner", "field": "owner" },
+        { "label": "Capacity Tbps", "field": "capacityTbps" },
+        { "label": "Risk Tier", "field": "riskTier" },
+        { "label": "Cables", "field": "cables" }
+      ]
+    }
+  },
+  "assets": {
+    "previews": [
+      {
+        "type": "card",
+        "title": "400+ landing stations",
+        "body": "Covers major trans-oceanic routes and regional distribution hubs."
+      },
+      {
+        "type": "card",
+        "title": "Vulnerability classification",
+        "body": "Choke points, shallow-water segments, and historically disrupted routes flagged."
+      }
+    ]
+  }
+}

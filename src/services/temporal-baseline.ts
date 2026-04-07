@@ -1,13 +1,15 @@
 import { InfrastructureServiceClient, type TemporalAnomalyProto } from '@/generated/client/worldmonitor/infrastructure/v1/service_client';
 import { getHydratedData } from '@/services/bootstrap';
 
-export type TemporalEventType =
+export type KnownTemporalEventType =
   | 'military_flights'
   | 'vessels'
   | 'protests'
   | 'news'
   | 'ais_gaps'
   | 'satellite_fires';
+
+export type TemporalEventType = KnownTemporalEventType | (string & {});
 
 export interface TemporalAnomaly {
   type: TemporalEventType;
@@ -21,7 +23,7 @@ export interface TemporalAnomaly {
 
 const client = new InfrastructureServiceClient('', { fetch: (...args) => globalThis.fetch(...args) });
 
-const TYPE_LABELS: Record<TemporalEventType, string> = {
+const TYPE_LABELS: Record<KnownTemporalEventType, string> = {
   military_flights: 'Military flights',
   vessels: 'Naval vessels',
   protests: 'Protests',
@@ -34,7 +36,11 @@ const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', '
 const MONTH_NAMES = ['', 'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'];
 
-const SERVER_TYPES = new Set<TemporalEventType>(['news', 'satellite_fires']);
+const SERVER_TYPES = new Set<string>(['news', 'satellite_fires']);
+
+function getTypeLabel(type: TemporalEventType): string {
+  return TYPE_LABELS[type as KnownTemporalEventType] ?? type.replace(/_/g, ' ');
+}
 
 function formatAnomalyMessage(
   type: TemporalEventType,
@@ -47,7 +53,7 @@ function formatAnomalyMessage(
   const weekday = WEEKDAY_NAMES[now.getUTCDay()];
   const month = MONTH_NAMES[now.getUTCMonth() + 1];
   const mult = multiplier < 10 ? `${multiplier.toFixed(1)}x` : `${Math.round(multiplier)}x`;
-  return `${TYPE_LABELS[type]} ${mult} normal for ${weekday} (${month}) — ${count} vs baseline ${Math.round(mean)}`;
+  return `${getTypeLabel(type)} ${mult} normal for ${weekday} (${month}) - ${count} vs baseline ${Math.round(mean)}`;
 }
 
 function getSeverity(zScore: number): 'medium' | 'high' | 'critical' {

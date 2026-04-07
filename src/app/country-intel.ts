@@ -21,6 +21,7 @@ import {
 import { calculateCII, getCountryData, TIER1_COUNTRIES, hasIntelligenceSignalsLoaded, type CountryScore } from '@/services/country-instability';
 import { getCachedScores, toCountryScore } from '@/services/cached-risk-scores';
 import { signalAggregator } from '@/services/signal-aggregator';
+import { supplementalBus } from '@/services/supplemental-signal-bus';
 import { dataFreshness } from '@/services/data-freshness';
 import { fetchCountryMarkets } from '@/services/prediction';
 import { collectStoryData } from '@/services/story-data';
@@ -427,6 +428,12 @@ export class CountryIntelManager implements AppModule {
     const headlines = Array.isArray(context.headlines) ? context.headlines as string[] : [];
     if (headlines.length > 0) {
       lines.push(`Headlines: ${headlines.slice(0, 6).join(' | ')}`);
+    }
+
+    // Supplemental signals from newly added data sources (auto-included via SupplementalSignalBus)
+    const supplementalCtx = supplementalBus.getAIContext(code);
+    if (supplementalCtx) {
+      lines.push(`Supplemental: ${supplementalCtx}`);
     }
 
     return lines.join('\n');

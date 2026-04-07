@@ -483,6 +483,31 @@ export class MarketplaceService {
       data: MarketplaceSearchResultData;
     }> = [];
 
+    // --- Catalog items: searchable by name, author, category, tags, description ---
+    const installedIds = new Set(Array.from(this.installed.keys()));
+    for (const catalogItem of this.catalogItems) {
+      const subtitleParts = [
+        catalogItem.author,
+        catalogItem.category,
+        ...catalogItem.tags.slice(0, 4),
+      ].filter(Boolean);
+      items.push({
+        id: `marketplace-catalog-${catalogItem.id}`,
+        title: catalogItem.name,
+        subtitle: subtitleParts.join(' • '),
+        data: {
+          itemId: catalogItem.id,
+          datasetId: '',
+          recordId: '',
+          preferredOpenAction: 'modal',
+          hasGeometry: false,
+        },
+      });
+      // If the catalog item is also installed and has a search surface, add its records too
+      if (installedIds.has(catalogItem.id)) continue;
+    }
+
+    // --- Installed records with a search surface ---
     for (const installed of this.installed.values()) {
       const view = this.toViewItem(installed, currentVariant);
       const searchSurface = installed.manifest.surfaces.search;

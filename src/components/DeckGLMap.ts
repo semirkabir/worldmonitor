@@ -4241,7 +4241,7 @@ export class DeckGLMap {
     if (lat != null && lon != null) {
       this.maplibreMap.flyTo({
         center: [lon, lat],
-        zoom: 10,
+        zoom: 12,
         duration: 800,
       });
     }
@@ -4381,7 +4381,7 @@ export class DeckGLMap {
     layersToggleBtn.className = 'layers-toggle-btn';
     layersToggleBtn.id = 'layersToggleBtn';
     layersToggleBtn.title = 'Toggle Layers';
-    layersToggleBtn.textContent = 'LAYERS';
+    layersToggleBtn.innerHTML = 'LAYERS <span class="layers-btn-count"></span>';
 
     const layersClearBtn = document.createElement('button');
     layersClearBtn.className = 'layers-row-clear';
@@ -4476,15 +4476,7 @@ export class DeckGLMap {
       premium: def.premium,
     }));
 
-    const header = document.createElement('div');
-    header.className = 'map-tray-header';
-    const title = document.createElement('span');
-    title.className = 'map-tray-title';
-    title.textContent = 'Layer filters';
-    const status = document.createElement('span');
-    status.className = 'map-tray-status';
-    header.append(title, status);
-    layersPanel.appendChild(header);
+    const status = this.container.querySelector<HTMLElement>('#layersToggleBtn .layers-btn-count') ?? document.createElement('span');
 
     const searchWrap = document.createElement('div');
     searchWrap.className = 'map-tray-search';
@@ -4583,7 +4575,8 @@ export class DeckGLMap {
     layersPanel.appendChild(list);
 
     const updateStatus = () => {
-      status.textContent = `${layersPanel.querySelectorAll('.layer-toggle input:checked').length} active`;
+      const count = layersPanel.querySelectorAll('.layer-toggle input:checked').length;
+      if (status) status.textContent = count > 0 ? String(count) : '';
     };
 
     const applyLayerFilter = () => {
@@ -4657,9 +4650,9 @@ export class DeckGLMap {
   }
 
   private updateLayerTrayStatus(layersPanel: HTMLElement): void {
-    const status = layersPanel.querySelector<HTMLElement>('.map-tray-status');
-    if (!status) return;
-    status.textContent = `${layersPanel.querySelectorAll('.layer-toggle input:checked').length} active`;
+    const count = layersPanel.querySelectorAll('.layer-toggle input:checked').length;
+    const badge = this.container.querySelector<HTMLElement>('#layersToggleBtn .layers-btn-count');
+    if (badge) badge.textContent = count > 0 ? String(count) : '';
   }
 
   private applyLayerTrayFilter(layersPanel: HTMLElement): void {
@@ -4906,6 +4899,23 @@ export class DeckGLMap {
       </div>
     `;
 
+    const controlsFooter = `
+      <div class="layer-help-controls-footer">
+        <div class="layer-help-controls-row">
+          <span class="layer-help-ctrl-badge ctrl-clear">✕</span>
+          <span>${t('components.deckgl.layerHelp.controls.clearDesc')}</span>
+        </div>
+        <div class="layer-help-controls-row">
+          <span class="layer-help-ctrl-badge ctrl-marketplace">▦</span>
+          <span>${t('components.deckgl.layerHelp.controls.marketplaceDesc')}</span>
+        </div>
+        <div class="layer-help-controls-row">
+          <span class="layer-help-ctrl-badge ctrl-help">?</span>
+          <span>${t('components.deckgl.layerHelp.controls.helpDesc')}</span>
+        </div>
+      </div>
+    `;
+
     // ── TECH variant ─────────────────────────────────────────────────────────
     // Layers: startupHubs, techHQs, accelerators, cloudRegions,
     //         datacenters, cables, outages, cyberThreats, techEvents
@@ -4925,6 +4935,7 @@ export class DeckGLMap {
       helpItem(label('internetOutages'), 'infraOutages'),
       helpItem(label('cyberThreats'), 'techCyberThreats'),
     ])}
+        ${controlsFooter}
       </div>
     `;
 
@@ -4957,6 +4968,7 @@ export class DeckGLMap {
       helpItem(label('naturalEvents'), 'financeNatural'),
       helpItem(label('dayNight'), 'dayNight'),
     ])}
+        ${controlsFooter}
       </div>
     `;
 
@@ -4974,6 +4986,7 @@ export class DeckGLMap {
       helpItem(label('speciesRecovery'), 'happySpecies'),
       helpItem(label('renewableInstallations'), 'happyRenewable'),
     ])}
+        ${controlsFooter}
       </div>
     `;
 
@@ -5002,6 +5015,7 @@ export class DeckGLMap {
       helpItem(label('internetOutages'), 'commodityOutages'),
       helpItem(label('dayNight'), 'dayNight'),
     ])}
+        ${controlsFooter}
       </div>
     `;
 
@@ -5021,6 +5035,7 @@ export class DeckGLMap {
         ${helpSection('geopolitical', [
       helpItem(label('intelHotspots'), 'geoHotspots'),
       helpItem(label('conflictZones'), 'geoConflicts'),
+      helpItem(label('iranAttacks'), 'geoIranAttacks'),
       helpItem(label('protests'), 'geoProtests'),
       helpItem(label('ucdpEvents'), 'geoUcdpEvents'),
       helpItem(label('displacementFlows'), 'geoDisplacement'),
@@ -5058,6 +5073,7 @@ export class DeckGLMap {
       helpItem(label('dayNight'), 'dayNight'),
       helpItem(label('strategicWaterways'), 'waterwaysLabels'),
     ])}
+        ${controlsFooter}
       </div>
     `;
 
@@ -5101,15 +5117,25 @@ export class DeckGLMap {
       <div class="map-tray-header">
         <span class="map-tray-title">Legend</span>
         <span class="map-tray-status"></span>
+        <button class="map-tray-collapse" type="button" aria-label="Collapse legend" aria-expanded="true">−</button>
       </div>
       <div class="legend-items map-tray-body"></div>
     `;
 
     const header = legend.querySelector('.map-tray-header');
+    const body = legend.querySelector('.map-tray-body') as HTMLElement | null;
+    const collapseBtn = legend.querySelector('.map-tray-collapse') as HTMLButtonElement | null;
+    const applyCollapsedState = (collapsed: boolean) => {
+      body?.classList.toggle('collapsed', collapsed);
+      legend.classList.toggle('collapsed', collapsed);
+      if (collapseBtn) {
+        collapseBtn.textContent = collapsed ? '+' : '−';
+        collapseBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      }
+    };
+
     header?.addEventListener('click', () => {
-      console.log('[Legend] Clicked, toggling collapsed');
-      legend.classList.toggle('collapsed');
-      console.log('[Legend] collapsed class:', legend.classList.contains('collapsed'));
+      applyCollapsedState(!legend.classList.contains('collapsed'));
       this.refreshLegend();
     });
 

@@ -1,0 +1,83 @@
+{
+  "id": "climate-risk-zones",
+  "slug": "climate-risk-zones",
+  "name": "Climate Risk Zones",
+  "version": "1.0.0",
+  "author": "World Monitor Curated",
+  "description": "Physical climate risk layers including flood exposure, wildfire index, drought severity, and extreme heat frequency.",
+  "license": "WM Curated Data License",
+  "category": "climate",
+  "tags": ["flood", "drought", "wildfire", "hurricane", "climate risk", "sea level", "heat stress", "adaptation", "noaa", "ipcc", "physical risk", "agriculture", "water stress"],
+  "sourceType": "catalog",
+  "visibility": "public",
+  "compatibility": {
+    "variants": ["full", "happy", "commodity"]
+  },
+  "datasets": [
+    {
+      "id": "zones",
+      "name": "Risk Zones",
+      "format": "json",
+      "url": "/marketplace/data/climate-risk-zones.json",
+      "recordPath": "records",
+      "primaryIdField": "id",
+      "pollingIntervalMs": 86400000,
+      "fieldMap": {
+        "id": "id",
+        "name": "name",
+        "riskType": "riskType",
+        "severity": "severity",
+        "lat": "lat",
+        "lon": "lon",
+        "country": "country",
+        "region": "region",
+        "lastUpdated": "lastUpdated"
+      },
+      "transforms": {
+        "lat": "number",
+        "lon": "number"
+      }
+    }
+  ],
+  "surfaces": {
+    "map": {
+      "datasetId": "zones",
+      "geometryType": "point",
+      "latField": "lat",
+      "lonField": "lon",
+      "style": {
+        "color": "#ff4444",
+        "strokeColor": "#ffcccc",
+        "pointRadius": 40000,
+        "opacity": 0.5,
+        "visibleByDefault": false
+      }
+    },
+    "panel": {
+      "datasetId": "zones",
+      "template": "record-list",
+      "titleField": "name",
+      "subtitleField": "riskType",
+      "metrics": [
+        { "label": "Risk Type", "field": "riskType" },
+        { "label": "Severity", "field": "severity" },
+        { "label": "Region", "field": "region" },
+        { "label": "Updated", "field": "lastUpdated" }
+      ]
+    }
+  },
+  "assets": {
+    "previews": [
+      {
+        "type": "card",
+        "title": "Multi-hazard classification",
+        "body": "Flood, drought, wildfire, storm surge, and chronic heat layers in a single dataset."
+      },
+      {
+        "type": "card",
+        "title": "Daily refresh",
+        "body": "Aligned with NOAA, Copernicus, and ERA5 reanalysis outputs."
+      }
+    ]
+  }
+}

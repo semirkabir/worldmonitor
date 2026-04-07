@@ -36,6 +36,7 @@ import {
   AviationCommandBar,
   EconomicCalendarPanel,
   SanctionsTrackerPanel,
+  SolarWeatherPanel,
   AlertRulesPanel,
   GeopoliticalRiskPanel,
   CorrelationMatrixPanel,
@@ -1059,6 +1060,7 @@ export class PanelLayoutManager implements AppModule {
       this.ctx.panels['stablecoins'] = new StablecoinPanel();
       this.ctx.panels['economic-calendar'] = new EconomicCalendarPanel();
       this.ctx.panels['sanctions-tracker'] = new SanctionsTrackerPanel();
+      this.ctx.panels['solar-weather'] = new SolarWeatherPanel();
       if (isLoggedIn()) {
         this.ctx.panels['alert-rules'] = new AlertRulesPanel();
       }

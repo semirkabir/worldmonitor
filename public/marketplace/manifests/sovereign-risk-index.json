@@ -1,0 +1,77 @@
+{
+  "id": "sovereign-risk-index",
+  "slug": "sovereign-risk-index",
+  "name": "Sovereign Risk Index",
+  "version": "1.0.0",
+  "author": "World Monitor Curated",
+  "description": "Country-level sovereign risk scores derived from debt dynamics, political stability indices, and market stress signals.",
+  "license": "WM Curated Data License",
+  "category": "geopolitical",
+  "tags": ["sovereign risk", "political stability", "default", "country rating", "emerging markets", "creditworthiness", "debt", "imf", "fiscal", "cds spread", "currency risk"],
+  "sourceType": "catalog",
+  "visibility": "public",
+  "compatibility": {
+    "variants": ["full", "finance"]
+  },
+  "datasets": [
+    {
+      "id": "scores",
+      "name": "Risk Scores",
+      "format": "json",
+      "url": "/marketplace/data/sovereign-risk-index.json",
+      "recordPath": "records",
+      "primaryIdField": "iso3",
+      "pollingIntervalMs": 3600000,
+      "fieldMap": {
+        "iso3": "iso3",
+        "name": "name",
+        "riskScore": "riskScore",
+        "riskTier": "riskTier",
+        "trend": "trend",
+        "region": "region",
+        "gdpDebtRatio": "gdpDebtRatio",
+        "cdsSpread": "cdsSpread"
+      },
+      "transforms": {
+        "riskScore": "number",
+        "gdpDebtRatio": "number",
+        "cdsSpread": "number"
+      }
+    }
+  ],
+  "surfaces": {
+    "search": {
+      "datasetId": "scores",
+      "titleField": "name",
+      "subtitleField": "riskTier",
+      "tagsField": "region",
+      "locationLabelField": "region"
+    },
+    "panel": {
+      "datasetId": "scores",
+      "template": "record-list",
+      "titleField": "name",
+      "subtitleField": "riskTier",
+      "metrics": [
+        { "label": "Risk Score", "field": "riskScore" },
+        { "label": "Trend", "field": "trend" },
+        { "label": "Debt / GDP", "field": "gdpDebtRatio" },
+        { "label": "CDS Spread", "field": "cdsSpread" }
+      ]
+    }
+  },
+  "assets": {
+    "previews": [
+      {
+        "type": "card",
+        "title": "Country risk ranking",
+        "body": "Scored 0–100 from composite of debt load, political stability, and market stress."
+      },
+      {
+        "type": "card",
+        "title": "CDS spread integration",
+        "body": "Live credit default swap spreads layered against fundamental indicators."
+      }
+    ]
+  }
+}

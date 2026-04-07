@@ -1,0 +1,90 @@
+{
+  "id": "conflict-intensity-scores",
+  "slug": "conflict-intensity-scores",
+  "name": "Conflict Intensity Scores",
+  "version": "1.0.0",
+  "author": "World Monitor Curated",
+  "description": "Sub-national conflict intensity scores aggregated from event data, covering armed clashes, airstrikes, and protest-violence crossovers.",
+  "license": "WM Curated Data License",
+  "category": "geopolitical",
+  "tags": ["conflict", "war", "ceasefire", "military", "armed conflict", "acled", "intensity", "casualties", "airstrike", "displacement", "insurgency", "frontline", "escalation"],
+  "sourceType": "catalog",
+  "visibility": "public",
+  "compatibility": {
+    "variants": ["full", "conflicts"]
+  },
+  "datasets": [
+    {
+      "id": "zones",
+      "name": "Conflict Zones",
+      "format": "json",
+      "url": "/marketplace/data/conflict-intensity-scores.json",
+      "recordPath": "records",
+      "primaryIdField": "id",
+      "pollingIntervalMs": 3600000,
+      "fieldMap": {
+        "id": "id",
+        "name": "name",
+        "country": "country",
+        "region": "region",
+        "intensityScore": "intensityScore",
+        "intensityTier": "intensityTier",
+        "trend": "trend",
+        "eventCount7d": "eventCount7d",
+        "fatalityEst7d": "fatalityEst7d",
+        "lat": "lat",
+        "lon": "lon",
+        "tags": "tags"
+      },
+      "transforms": {
+        "lat": "number",
+        "lon": "number",
+        "intensityScore": "number",
+        "eventCount7d": "number",
+        "fatalityEst7d": "number",
+        "tags": "tags"
+      }
+    }
+  ],
+  "surfaces": {
+    "map": {
+      "datasetId": "zones",
+      "geometryType": "point",
+      "latField": "lat",
+      "lonField": "lon",
+      "style": {
+        "color": "#ff4444",
+        "strokeColor": "#ffcccc",
+        "pointRadius": 50000,
+        "opacity": 0.65,
+        "visibleByDefault": true
+      }
+    },
+    "panel": {
+      "datasetId": "zones",
+      "template": "record-list",
+      "titleField": "name",
+      "subtitleField": "intensityTier",
+      "metrics": [
+        { "label": "Intensity", "field": "intensityScore" },
+        { "label": "Trend", "field": "trend" },
+        { "label": "Events (7d)", "field": "eventCount7d" },
+        { "label": "Est. Fatalities", "field": "fatalityEst7d" }
+      ]
+    }
+  },
+  "assets": {
+    "previews": [
+      {
+        "type": "card",
+        "title": "Hourly event aggregation",
+        "body": "Events classified into armed clash, airstrike, IED, protest-violence, and state repression."
+      },
+      {
+        "type": "card",
+        "title": "Intensity scoring 0–100",
+        "body": "Composite of event count, fatality estimates, geographic spread, and trend acceleration."
+      }
+    ]
+  }
+}

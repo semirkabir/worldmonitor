@@ -47,6 +47,9 @@ export type DataSourceId =
   | 'bis'            // BIS central bank data
   | 'wto_trade'      // WTO trade policy data
   | 'supply_chain'   // Supply chain disruption intelligence
+  | 'sanctions'      // Unified sanctions radar
+  | 'solar_weather'  // NOAA SWPC solar weather
+  | 'renewable_mix'  // Renewable generation mix / grid stress
   | 'security_advisories'  // Government travel/security advisories
   | 'gpsjam'               // GPS/GNSS interference
   | 'webcams';             // Windy live webcams
@@ -115,6 +118,9 @@ const SOURCE_METADATA: Record<DataSourceId, { name: string; requiredForRisk: boo
   bis: { name: 'BIS Central Banks', requiredForRisk: false, panelId: 'economic' },
   wto_trade: { name: 'WTO Trade Policy', requiredForRisk: false, panelId: 'trade-policy' },
   supply_chain: { name: 'Supply Chain Intelligence', requiredForRisk: false, panelId: 'supply-chain' },
+  sanctions: { name: 'Sanctions Radar', requiredForRisk: false, panelId: 'sanctions-tracker' },
+  solar_weather: { name: 'Solar Weather', requiredForRisk: false, panelId: 'solar-weather' },
+  renewable_mix: { name: 'Renewable Energy Mix', requiredForRisk: false, panelId: 'renewable' },
   security_advisories: { name: 'Security Advisories', requiredForRisk: false, panelId: 'security-advisories' },
   gpsjam: { name: 'GPS/GNSS Interference', requiredForRisk: false, panelId: 'map' },
   webcams: { name: 'Live Webcams (Windy)', requiredForRisk: false, panelId: 'live-webcams' },
@@ -442,6 +448,9 @@ const INTELLIGENCE_GAP_MESSAGES: Record<DataSourceId, string> = {
   bis: 'Central bank policy data may be stale—BIS feed unavailable',
   wto_trade: 'Trade policy intelligence unavailable—WTO data not updating',
   supply_chain: 'Supply chain disruption status unavailable—chokepoint monitoring offline',
+  sanctions: 'Sanctions radar unavailable—designation and entity exposure tracking degraded',
+  solar_weather: 'Solar weather dashboard unavailable—geomagnetic storm context missing',
+  renewable_mix: 'Renewable generation mix unavailable—grid transition context missing',
   security_advisories: 'Government travel advisory data unavailable—security alerts may be missed',
   gpsjam: 'GPS/GNSS interference data unavailable—jamming zones undetected',
   webcams: 'Live webcam feeds unavailable—Windy API not responding',

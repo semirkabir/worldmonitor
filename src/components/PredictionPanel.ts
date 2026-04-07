@@ -6,6 +6,16 @@ import { t } from '@/services/i18n';
 export class PredictionPanel extends Panel {
   private onMarketClick?: (market: PredictionMarket) => void;
 
+  private getTheme(title: string): string {
+    const lower = title.toLowerCase();
+    if (/taiwan|china|beijing/.test(lower)) return 'China / Taiwan';
+    if (/iran|israel|gaza|hamas|middle east|houthi/.test(lower)) return 'Middle East';
+    if (/russia|ukraine|putin/.test(lower)) return 'Russia / Ukraine';
+    if (/election|senate|president|congress|trump|biden/.test(lower)) return 'Elections';
+    if (/oil|opec|inflation|fed|recession|tariff/.test(lower)) return 'Macro';
+    return 'Other';
+  }
+
   constructor() {
     super({
       id: 'polymarket',
@@ -31,8 +41,18 @@ export class PredictionPanel extends Panel {
       return;
     }
 
-    const html = data
-      .map((p) => {
+    const orderedMarkets = [...data].sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0));
+    const grouped = new Map<string, PredictionMarket[]>();
+    for (const market of orderedMarkets) {
+      const theme = this.getTheme(market.title);
+      const bucket = grouped.get(theme) ?? [];
+      bucket.push(market);
+      grouped.set(theme, bucket);
+    }
+
+    const html = [...grouped.entries()]
+      .map(([theme, markets]) => {
+        const items = markets.map((p) => {
         const yesPercent = Math.round(p.yesPrice);
         const noPercent = 100 - yesPercent;
         const volumeStr = this.formatVolume(p.volume);
@@ -52,8 +72,9 @@ export class PredictionPanel extends Panel {
           ? `<div class="prediction-meta">${volumeStr ? `<span class="prediction-volume">${t('components.predictions.vol')}: ${volumeStr}</span>` : ''}${expiryHtml}</div>`
           : '';
 
-        const itemHtml = `
+        return `
       <div class="prediction-item" data-slug="${p.slug || ''}" style="cursor: pointer;">
+        <div class="prediction-theme-pill">${escapeHtml(theme)}</div>
         ${titleHtml}
         ${metaHtml}
         <div class="prediction-bar">
@@ -66,7 +87,9 @@ export class PredictionPanel extends Panel {
         </div>
       </div>
     `;
-        return itemHtml;
+      }).join('');
+
+        return `<div class="prediction-group"><div class="prediction-group-title">${escapeHtml(theme)}</div>${items}</div>`;
       })
       .join('');
 
@@ -76,7 +99,7 @@ export class PredictionPanel extends Panel {
     const items = this.element.querySelectorAll('.prediction-item');
     items.forEach((item: Element, index: number) => {
       item.addEventListener('click', () => {
-        const market = data[index];
+        const market = orderedMarkets[index];
         if (market && this.onMarketClick) {
           this.onMarketClick(market);
         }

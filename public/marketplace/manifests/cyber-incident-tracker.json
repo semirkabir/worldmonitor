@@ -1,0 +1,79 @@
+{
+  "id": "cyber-incident-tracker",
+  "slug": "cyber-incident-tracker",
+  "name": "Cyber Incident Tracker",
+  "version": "1.0.0",
+  "author": "World Monitor Curated",
+  "description": "Real-time feed of significant cyber incidents including ransomware, state-sponsored intrusions, and critical infrastructure attacks.",
+  "license": "WM Curated Data License",
+  "category": "cyber",
+  "tags": ["cyberattack", "ransomware", "apt", "vulnerability", "breach", "threat intel", "cve", "ics", "scada", "nation-state", "espionage", "malware", "zero-day"],
+  "sourceType": "catalog",
+  "visibility": "public",
+  "compatibility": {
+    "variants": ["full", "tech"]
+  },
+  "datasets": [
+    {
+      "id": "incidents",
+      "name": "Cyber Incidents",
+      "format": "json",
+      "url": "/marketplace/data/cyber-incident-tracker.json",
+      "recordPath": "records",
+      "primaryIdField": "id",
+      "pollingIntervalMs": 900000,
+      "fieldMap": {
+        "id": "id",
+        "title": "title",
+        "summary": "summary",
+        "type": "type",
+        "severity": "severity",
+        "actor": "actor",
+        "target": "target",
+        "sector": "sector",
+        "country": "country",
+        "reportedAt": "reportedAt",
+        "tags": "tags"
+      },
+      "transforms": {
+        "tags": "tags"
+      }
+    }
+  ],
+  "surfaces": {
+    "search": {
+      "datasetId": "incidents",
+      "titleField": "title",
+      "subtitleField": "summary",
+      "tagsField": "tags",
+      "locationLabelField": "country"
+    },
+    "panel": {
+      "datasetId": "incidents",
+      "template": "record-list",
+      "titleField": "title",
+      "subtitleField": "sector",
+      "descriptionField": "summary",
+      "metrics": [
+        { "label": "Type", "field": "type" },
+        { "label": "Severity", "field": "severity" },
+        { "label": "Actor", "field": "actor" },
+        { "label": "Reported", "field": "reportedAt" }
+      ]
+    }
+  },
+  "assets": {
+    "previews": [
+      {
+        "type": "card",
+        "title": "15-minute refresh cadence",
+        "body": "Aggregated from open threat intel sources, government CERT feeds, and vetted security research."
+      },
+      {
+        "type": "card",
+        "title": "Actor attribution",
+        "body": "APT group tagging and nation-state attribution where attribution confidence is high."
+      }
+    ]
+  }
+}

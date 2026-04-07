@@ -8,6 +8,8 @@ import { StockExchangeRenderer } from '@/components/entity-detail/renderers/stoc
 import { MilitaryBaseRenderer } from '@/components/entity-detail/renderers/military-base';
 import { MilitaryVesselRenderer } from '@/components/entity-detail/renderers/military-vessel';
 import { MilitaryVesselClusterRenderer } from '@/components/entity-detail/renderers/military-vessel-cluster';
+import { MilitaryFlightRenderer } from '@/components/entity-detail/renderers/military-flight';
+import { MilitaryFlightClusterRenderer } from '@/components/entity-detail/renderers/military-flight-cluster';
 import { HotspotRenderer } from '@/components/entity-detail/renderers/hotspot';
 import { PipelineRenderer } from '@/components/entity-detail/renderers/pipeline';
 import { NuclearRenderer } from '@/components/entity-detail/renderers/nuclear';
@@ -25,19 +27,19 @@ import { CompanyRenderer } from '@/components/entity-detail/renderers/company';
 import { WeatherAlertRenderer } from '@/components/entity-detail/renderers/weather';
 import { APTGroupRenderer } from '@/components/entity-detail/renderers/apt';
 import { PredictionMarketRenderer } from '@/components/entity-detail/renderers/prediction-market';
+import { ConflictRenderer } from '@/components/entity-detail/renderers/conflict';
 
 export class EntityIntelManager implements AppModule {
   private ctx: AppContext;
   private panel: EntityDetailPanel | null = null;
   private hotspotRenderer: HotspotRenderer;
   private tickerClickHandler: ((e: MouseEvent) => void) | null = null;
+  private entityOpenHandler: ((e: Event) => void) | null = null;
 
   constructor(ctx: AppContext) {
     this.ctx = ctx;
     this.hotspotRenderer = new HotspotRenderer();
   }
-
-  private tickerClickHandler: ((e: MouseEvent) => void) | null = null;
 
   init(): void {
     this.panel = new EntityDetailPanel(this.buildRegistry());
@@ -67,6 +69,14 @@ export class EntityIntelManager implements AppModule {
     };
     document.addEventListener('click', this.tickerClickHandler);
 
+    this.entityOpenHandler = (e: Event) => {
+      const detail = (e as CustomEvent<{ type: PopupType; data: unknown }>).detail;
+      if (!detail) return;
+      this.ctx.countryBriefPage?.hide();
+      this.panel?.show(detail.type, detail.data);
+    };
+    document.addEventListener('wm:open-entity-detail', this.entityOpenHandler as EventListener);
+
     this.panel.onClose(() => {});
   }
 
@@ -74,6 +84,10 @@ export class EntityIntelManager implements AppModule {
     if (this.tickerClickHandler) {
       document.removeEventListener('click', this.tickerClickHandler);
       this.tickerClickHandler = null;
+    }
+    if (this.entityOpenHandler) {
+      document.removeEventListener('wm:open-entity-detail', this.entityOpenHandler as EventListener);
+      this.entityOpenHandler = null;
     }
     this.panel?.hide();
     this.ctx.entityDetailPanel = null;
@@ -83,10 +97,13 @@ export class EntityIntelManager implements AppModule {
   private buildRegistry(): EntityRendererRegistry {
     return {
       cable: new CableRenderer(),
+      conflict: new ConflictRenderer(),
       port: new PortRenderer(),
       stockExchange: new StockExchangeRenderer(),
       base: new MilitaryBaseRenderer(),
+      militaryFlight: new MilitaryFlightRenderer(),
       militaryVessel: new MilitaryVesselRenderer(),
+      militaryFlightCluster: new MilitaryFlightClusterRenderer(),
       militaryVesselCluster: new MilitaryVesselClusterRenderer(),
       hotspot: this.hotspotRenderer,
       pipeline: new PipelineRenderer(),

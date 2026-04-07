@@ -308,6 +308,143 @@
   font-style: italic;
 }
 
+.edp-conflict-cost-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.16), rgba(127, 29, 29, 0.12));
+}
+
+.edp-conflict-cost-label,
+.edp-conflict-source-line {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+
+.edp-conflict-cost-value {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  color: #ffd4d4;
+}
+
+.edp-conflict-cost-formula {
+  font-size: 13px;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--text) 90%, white 10%);
+}
+
+.edp-conflict-snapshot-grid {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  align-items: stretch;
+}
+
+.edp-conflict-fact-wide {
+  grid-column: span 2;
+}
+
+.edp-conflict-fact-emphasis {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.14), rgba(127, 29, 29, 0.09));
+  border-color: rgba(239, 68, 68, 0.24);
+}
+
+.edp-conflict-fact-emphasis .edp-fact-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffd6d6;
+}
+
+.edp-conflict-casualty-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.edp-conflict-casualty-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+
+.edp-conflict-casualty-us {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0.05));
+}
+
+.edp-conflict-casualty-military {
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.05));
+}
+
+.edp-conflict-casualty-civilian {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.14), rgba(239, 68, 68, 0.06));
+}
+
+.edp-conflict-casualty-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.edp-conflict-casualty-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.edp-conflict-casualty-label {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.edp-conflict-casualty-value {
+  font-size: 22px;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.edp-conflict-casualty-row-killed .edp-conflict-casualty-value {
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.edp-conflict-casualty-us .edp-conflict-casualty-row-killed .edp-conflict-casualty-value {
+  color: #93c5fd;
+}
+
+.edp-conflict-casualty-military .edp-conflict-casualty-row-killed .edp-conflict-casualty-value {
+  color: #fbbf24;
+}
+
+.edp-conflict-casualty-civilian .edp-conflict-casualty-row-killed .edp-conflict-casualty-value {
+  color: #fda4af;
+}
+
+.edp-conflict-casualty-row-wounded .edp-conflict-casualty-value {
+  font-size: 20px;
+  color: color-mix(in srgb, var(--text) 90%, var(--text-faint) 10%);
+}
+
+.edp-conflict-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.edp-conflict-list-item {
+  color: var(--text);
+  line-height: 1.5;
+}
+
 .edp-hotspot-detail .edp-card:last-child {
   margin-bottom: 0;
 }
@@ -1284,6 +1421,9 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-height: min(48vh, 620px);
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .edp-vessel-item {
@@ -1291,6 +1431,25 @@
   background: color-mix(in srgb, var(--bg) 40%, transparent);
   border: 1px solid var(--border);
   border-radius: 6px;
+}
+
+.edp-vessel-item-button {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.edp-vessel-item-button:hover {
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  background: color-mix(in srgb, var(--surface) 78%, var(--accent) 10%);
+  transform: translateY(-1px);
+}
+
+.edp-vessel-item-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 65%, white 12%);
+  outline-offset: 2px;
 }
 
 .edp-vessel-name-row {
@@ -1350,6 +1509,14 @@
   color: var(--text-faint);
   margin-top: 4px;
   line-height: 1.4;
+}
+
+.edp-vessel-open-hint {
+  margin-top: 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
 }
 
 
@@ -1441,8 +1608,13 @@
   }
 
   .edp-fact-grid,
-  .edp-hotspot-score-top {
+  .edp-hotspot-score-top,
+  .edp-conflict-casualty-grid {
     grid-template-columns: 1fr;
+  }
+
+  .edp-conflict-fact-wide {
+    grid-column: auto;
   }
 
   .edp-hotspot-component {

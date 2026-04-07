@@ -48,6 +48,7 @@ const SIGNAL_ICONS: Record<SignalType, string> = {
   satellite_fire: '🔥',
   temporal_anomaly: '📊',
   active_strike: '💥',
+  supplemental: '🧩',
 };
 
 function timeAgo(ts: number): string {

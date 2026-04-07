@@ -26,6 +26,7 @@ import { t } from '@/services/i18n';
 import { saveToStorage, setTheme } from '@/utils';
 import { CountryIntelManager } from '@/app/country-intel';
 import { searchPredictions } from '@/services/prediction';
+import { getCachedSanctions } from '@/services/sanctions';
 import { getQuickActionCommandIds } from '@/components/search-ux';
 
 export interface SearchManagerCallbacks {
@@ -497,6 +498,12 @@ export class SearchManager implements AppModule {
         this.ctx.map?.setTimeRange(action as import('@/components').TimeRange);
         break;
 
+      case 'actions':
+        if (action === 'open-marketplace') {
+          void this.ctx.marketplace?.openModal();
+        }
+        break;
+
       case 'country': {
         const name = TIER1_COUNTRIES[action]
           || CURATED_COUNTRIES[action]?.name
@@ -563,6 +570,16 @@ export class SearchManager implements AppModule {
         title: p.title,
         subtitle: `${Math.round(p.yesPrice)}% probability`,
         data: p,
+      })));
+    }
+
+    const sanctions = getCachedSanctions();
+    if (sanctions.length > 0) {
+      this.ctx.searchModal.registerSource('sanction', sanctions.map(entity => ({
+        id: entity.id,
+        title: entity.name,
+        subtitle: `${entity.source} · ${entity.programs.slice(0, 2).join(', ')}`,
+        data: { name: entity.name, id: entity.id },
       })));
     }
 

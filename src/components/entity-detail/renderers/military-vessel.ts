@@ -35,6 +35,13 @@ const DEPLOYMENT_STATUS_LABELS: Record<string, string> = {
   unknown: 'Unknown',
 };
 
+const DEPLOYMENT_STATUS_BADGE_CLASS: Record<string, string> = {
+  deployed: 'edp-badge edp-badge-deployed',
+  underway: 'edp-badge edp-badge-warning',
+  'in-port': 'edp-badge edp-badge-dim',
+  unknown: 'edp-badge edp-badge-dim',
+};
+
 interface VesselPanelData {
   vessel: MilitaryVessel;
   photo: { url: string; source: string; credit?: string } | null;
@@ -67,9 +74,7 @@ function buildHeader(container: HTMLElement, ctx: EntityRenderContext, vessel: M
     badgeRow.append(ctx.badge('DARK TARGET', 'edp-badge edp-badge-severity'));
   } else if (vessel.usniDeploymentStatus && vessel.usniDeploymentStatus !== 'unknown') {
     const statusLabel = DEPLOYMENT_STATUS_LABELS[vessel.usniDeploymentStatus] || vessel.usniDeploymentStatus;
-    const badgeCls = vessel.usniDeploymentStatus === 'deployed'
-      ? 'edp-badge edp-badge-deployed'
-      : 'edp-badge edp-badge-dim';
+    const badgeCls = DEPLOYMENT_STATUS_BADGE_CLASS[vessel.usniDeploymentStatus] || 'edp-badge edp-badge-dim';
     badgeRow.append(ctx.badge(statusLabel.toUpperCase(), badgeCls));
   }
 
@@ -256,6 +261,19 @@ export class MilitaryVesselRenderer implements EntityRenderer {
       const [intelCard, intelBody] = ctx.sectionCard('USNI Intelligence');
       intelBody.append(ctx.el('p', 'edp-description', vessel.usniActivityDescription));
       container.append(intelCard);
+    }
+
+    if (vessel.usniArticleUrl) {
+      const [coverageCard, coverageBody] = ctx.sectionCard('Related Coverage');
+      const link = ctx.el('a', 'edp-wiki-link') as HTMLAnchorElement;
+      link.href = vessel.usniArticleUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = vessel.usniArticleDate
+        ? `USNI Fleet Update (${new Date(vessel.usniArticleDate).toLocaleDateString()})`
+        : 'USNI Fleet Update';
+      coverageBody.append(link);
+      container.append(coverageCard);
     }
 
     if (vessel.note) {

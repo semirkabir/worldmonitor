@@ -7,7 +7,7 @@
     "author": "World Monitor Curated",
     "description": "Refinery and processing nodes across rare earth, lithium, cobalt, and nickel supply chains.",
     "category": "supply-chain",
-    "tags": ["minerals", "refining", "supply chain", "processing"],
+    "tags": ["minerals", "refining", "supply chain", "processing", "lithium", "cobalt", "nickel", "rare earth", "ev battery", "china", "africa", "capacity", "operator", "bottleneck"],
     "surfaces": ["map", "search", "panel"],
     "compatibility": {
       "variants": ["full", "finance", "commodity"]
@@ -22,7 +22,7 @@
     "author": "World Monitor Curated",
     "description": "High-risk shipping corridors with premium deltas and current insurer posture summaries.",
     "category": "maritime-risk",
-    "tags": ["shipping", "insurance", "red sea", "routing"],
+    "tags": ["shipping", "insurance", "red sea", "routing", "piracy", "war risk", "lloyd's", "hull", "premium", "bab el-mandeb", "hormuz", "taiwan strait", "rerouting"],
     "surfaces": ["map", "search", "panel"],
     "compatibility": {
       "variants": ["full", "finance", "conflicts", "commodity"]
@@ -37,11 +37,131 @@
     "author": "World Monitor Curated",
     "description": "Curated equities tied to defense autonomy, satellite infrastructure, and AI compute demand.",
     "category": "markets",
-    "tags": ["equities", "ai", "defense", "quotes"],
+    "tags": ["equities", "ai", "defense", "quotes", "nasdaq", "lockheed", "palantir", "nvidia", "autonomous systems", "satellite", "compute", "drone", "c4isr"],
     "surfaces": ["search", "panel"],
     "compatibility": {
       "variants": ["full", "tech", "finance"]
     },
     "manifestUrl": "/marketplace/manifests/ai-defense-quote-board.json"
+  },
+  {
+    "id": "sovereign-risk-index",
+    "slug": "sovereign-risk-index",
+    "name": "Sovereign Risk Index",
+    "version": "1.0.0",
+    "author": "World Monitor Curated",
+    "description": "Country-level sovereign risk scores derived from debt dynamics, political stability indices, and market stress signals.",
+    "category": "geopolitical",
+    "tags": ["sovereign risk", "political stability", "default", "country rating", "emerging markets", "creditworthiness", "debt", "imf", "fiscal", "cds spread", "currency risk"],
+    "surfaces": ["search", "panel"],
+    "compatibility": {
+      "variants": ["full", "finance"]
+    },
+    "manifestUrl": "/marketplace/manifests/sovereign-risk-index.json"
+  },
+  {
+    "id": "energy-infrastructure-map",
+    "slug": "energy-infrastructure-map",
+    "name": "Energy Infrastructure Map",
+    "version": "1.0.0",
+    "author": "World Monitor Curated",
+    "description": "Global oil, gas, and LNG infrastructure including pipelines, terminals, and critical chokepoints.",
+    "category": "energy",
+    "tags": ["oil", "gas", "pipeline", "lng", "terminal", "critical infrastructure", "energy security", "opec", "refinery", "chokepoint", "natural gas", "petrochemical"],
+    "surfaces": ["map", "search", "panel"],
+    "compatibility": {
+      "variants": ["full", "commodity", "finance"]
+    },
+    "manifestUrl": "/marketplace/manifests/energy-infrastructure-map.json"
+  },
+  {
+    "id": "cyber-incident-tracker",
+    "slug": "cyber-incident-tracker",
+    "name": "Cyber Incident Tracker",
+    "version": "1.0.0",
+    "author": "World Monitor Curated",
+    "description": "Real-time feed of significant cyber incidents including ransomware, state-sponsored intrusions, and critical infrastructure attacks.",
+    "category": "cyber",
+    "tags": ["cyberattack", "ransomware", "apt", "vulnerability", "breach", "threat intel", "cve", "ics", "scada", "nation-state", "espionage", "malware", "zero-day"],
+    "surfaces": ["panel", "search"],
+    "compatibility": {
+      "variants": ["full", "tech"]
+    },
+    "manifestUrl": "/marketplace/manifests/cyber-incident-tracker.json"
+  },
+  {
+    "id": "climate-risk-zones",
+    "slug": "climate-risk-zones",
+    "name": "Climate Risk Zones",
+    "version": "1.0.0",
+    "author": "World Monitor Curated",
+    "description": "Physical climate risk layers including flood exposure, wildfire index, drought severity, and extreme heat frequency.",
+    "category": "climate",
+    "tags": ["flood", "drought", "wildfire", "hurricane", "climate risk", "sea level", "heat stress", "adaptation", "noaa", "ipcc", "physical risk", "agriculture", "water stress"],
+    "surfaces": ["map", "panel"],
+    "compatibility": {
+      "variants": ["full", "happy", "commodity"]
+    },
+    "manifestUrl": "/marketplace/manifests/climate-risk-zones.json"
+  },
+  {
+    "id": "port-congestion-monitor",
+    "slug": "port-congestion-monitor",
+    "name": "Port Congestion Monitor",
+    "version": "1.0.0",
+    "author": "World Monitor Curated",
+    "description": "Live port congestion metrics for major global terminals including vessel dwell times, berth utilization, and queue depth.",
+    "category": "trade",
+    "tags": ["port", "shipping", "logistics", "congestion", "dwell time", "container", "supply chain", "throughput", "teu", "los angeles", "rotterdam", "singapore", "waiting time"],
+    "surfaces": ["map", "panel", "search"],
+    "compatibility": {
+      "variants": ["full", "commodity", "finance"]
+    },
+    "manifestUrl": "/marketplace/manifests/port-congestion-monitor.json"
+  },
+  {
+    "id": "satellite-launch-manifest",
+    "slug": "satellite-launch-manifest",
+    "name": "Satellite Launch Manifest",
+    "version": "1.0.0",
+    "author": "World Monitor Curated",
+    "description": "Upcoming and recent satellite launches with orbital parameters, payload classification, and operator profiles.",
+    "category": "space",
+    "tags": ["satellite", "launch", "orbit", "leo", "geo", "payload", "launch vehicle", "spacex", "arianespace", "roscosmos", "reconnaissance", "iss", "debris"],
+    "surfaces": ["panel", "search"],
+    "compatibility": {
+      "variants": ["full", "tech"]
+    },
+    "manifestUrl": "/marketplace/manifests/satellite-launch-manifest.json"
+  },
+  {
+    "id": "conflict-intensity-scores",
+    "slug": "conflict-intensity-scores",
+    "name": "Conflict Intensity Scores",
+    "version": "1.0.0",
+    "author": "World Monitor Curated",
+    "description": "Sub-national conflict intensity scores aggregated from event data, covering armed clashes, airstrikes, and protest-violence crossovers.",
+    "category": "geopolitical",
+    "tags": ["conflict", "war", "ceasefire", "military", "armed conflict", "acled", "intensity", "casualties", "airstrike", "displacement", "insurgency", "frontline", "escalation"],
+    "surfaces": ["map", "panel"],
+    "compatibility": {
+      "variants": ["full", "conflicts"]
+    },
+    "manifestUrl": "/marketplace/manifests/conflict-intensity-scores.json"
+  },
+  {
+    "id": "undersea-cable-map",
+    "slug": "undersea-cable-map",
+    "name": "Undersea Cable Infrastructure",
+    "version": "1.0.0",
+    "author": "World Monitor Curated",
+    "description": "Global submarine cable network with landing stations, cable system operators, capacity tiers, and known vulnerability zones.",
+    "category": "infrastructure",
+    "tags": ["submarine cable", "internet", "telecom", "fiber", "bandwidth", "critical infrastructure", "landing station", "cable cut", "sabotage", "pacific", "atlantic", "resilience"],
+    "surfaces": ["map", "search", "panel"],
+    "compatibility": {
+      "variants": ["full", "tech"]
+    },
+    "manifestUrl": "/marketplace/manifests/undersea-cable-map.json"
   }
 ]

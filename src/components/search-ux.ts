@@ -10,6 +10,7 @@ export function describeCommandAction(command: Command): string {
   if (command.id.startsWith('layers:')) return 'Apply a layer preset';
   if (command.id.startsWith('view:')) return 'Change the current view';
   if (command.id.startsWith('time:')) return 'Update the map time window';
+  if (command.id === 'actions:open-marketplace') return 'Open the Marketplace data packages window';
   return 'Run this command';
 }
 
@@ -39,8 +40,9 @@ export function getSearchResultActionLabel(type: SearchResultType): string {
     financialcenter: 'Inspect financial hub',
     centralbank: 'Inspect central bank',
     commodityhub: 'Inspect commodity hub',
+    sanction: 'Open sanctions tracker',
     company: 'Open company detail panel',
-    marketplace: 'Open marketplace dataset panel',
+    marketplace: 'Open in Marketplace',
   };
   return labels[type];
 }

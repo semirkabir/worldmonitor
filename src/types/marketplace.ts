@@ -152,7 +152,7 @@ export interface MarketplaceSearchResultData {
   itemId: string;
   datasetId: string;
   recordId: string;
-  preferredOpenAction: 'panel' | 'map';
+  preferredOpenAction: 'panel' | 'map' | 'modal';
   hasGeometry: boolean;
 }
 

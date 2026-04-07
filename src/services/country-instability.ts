@@ -1,4 +1,5 @@
 import type { SocialUnrestEvent, MilitaryFlight, MilitaryVessel, ClusteredEvent, InternetOutage, AisDisruptionEvent, CyberThreat } from '@/types';
+import { supplementalBus } from './supplemental-signal-bus';
 import type { AirportDelayAlert } from '@/services/aviation';
 import type { SecurityAdvisory } from '@/services/security-advisories';
 import type { TemporalAnomaly } from '@/services/temporal-baseline';
@@ -70,6 +71,7 @@ let learningStartTime: number | null = null;
 let isLearningComplete = false;
 let hasCachedScoresAvailable = false;
 let intelligenceSignalsLoaded = false;
+const temporalAnomaliesByType = new Map<string, TemporalAnomaly[]>();
 
 export function setIntelligenceSignalsLoaded(): void {
   intelligenceSignalsLoaded = true;
@@ -696,23 +698,35 @@ export function ingestCyberThreatsForCII(threats: CyberThreat[]): void {
   }
 }
 
-export function ingestTemporalAnomaliesForCII(anomalies: TemporalAnomaly[]): void {
+export function ingestTemporalAnomaliesForCII(anomalies: TemporalAnomaly[], trackedTypes?: string[]): void {
+  const typesToUpdate = trackedTypes?.length
+    ? trackedTypes
+    : [...new Set(anomalies.map(anomaly => anomaly.type))];
+
+  for (const type of typesToUpdate) {
+    const matches = anomalies.filter(anomaly => anomaly.type === type);
+    if (matches.length > 0) temporalAnomaliesByType.set(type, matches);
+    else temporalAnomaliesByType.delete(type);
+  }
+
   for (const [, data] of countryDataMap) {
     data.temporalAnomalyCount = 0;
     data.temporalAnomalyCriticalCount = 0;
   }
 
-  for (const anomaly of anomalies) {
-    const region = anomaly.region.trim();
-    if (!region || region.toLowerCase() === 'global') continue;
-    processedCount++;
+  for (const group of temporalAnomaliesByType.values()) {
+    for (const anomaly of group) {
+      const region = anomaly.region.trim();
+      if (!region || region.toLowerCase() === 'global') continue;
+      processedCount++;
 
-    const code = ensureISO2(region) || normalizeCountryName(region);
-    if (!code) { unmappedCount++; continue; }
-    if (!countryDataMap.has(code)) countryDataMap.set(code, initCountryData());
-    const data = countryDataMap.get(code)!;
-    data.temporalAnomalyCount++;
-    if (anomaly.severity === 'critical') data.temporalAnomalyCriticalCount++;
+      const code = ensureISO2(region) || normalizeCountryName(region);
+      if (!code) { unmappedCount++; continue; }
+      if (!countryDataMap.has(code)) countryDataMap.set(code, initCountryData());
+      const data = countryDataMap.get(code)!;
+      data.temporalAnomalyCount++;
+      if (anomaly.severity === 'critical') data.temporalAnomalyCriticalCount++;
+    }
   }
 }
 
@@ -937,7 +951,8 @@ export function calculateCII(): CountryScore[] {
 
     const advisoryBoost = getAdvisoryBoost(data);
     const supplementalSignalBoost = getSupplementalSignalBoost(data);
-    const blendedScore = baselineRisk * 0.4 + eventScore * 0.6 + hotspotBoost + newsUrgencyBoost + focalBoost + displacementBoost + climateBoost + getOrefBlendBoost(code, data) + advisoryBoost + supplementalSignalBoost;
+    const busBoost = supplementalBus.getCountryCIIBoost(code);
+    const blendedScore = baselineRisk * 0.4 + eventScore * 0.6 + hotspotBoost + newsUrgencyBoost + focalBoost + displacementBoost + climateBoost + getOrefBlendBoost(code, data) + advisoryBoost + supplementalSignalBoost + busBoost;
 
     const floor = Math.max(getUcdpFloor(data), getAdvisoryFloor(data));
     const score = Math.round(Math.min(100, Math.max(floor, blendedScore)));
@@ -992,7 +1007,8 @@ export function getCountryScore(code: string): number | null {
   const climateBoost = data.climateStress;
   const advisoryBoost = getAdvisoryBoost(data);
   const supplementalSignalBoost = getSupplementalSignalBoost(data);
-  const blendedScore = baselineRisk * 0.4 + eventScore * 0.6 + hotspotBoost + newsUrgencyBoost + focalBoost + displacementBoost + climateBoost + getOrefBlendBoost(code, data) + advisoryBoost + supplementalSignalBoost;
+  const busBoost = supplementalBus.getCountryCIIBoost(code);
+  const blendedScore = baselineRisk * 0.4 + eventScore * 0.6 + hotspotBoost + newsUrgencyBoost + focalBoost + displacementBoost + climateBoost + getOrefBlendBoost(code, data) + advisoryBoost + supplementalSignalBoost + busBoost;
 
   const floor = Math.max(getUcdpFloor(data), getAdvisoryFloor(data));
   return Math.round(Math.min(100, Math.max(floor, blendedScore)));

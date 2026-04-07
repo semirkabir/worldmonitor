@@ -1,6 +1,7 @@
 import { getLocationName, type GeoConvergenceAlert } from './geo-convergence';
 import type { CountryScore } from './country-instability';
 import type { CascadeResult, CascadeImpactLevel } from '@/types';
+import type { SupplementalSignal } from './supplemental-signal-bus';
 import { calculateCII, isInLearningMode } from './country-instability';
 import { getCountryNameByCode } from './country-geometry';
 import { t } from '@/services/i18n';
@@ -8,7 +9,7 @@ import type { TheaterPostureSummary } from '@/services/military-surge';
 import { haversineKm } from '@/utils/geo';
 
 export type AlertPriority = 'critical' | 'high' | 'medium' | 'low';
-export type AlertType = 'convergence' | 'cii_spike' | 'cascade' | 'composite';
+export type AlertType = 'convergence' | 'cii_spike' | 'cascade' | 'supplemental' | 'composite';
 
 export interface UnifiedAlert {
   id: string;
@@ -20,6 +21,7 @@ export interface UnifiedAlert {
     convergence?: GeoConvergenceAlert;
     ciiChange?: CIIChangeAlert;
     cascade?: CascadeAlert;
+    supplemental?: SupplementalSourceAlert;
   };
   location?: { lat: number; lon: number };
   countries: string[];
@@ -42,6 +44,13 @@ export interface CascadeAlert {
   sourceType: string;
   countriesAffected: number;
   highestImpact: CascadeImpactLevel;
+}
+
+export interface SupplementalSourceAlert {
+  sourceId: string;
+  sourceName: string;
+  label: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
 }
 
 export interface StrategicRiskOverview {
@@ -173,6 +182,39 @@ export function createCascadeAlert(cascade: CascadeResult): UnifiedAlert | null 
       : undefined,
     countries: cascade.countriesAffected.map(c => c.country),
     timestamp: new Date(),
+  };
+
+  return addAndMergeAlert(alert);
+}
+
+function slugifyFragment(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 40);
+}
+
+export function createSupplementalAlert(signal: SupplementalSignal): UnifiedAlert | null {
+  if (signal.severity !== 'high' && signal.severity !== 'critical') return null;
+
+  const countryLabel = signal.country && signal.country !== 'XX'
+    ? getCountryDisplayName(signal.country)
+    : 'Global';
+
+  const alert: UnifiedAlert = {
+    id: `supp-${signal.sourceId}-${signal.country || 'XX'}-${slugifyFragment(signal.label)}`,
+    type: 'supplemental',
+    priority: signal.severity,
+    title: `${signal.sourceName}: ${countryLabel}`,
+    summary: signal.label,
+    components: {
+      supplemental: {
+        sourceId: signal.sourceId,
+        sourceName: signal.sourceName,
+        label: signal.label,
+        severity: signal.severity,
+      },
+    },
+    location: signal.lat != null && signal.lon != null ? { lat: signal.lat, lon: signal.lon } : undefined,
+    countries: signal.country && signal.country !== 'XX' ? [signal.country] : [],
+    timestamp: signal.timestamp,
   };
 
   return addAndMergeAlert(alert);

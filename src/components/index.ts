@@ -61,3 +61,4 @@ export * from './IPOCalendarPanel';
 export * from './InsiderTradingPanel';
 export * from './SocialSentimentPanel';
 export * from './OptionsChainPanel';
+export * from './SolarWeatherPanel';

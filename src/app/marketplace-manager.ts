@@ -74,6 +74,12 @@ export class MarketplaceManager implements AppModule {
   }
 
   public openSearchResult(data: MarketplaceSearchResultData): void {
+    if (data.preferredOpenAction === 'modal') {
+      // Catalog item — open the marketplace modal and pre-select this item
+      this.modal.preSelectItem(data.itemId);
+      void this.openModal();
+      return;
+    }
     this.openRecord({
       itemId: data.itemId,
       datasetId: data.datasetId,

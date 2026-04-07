@@ -168,6 +168,7 @@ export class MapPopup {
   private sheetCurrentOffset = 0;
   private readonly mobileDismissThreshold = 96;
   private outsideListenerTimeoutId: number | null = null;
+  private currentData: PopupData | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -175,6 +176,7 @@ export class MapPopup {
 
   public show(data: PopupData): void {
     this.hide();
+    this.currentData = data;
 
     this.isMobileSheet = isMobileDevice();
     this.popup = document.createElement('div');
@@ -217,6 +219,34 @@ export class MapPopup {
         const expanded = hidden.style.display !== 'none';
         hidden.style.display = expanded ? 'none' : '';
         toggle.textContent = expanded ? (toggle.dataset.more ?? '') : (toggle.dataset.less ?? '');
+        return;
+      }
+
+      const vesselRow = target.closest('.cluster-vessel-item[data-vessel-index]') as HTMLButtonElement | null;
+      if (vesselRow && this.currentData?.type === 'militaryVesselCluster') {
+        const cluster = this.currentData.data as MilitaryVesselCluster;
+        const index = Number(vesselRow.dataset.vesselIndex);
+        const vessel = Number.isInteger(index) ? cluster.vessels[index] : undefined;
+        if (vessel) {
+          document.dispatchEvent(new CustomEvent('wm:open-entity-detail', {
+            detail: { type: 'militaryVessel', data: vessel },
+          }));
+          this.hide();
+        }
+        return;
+      }
+
+      const flightRow = target.closest('.cluster-flight-item[data-flight-index]') as HTMLButtonElement | null;
+      if (flightRow && this.currentData?.type === 'militaryFlightCluster') {
+        const cluster = this.currentData.data as MilitaryFlightCluster;
+        const index = Number(flightRow.dataset.flightIndex);
+        const flight = Number.isInteger(index) ? cluster.flights[index] : undefined;
+        if (flight) {
+          document.dispatchEvent(new CustomEvent('wm:open-entity-detail', {
+            detail: { type: 'militaryFlight', data: flight },
+          }));
+          this.hide();
+        }
       }
     });
 
@@ -399,6 +429,7 @@ export class MapPopup {
       this.popup.removeEventListener('touchcancel', this.handleSheetTouchEnd);
       this.popup.remove();
       this.popup = null;
+      this.currentData = null;
       this.isMobileSheet = false;
       this.sheetTouchStartY = null;
       this.sheetCurrentOffset = 0;
@@ -2361,12 +2392,18 @@ export class MapPopup {
     const activityTypeLabel = escapeHtml(activityType.toUpperCase());
     const dominantOperator = cluster.dominantOperator ? escapeHtml(cluster.dominantOperator.toUpperCase()) : '';
     const flightSummary = cluster.flights
-      .slice(0, 5)
-      .map(f => `<div class="cluster-flight-item">${escapeHtml(f.callsign)} - ${escapeHtml(f.aircraftType)}</div>`)
+      .map((f, index) => `
+        <button type="button" class="cluster-flight-item" data-flight-index="${index}">
+          <div class="cluster-vessel-topline">
+            <span class="cluster-vessel-name">${escapeHtml(f.callsign || f.id)}</span>
+            ${f.registration ? `<span class="cluster-vessel-hull">${escapeHtml(f.registration)}</span>` : ''}
+            <span class="cluster-vessel-status ${f.confidence === 'high' ? 'deployed' : f.confidence === 'medium' ? 'underway' : 'dim'}">${escapeHtml(f.aircraftType.toUpperCase())}</span>
+          </div>
+          <div class="cluster-vessel-meta">${escapeHtml(f.aircraftModel || f.aircraftType)} · ${escapeHtml(f.operatorCountry || f.operator)}</div>
+          ${f.note ? `<div class="cluster-vessel-note">${escapeHtml(f.note)}</div>` : ''}
+        </button>
+      `)
       .join('');
-    const moreFlights = cluster.flightCount > 5
-      ? `<div class="cluster-more">${t('popups.militaryCluster.moreAircraft', { count: String(cluster.flightCount - 5) })}</div>`
-      : '';
 
     return `
       <div class="popup-header military-cluster">
@@ -2396,7 +2433,6 @@ export class MapPopup {
           <span class="section-label">${t('popups.militaryCluster.trackedAircraft')}</span>
           <div class="cluster-flights">
             ${flightSummary}
-            ${moreFlights}
           </div>
         </div>
       </div>
@@ -2423,23 +2459,30 @@ export class MapPopup {
     const clusterName = escapeHtml(cluster.name);
     const activityTypeLabel = escapeHtml(activityType.toUpperCase());
     const region = cluster.region ? escapeHtml(cluster.region) : '';
-    const visibleVessels = cluster.vessels
-      .slice(0, 5)
-      .map(v => `<div class="cluster-vessel-item">${escapeHtml(v.name)} - ${escapeHtml(v.vesselType)}</div>`)
+    const vesselSummary = cluster.vessels
+      .map((v, index) => {
+        const typeLabel = escapeHtml(v.vesselType === 'unknown' ? 'Vessel' : v.vesselType);
+        const hull = v.hullNumber ? `<span class="cluster-vessel-hull">${escapeHtml(v.hullNumber)}</span>` : '';
+        const operator = escapeHtml(v.operatorCountry || v.operator || 'Navy');
+        const note = v.note ? `<div class="cluster-vessel-note">${escapeHtml(v.note)}</div>` : '';
+        const status = v.isDark
+          ? '<span class="cluster-vessel-status critical">DARK</span>'
+          : v.usniDeploymentStatus && v.usniDeploymentStatus !== 'unknown'
+            ? `<span class="cluster-vessel-status ${v.usniDeploymentStatus === 'deployed' ? 'deployed' : v.usniDeploymentStatus === 'underway' ? 'underway' : 'dim'}">${escapeHtml(v.usniDeploymentStatus.replace('-', ' ').toUpperCase())}</span>`
+            : '';
+        return `
+          <button type="button" class="cluster-vessel-item" data-vessel-index="${index}">
+            <div class="cluster-vessel-topline">
+              <span class="cluster-vessel-name">${escapeHtml(v.name)}</span>
+              ${hull}
+              ${status}
+            </div>
+            <div class="cluster-vessel-meta">${typeLabel} · ${operator}</div>
+            ${note}
+          </button>
+        `;
+      })
       .join('');
-    const hiddenVessels = cluster.vessels.length > 5
-      ? cluster.vessels
-          .slice(5)
-          .map(v => `<div class="cluster-vessel-item">${escapeHtml(v.name)} - ${escapeHtml(v.vesselType)}</div>`)
-          .join('')
-      : '';
-    const hiddenCount = cluster.vessels.length - 5;
-    const moreLabel = escapeHtml(t('popups.militaryCluster.moreVessels', { count: String(hiddenCount) }));
-    const lessLabel = escapeHtml(t('popups.militaryCluster.showLess'));
-    const vesselSummary = hiddenVessels
-      ? `${visibleVessels}<div class="cluster-vessels-hidden" style="display:none">${hiddenVessels}</div>`
-        + `<button type="button" class="cluster-toggle" data-more="${moreLabel}" data-less="${lessLabel}">${moreLabel}</button>`
-      : visibleVessels;
 
     return `
       <div class="popup-header military-cluster">

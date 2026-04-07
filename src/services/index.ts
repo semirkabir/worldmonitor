@@ -41,3 +41,5 @@ export * from './trade';
 export * from './supply-chain';
 export * from './breaking-news-alerts';
 export * from './user-auth';
+export * from './sanctions';
+export * from './solar-weather';

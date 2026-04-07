@@ -1,0 +1,79 @@
+{
+  "id": "satellite-launch-manifest",
+  "slug": "satellite-launch-manifest",
+  "name": "Satellite Launch Manifest",
+  "version": "1.0.0",
+  "author": "World Monitor Curated",
+  "description": "Upcoming and recent satellite launches with orbital parameters, payload classification, and operator profiles.",
+  "license": "WM Curated Data License",
+  "category": "space",
+  "tags": ["satellite", "launch", "orbit", "leo", "geo", "payload", "launch vehicle", "spacex", "arianespace", "roscosmos", "reconnaissance", "iss", "debris"],
+  "sourceType": "catalog",
+  "visibility": "public",
+  "compatibility": {
+    "variants": ["full", "tech"]
+  },
+  "datasets": [
+    {
+      "id": "launches",
+      "name": "Launch Manifest",
+      "format": "json",
+      "url": "/marketplace/data/satellite-launch-manifest.json",
+      "recordPath": "records",
+      "primaryIdField": "id",
+      "pollingIntervalMs": 3600000,
+      "fieldMap": {
+        "id": "id",
+        "name": "name",
+        "vehicle": "vehicle",
+        "operator": "operator",
+        "payload": "payload",
+        "orbit": "orbit",
+        "launchSite": "launchSite",
+        "scheduledDate": "scheduledDate",
+        "status": "status",
+        "classification": "classification",
+        "tags": "tags"
+      },
+      "transforms": {
+        "tags": "tags"
+      }
+    }
+  ],
+  "surfaces": {
+    "search": {
+      "datasetId": "launches",
+      "titleField": "name",
+      "subtitleField": "payload",
+      "tagsField": "tags",
+      "locationLabelField": "launchSite"
+    },
+    "panel": {
+      "datasetId": "launches",
+      "template": "record-list",
+      "titleField": "name",
+      "subtitleField": "operator",
+      "descriptionField": "payload",
+      "metrics": [
+        { "label": "Vehicle", "field": "vehicle" },
+        { "label": "Orbit", "field": "orbit" },
+        { "label": "Date", "field": "scheduledDate" },
+        { "label": "Classification", "field": "classification" }
+      ]
+    }
+  },
+  "assets": {
+    "previews": [
+      {
+        "type": "card",
+        "title": "90-day rolling window",
+        "body": "Scheduled launches updated from official provider manifests and launch authority filings."
+      },
+      {
+        "type": "card",
+        "title": "Payload classification",
+        "body": "Commercial, civil, military, and dual-use payloads flagged where publicly confirmed."
+      }
+    ]
+  }
+}

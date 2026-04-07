@@ -1,39 +1,7 @@
 import { Panel } from './Panel';
 import { escapeHtml } from '@/utils/sanitize';
 import { getCountryFlag } from '@/utils/country-flags';
-
-export interface SanctionEntity {
-  id: string;
-  name: string;
-  type: 'person' | 'company' | 'vessel' | 'aircraft' | 'other';
-  countries: string[];
-  programs: string[];
-  dateAdded: string;
-  source: string;
-}
-
-// Sample data to simulate OpenSanctions/OFAC feed
-function getRecentSanctions(): SanctionEntity[] {
-  const now = new Date();
-  const days = (n: number) => {
-    const d = new Date(now);
-    d.setDate(d.getDate() - n);
-    return d.toISOString();
-  };
-
-  return [
-    { id: '1', name: 'Sovcomflot Vessel NS Century', type: 'vessel', countries: ['RU'], programs: ['OFAC Specially Designated Nationals (SDN)'], dateAdded: days(1), source: 'OFAC' },
-    { id: '2', name: 'Arctic LNG 2 LLC', type: 'company', countries: ['RU'], programs: ['EU Sanctions Map', 'OFAC'], dateAdded: days(2), source: 'EU/OFAC' },
-    { id: '3', name: 'Kim Jong Un', type: 'person', countries: ['KP'], programs: ['UN Security Council', 'OFAC'], dateAdded: days(5), source: 'UN' },
-    { id: '4', name: 'Iran Air', type: 'company', countries: ['IR'], programs: ['EU Sanctions Map', 'OFAC'], dateAdded: days(8), source: 'EU' },
-    { id: '5', name: 'Mahan Air Flight QFZ995', type: 'aircraft', countries: ['IR'], programs: ['OFAC'], dateAdded: days(10), source: 'OFAC' },
-    { id: '6', name: 'Huawei Technologies Co., Ltd.', type: 'company', countries: ['CN'], programs: ['Entity List'], dateAdded: days(15), source: 'BIS' },
-    { id: '7', name: 'PDVSA', type: 'company', countries: ['VE'], programs: ['OFAC SDN'], dateAdded: days(20), source: 'OFAC' },
-    { id: '8', name: 'Al-Shabaab Financial Network', type: 'company', countries: ['SO'], programs: ['UN Security Council'], dateAdded: days(22), source: 'UN' },
-    { id: '9', name: 'Myanmar Economic Holdings Public Company Limited', type: 'company', countries: ['MM'], programs: ['UK Sanctions List', 'OFAC'], dateAdded: days(25), source: 'UK/OFAC' },
-    { id: '10', name: 'Tornado Cash', type: 'other', countries: ['UNKNOWN'], programs: ['OFAC SDN'], dateAdded: days(30), source: 'OFAC' },
-  ];
-}
+import type { SanctionEntity } from '@/services/sanctions';
 
 const TYPE_ICONS: Record<SanctionEntity['type'], string> = {
   person: '👤',
@@ -46,7 +14,7 @@ const TYPE_ICONS: Record<SanctionEntity['type'], string> = {
 export class SanctionsTrackerPanel extends Panel {
   private entities: SanctionEntity[] = [];
   private searchQuery = '';
-  private loading = true;
+  private loaded = false;
 
   constructor() {
     super({ id: 'sanctions-tracker', title: '🚫 Sanctions Tracker' });
@@ -57,21 +25,29 @@ export class SanctionsTrackerPanel extends Panel {
         this.renderList();
       }
     });
-    void this.fetchData();
+    this.showLoading('Loading sanctions data...');
   }
 
-  public async fetchData(): Promise<void> {
-    // In a real implementation this would fetch from an OpenSanctions proxy or direct API
-    // For now we simulate the data load
-    await new Promise(r => setTimeout(r, 600));
-    this.entities = getRecentSanctions();
-    this.loading = false;
+  public setEntities(entities: SanctionEntity[]): void {
+    this.entities = entities;
+    this.loaded = true;
+    this.setCount(entities.length);
+    this.renderPanel();
+  }
+
+  public setSearchQuery(query: string): void {
+    this.searchQuery = query.toLowerCase();
     this.renderPanel();
   }
 
   private renderPanel(): void {
-    if (this.loading) {
+    if (!this.loaded) {
       this.showLoading('Loading sanctions data...');
+      return;
+    }
+
+    if (this.entities.length === 0) {
+      this.showEmptyState('No sanctions data available');
       return;
     }
 
@@ -104,6 +80,7 @@ export class SanctionsTrackerPanel extends Panel {
         e.countries.some(c => c.toLowerCase().includes(q) || getCountryFlag(c).includes(q)) ||
         e.programs.some(p => p.toLowerCase().includes(q)) ||
         e.source.toLowerCase().includes(q) ||
+        e.aliases?.some(alias => alias.toLowerCase().includes(q)) ||
         e.type.toLowerCase().includes(q);
     });
 

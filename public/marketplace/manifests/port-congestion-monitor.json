@@ -1,0 +1,94 @@
+{
+  "id": "port-congestion-monitor",
+  "slug": "port-congestion-monitor",
+  "name": "Port Congestion Monitor",
+  "version": "1.0.0",
+  "author": "World Monitor Curated",
+  "description": "Live port congestion metrics for major global terminals including vessel dwell times, berth utilization, and queue depth.",
+  "license": "WM Curated Data License",
+  "category": "trade",
+  "tags": ["port", "shipping", "logistics", "congestion", "dwell time", "container", "supply chain", "throughput", "teu", "los angeles", "rotterdam", "singapore", "waiting time"],
+  "sourceType": "catalog",
+  "visibility": "public",
+  "compatibility": {
+    "variants": ["full", "commodity", "finance"]
+  },
+  "datasets": [
+    {
+      "id": "ports",
+      "name": "Port Status",
+      "format": "json",
+      "url": "/marketplace/data/port-congestion-monitor.json",
+      "recordPath": "records",
+      "primaryIdField": "unlocode",
+      "pollingIntervalMs": 1800000,
+      "fieldMap": {
+        "unlocode": "unlocode",
+        "name": "name",
+        "country": "country",
+        "lat": "lat",
+        "lon": "lon",
+        "congestionIndex": "congestionIndex",
+        "dwellTimeHrs": "dwellTimeHrs",
+        "vesselQueueDepth": "vesselQueueDepth",
+        "berthUtilPct": "berthUtilPct",
+        "status": "status"
+      },
+      "transforms": {
+        "lat": "number",
+        "lon": "number",
+        "congestionIndex": "number",
+        "dwellTimeHrs": "number",
+        "vesselQueueDepth": "number",
+        "berthUtilPct": "number"
+      }
+    }
+  ],
+  "surfaces": {
+    "map": {
+      "datasetId": "ports",
+      "geometryType": "point",
+      "latField": "lat",
+      "lonField": "lon",
+      "style": {
+        "color": "#4a9eff",
+        "strokeColor": "#d0e8ff",
+        "pointRadius": 30000,
+        "opacity": 0.8,
+        "visibleByDefault": true
+      }
+    },
+    "search": {
+      "datasetId": "ports",
+      "titleField": "name",
+      "subtitleField": "status",
+      "locationLabelField": "country"
+    },
+    "panel": {
+      "datasetId": "ports",
+      "template": "record-detail",
+      "titleField": "name",
+      "subtitleField": "country",
+      "metrics": [
+        { "label": "Congestion Index", "field": "congestionIndex" },
+        { "label": "Dwell Time (hrs)", "field": "dwellTimeHrs" },
+        { "label": "Queue Depth", "field": "vesselQueueDepth" },
+        { "label": "Berth Util %", "field": "berthUtilPct" }
+      ]
+    }
+  },
+  "assets": {
+    "previews": [
+      {
+        "type": "card",
+        "title": "30-minute updates",
+        "body": "Congestion index aggregated from AIS vessel positions, reported dwell times, and berth schedules."
+      },
+      {
+        "type": "card",
+        "title": "80+ major terminals",
+        "body": "Covers top-volume ports across Asia-Pacific, Europe, and Americas."
+      }
+    ]
+  }
+}

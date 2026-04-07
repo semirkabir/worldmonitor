@@ -32,6 +32,36 @@ function defaultFilters(): MarketplaceModalFilters {
   };
 }
 
+function authorAvatar(author: string, size: 'sm' | 'md' = 'md'): string {
+  const initials = author
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => (w[0] ?? '').toUpperCase())
+    .join('');
+  const hue = [...author].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360;
+  const sizeClass = size === 'sm' ? ' marketplace-author-avatar--sm' : '';
+  return `<span class="marketplace-author-avatar${sizeClass}" style="--avatar-hue:${hue}">${escapeHtml(initials)}</span>`;
+}
+
+function authorWithAvatar(author: string, size: 'sm' | 'md' = 'md'): string {
+  return `<strong class="marketplace-modal-author-row">${authorAvatar(author, size)}<span class="marketplace-modal-author-name">${escapeHtml(author)}</span></strong>`;
+}
+
+function formatUpdateEvery(datasets: MarketplaceManifest['datasets']): string {
+  const intervals = datasets.map((d) => d.pollingIntervalMs).filter((ms): ms is number => typeof ms === 'number');
+  if (intervals.length === 0) return 'manual refresh';
+  const ms = Math.min(...intervals);
+  if (ms < 60_000) return `every ${Math.round(ms / 1000)}s`;
+  if (ms < 3_600_000) return `every ${Math.round(ms / 60_000)} min`;
+  if (ms < 86_400_000) {
+    const hrs = Math.round(ms / 3_600_000);
+    return `every ${hrs === 1 ? 'hour' : `${hrs} hrs`}`;
+  }
+  const days = Math.round(ms / 86_400_000);
+  return days === 1 ? 'every day' : `approx. every ${days} days`;
+}
+
 function computeSchemaSummary(manifest: MarketplaceManifest): string {
   return manifest.datasets
     .map((dataset) => {
@@ -66,6 +96,88 @@ function previewMarkup(previews: MarketplacePreviewAsset[] | undefined): string 
   `;
 }
 
+function formatSurfaceLabel(surface: string): string {
+  if (surface === 'map') return 'Map overlay';
+  if (surface === 'search') return 'Global search';
+  if (surface === 'panel') return 'Panel view';
+  return surface;
+}
+
+function formatSourceTypeLabel(sourceType: string): string {
+  if (sourceType === 'catalog') return 'Curated';
+  if (sourceType === 'import-file') return 'Private file';
+  if (sourceType === 'import-url') return 'Remote feed';
+  return sourceType;
+}
+
+function formatVisibilityLabel(visibility: string): string {
+  if (visibility === 'public') return 'Public';
+  if (visibility === 'review') return 'Review queue';
+  if (visibility === 'private') return 'Private';
+  return visibility;
+}
+
+function computeDatasetRefreshText(manifest: Pick<MarketplaceManifest, 'datasets'>): string {
+  const labels = Array.from(new Set(manifest.datasets.map((dataset) => dataset.pollingIntervalMs
+    ? `${Math.round(dataset.pollingIntervalMs / 60000)}m`
+    : 'manual')));
+  return labels.join(' • ');
+}
+
+function renderSurfaceCards(manifest: MarketplaceManifest): string {
+  const cards: string[] = [];
+  if (manifest.surfaces.map) {
+    cards.push(`
+      <div class="marketplace-modal-capability-card">
+        <strong>Map layer</strong>
+        <span>Geospatial overlay with click-through detail</span>
+      </div>
+    `);
+  }
+  if (manifest.surfaces.search) {
+    cards.push(`
+      <div class="marketplace-modal-capability-card">
+        <strong>Search index</strong>
+        <span>Records indexed in global search</span>
+      </div>
+    `);
+  }
+  if (manifest.surfaces.panel) {
+    cards.push(`
+      <div class="marketplace-modal-capability-card">
+        <strong>Panel view</strong>
+        <span>${escapeHtml(manifest.surfaces.panel.template.replace('-', ' '))} layout</span>
+      </div>
+    `);
+  }
+  return cards.join('');
+}
+
+function renderDatasetMarkup(manifest: MarketplaceManifest): string {
+  return manifest.datasets.map((dataset) => {
+    const fields = Object.keys(dataset.fieldMap ?? {}).slice(0, 8);
+    const fieldSummary = fields.length > 0 ? fields.join(', ') : 'Schema inferred at runtime';
+    const refresh = dataset.pollingIntervalMs ? `${Math.round(dataset.pollingIntervalMs / 60000)} minute refresh` : 'Manual refresh';
+    return `
+      <article class="marketplace-modal-dataset-card">
+        <div class="marketplace-modal-dataset-head">
+          <div>
+            <strong>${escapeHtml(dataset.name)}</strong>
+            <span>${escapeHtml(dataset.format.toUpperCase())} source</span>
+          </div>
+          <span class="marketplace-modal-pill">${escapeHtml(refresh)}</span>
+        </div>
+        <div class="marketplace-modal-dataset-meta">
+          <span>${dataset.url ? 'Remote dataset' : 'Embedded dataset'}</span>
+          ${dataset.primaryIdField ? `<span>Primary key: ${escapeHtml(dataset.primaryIdField)}</span>` : ''}
+          ${dataset.recordPath ? `<span>Path: ${escapeHtml(dataset.recordPath)}</span>` : ''}
+        </div>
+        <p>${escapeHtml(fieldSummary)}</p>
+      </article>
+    `;
+  }).join('');
+}
+
 export class MarketplaceModal {
   private service: MarketplaceService;
   private handlers: MarketplaceModalHandlers = {};
@@ -94,7 +206,21 @@ export class MarketplaceModal {
     this.handlers = handlers;
   }
 
+  public preSelectItem(itemId: string): void {
+    this.selectedItemId = itemId;
+    this.activeTab = 'browse';
+    // If the modal is already open, re-render immediately and load the detail
+    if (this.overlay && document.body.contains(this.overlay)) {
+      void this.loadDetail(itemId);
+      this.render();
+    }
+  }
+
   public async open(): Promise<void> {
+    // Guard: if overlay was detached from DOM without close() being called (e.g. HMR), reset state
+    if (this.overlay && !document.body.contains(this.overlay)) {
+      this.overlay = null;
+    }
     if (this.overlay) {
       this.render();
       return;
@@ -410,6 +536,7 @@ export class MarketplaceModal {
     const selectedCatalog = items.find((item) => item.id === this.selectedItemId) ?? items[0] ?? null;
     const selectedInstalled = installedItems.find((item) => item.manifest.id === selectedCatalog?.id);
     const detailManifest = currentDetail && selectedCatalog?.id === this.selectedItemId ? currentDetail : null;
+    const detailVariants = detailManifest?.compatibility.variants || selectedCatalog?.compatibility.variants || [];
 
     return `
       <div class="marketplace-modal-filters">
@@ -442,19 +569,28 @@ export class MarketplaceModal {
           ${items.map((item) => {
             const installed = installedItems.find((entry) => entry.manifest.id === item.id);
             const compatible = item.compatibility.variants.includes(SITE_VARIANT as MarketplaceVariant);
+            const detail = item.id === this.selectedItemId ? detailManifest : null;
+            const datasetCount = detail?.datasets.length ?? 0;
+            const refreshText = detail ? computeDatasetRefreshText(detail) : 'Detail available on open';
             return `
               <button class="marketplace-modal-card${item.id === selectedCatalog?.id ? ' active' : ''}" type="button" data-marketplace-card="${escapeHtml(item.id)}">
+                <div class="marketplace-modal-card-kicker-row">
+                  <span class="marketplace-modal-kicker" data-category="${escapeHtml(item.category)}">${escapeHtml(item.category)}</span>
+                  <span class="marketplace-modal-card-state ${installed ? (installed.hasUpdate ? 'update' : 'installed') : 'catalog'}">${installed ? (installed.hasUpdate ? 'Update ready' : 'Installed') : 'Catalog'}</span>
+                </div>
                 <div class="marketplace-modal-card-head">
                   <strong>${escapeHtml(item.name)}</strong>
-                  ${installed ? `<span class="marketplace-modal-pill">${installed.hasUpdate ? 'Update' : 'Installed'}</span>` : ''}
+                  ${!compatible ? '<span class="marketplace-modal-pill warn">Variant locked</span>' : ''}
                 </div>
                 <p>${escapeHtml(item.description)}</p>
                 <div class="marketplace-modal-card-meta">
-                  <span>${escapeHtml(item.author)}</span>
-                  <span>${escapeHtml(item.category)}</span>
+                  <span style="display:inline-flex;align-items:center;gap:4px">${authorAvatar(item.author, 'sm')}<span>${escapeHtml(item.author)}</span></span>
+                  <span>${datasetCount > 0 ? `${datasetCount} source${datasetCount === 1 ? '' : 's'}` : 'Manifest'}</span>
+                  <span>${escapeHtml(refreshText)}</span>
                   ${compatible ? '' : '<span class="warn">Unavailable in this variant</span>'}
                 </div>
-                <div class="marketplace-modal-chip-row">${item.surfaces.map((surface) => `<span class="marketplace-modal-chip">${escapeHtml(surface)}</span>`).join('')}</div>
+                <div class="marketplace-modal-chip-row">${item.surfaces.map((surface) => `<span class="marketplace-modal-chip" data-surface="${escapeHtml(surface)}">${escapeHtml(formatSurfaceLabel(surface))}</span>`).join('')}</div>
+                <div class="marketplace-modal-card-footer">${escapeHtml(item.tags.slice(0, 3).join(' • ') || item.slug)}</div>
               </button>
             `;
           }).join('') || '<div class="marketplace-modal-empty">No marketplace items match these filters.</div>'}
@@ -464,22 +600,54 @@ export class MarketplaceModal {
           ${selectedCatalog ? `
             <div class="marketplace-modal-detail-shell">
               <div class="marketplace-modal-detail-head">
-                <span class="marketplace-modal-kicker">${escapeHtml(selectedCatalog.category)}</span>
-                <h3>${escapeHtml(detailManifest?.name || selectedCatalog.name)}</h3>
-                <p>${escapeHtml(detailManifest?.description || selectedCatalog.description)}</p>
+                <div class="marketplace-modal-detail-banner">
+                  <div class="marketplace-modal-detail-banner-copy">
+                    <span class="marketplace-modal-kicker" data-category="${escapeHtml(selectedCatalog.category)}">${escapeHtml(selectedCatalog.category)}</span>
+                    <h3>${escapeHtml(detailManifest?.name || selectedCatalog.name)}</h3>
+                    <p>${escapeHtml(detailManifest?.description || selectedCatalog.description)}</p>
+                    ${detailManifest ? `<div style="margin-top:8px"><span class="marketplace-update-badge">⟳ ${escapeHtml(formatUpdateEvery(detailManifest.datasets))}</span></div>` : ''}
+                  </div>
+                  <div class="marketplace-modal-detail-badges">
+                    <span class="marketplace-modal-pill">${escapeHtml(formatSourceTypeLabel(detailManifest?.sourceType || 'catalog'))}</span>
+                    <span class="marketplace-modal-pill">${escapeHtml(formatVisibilityLabel(detailManifest?.visibility || 'public'))}</span>
+                  </div>
+                </div>
                 <div class="marketplace-modal-chip-row">
                   ${(detailManifest?.tags || selectedCatalog.tags).map((tag) => `<span class="marketplace-modal-chip">${escapeHtml(tag)}</span>`).join('')}
+                </div>
+                <div class="marketplace-modal-chip-row" style="margin-top:6px">
+                  ${selectedCatalog.surfaces.map((surface) => `<span class="marketplace-modal-chip" data-surface="${escapeHtml(surface)}">${escapeHtml(formatSurfaceLabel(surface))}</span>`).join('')}
                 </div>
               </div>
 
               <div class="marketplace-modal-stats">
-                <div><span>Author</span><strong>${escapeHtml(detailManifest?.author || selectedCatalog.author)}</strong></div>
+                <div><span>Author</span>${authorWithAvatar(detailManifest?.author || selectedCatalog.author)}</div>
                 <div><span>Version</span><strong>${escapeHtml(detailManifest?.version || selectedCatalog.version)}</strong></div>
-                <div><span>Variants</span><strong>${escapeHtml((detailManifest?.compatibility.variants || selectedCatalog.compatibility.variants).join(', '))}</strong></div>
-                <div><span>Refresh</span><strong>${detailManifest ? escapeHtml(detailManifest.datasets.map((dataset) => dataset.pollingIntervalMs ? `${Math.round(dataset.pollingIntervalMs / 60000)}m` : 'manual').join(' • ')) : 'Loading…'}</strong></div>
+                <div><span>Variants</span><strong>${escapeHtml(detailVariants.join(', '))}</strong></div>
+                <div><span>Refresh</span><strong>${detailManifest ? escapeHtml(computeDatasetRefreshText(detailManifest)) : 'Loading…'}</strong></div>
+                <div><span>Data sources</span><strong>${detailManifest ? String(detailManifest.datasets.length) : '…'}</strong></div>
+                <div><span>Surfaces</span><strong>${detailManifest ? String(Object.values(detailManifest.surfaces).filter(Boolean).length) : String(selectedCatalog.surfaces.length)}</strong></div>
               </div>
 
               ${detailManifest ? `
+                <section class="marketplace-modal-section">
+                  <div class="marketplace-modal-section-head">
+                    <strong>Surfaces</strong>
+                  </div>
+                  <div class="marketplace-modal-capability-grid">
+                    ${renderSurfaceCards(detailManifest)}
+                  </div>
+                </section>
+
+                <section class="marketplace-modal-section">
+                  <div class="marketplace-modal-section-head">
+                    <strong>Data sources</strong>
+                  </div>
+                  <div class="marketplace-modal-dataset-grid">
+                    ${renderDatasetMarkup(detailManifest)}
+                  </div>
+                </section>
+
                 <div class="marketplace-modal-schema">${escapeHtml(computeSchemaSummary(detailManifest))}</div>
                 ${previewMarkup(detailManifest.assets?.previews)}
               ` : '<div class="marketplace-modal-schema">Loading detail…</div>'}
@@ -515,6 +683,7 @@ export class MarketplaceModal {
               </div>
               <p>${escapeHtml(item.manifest.description)}</p>
               <div class="marketplace-modal-installed-meta">
+                <span style="display:inline-flex;align-items:center;gap:4px">${authorAvatar(item.manifest.author, 'sm')}<span>${escapeHtml(item.manifest.author)}</span></span>
                 <span>${escapeHtml(item.manifest.version)}</span>
                 <span>${escapeHtml(item.manifest.category)}</span>
                 <span>${item.variantCompatible ? 'Active in this variant' : 'Unavailable in this variant'}</span>
@@ -538,8 +707,8 @@ export class MarketplaceModal {
       <div class="marketplace-modal-forms">
         <section class="marketplace-modal-form-card">
           <div class="marketplace-modal-form-head">
-            <strong>Import local manifest bundle</strong>
-            <span>Install a private declarative marketplace item from a JSON bundle.</span>
+            <strong>Import local file</strong>
+            <span>Install from a JSON manifest bundle</span>
           </div>
           <label class="marketplace-modal-upload">
             <span>Select manifest file</span>
@@ -549,8 +718,8 @@ export class MarketplaceModal {
 
         <section class="marketplace-modal-form-card">
           <div class="marketplace-modal-form-head">
-            <strong>Import from remote URL</strong>
-            <span>Install a manifest hosted at a trusted HTTPS or local URL.</span>
+            <strong>Import from URL</strong>
+            <span>Install from a remote manifest</span>
           </div>
           <div class="marketplace-modal-inline-form">
             <input type="url" placeholder="https://example.com/manifest.json" data-marketplace-import-url-input />
@@ -567,8 +736,8 @@ export class MarketplaceModal {
       <div class="marketplace-modal-forms submit">
         <section class="marketplace-modal-form-card">
           <div class="marketplace-modal-form-head">
-            <strong>Submit to review queue</strong>
-            <span>Public items are queued for review before they can appear in the curated catalog.</span>
+            <strong>Submit to review</strong>
+            <span>Public items are reviewed before catalog listing</span>
           </div>
           <input type="text" placeholder="Optional note for reviewers" data-marketplace-submit-note />
           <textarea rows="14" placeholder="Paste marketplace manifest JSON here" data-marketplace-submit-json></textarea>
@@ -577,8 +746,8 @@ export class MarketplaceModal {
 
         <section class="marketplace-modal-form-card submissions">
           <div class="marketplace-modal-form-head">
-            <strong>Submission status</strong>
-            <span>Your queued public submissions.</span>
+            <strong>Submissions</strong>
+            <span>Queue status</span>
           </div>
           <div class="marketplace-modal-submissions">
             ${submissions.map((submission) => `
@@ -609,8 +778,9 @@ export class MarketplaceModal {
       <div class="marketplace-modal">
         <div class="marketplace-modal-header">
           <div class="marketplace-modal-heading">
-            <span class="marketplace-modal-kicker">Data Marketplace</span>
-            <h2>Curated live data, private imports, and reusable map/search/panel views.</h2>
+            <h2>Marketplace</h2>
+            <span class="marketplace-modal-kicker">data packages</span>
+            <span class="marketplace-modal-beta">BETA</span>
           </div>
           <button class="marketplace-modal-close" type="button" data-marketplace-close="true">×</button>
         </div>
