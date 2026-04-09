@@ -11,6 +11,7 @@ export class SocialSentimentPanel extends Panel {
       id: 'social-sentiment',
       title: t('panels.socialSentiment'),
     });
+    void this.render();
   }
 
   public async render(symbol?: string): Promise<void> {

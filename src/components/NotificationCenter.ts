@@ -175,7 +175,11 @@ export class NotificationCenter {
     }, 5_000);
   }
 
-  mount(parent: HTMLElement): void {
+  mount(parent: HTMLElement, before?: HTMLElement | null): void {
+    if (before && before.parentElement === parent) {
+      parent.insertBefore(this.el, before);
+      return;
+    }
     parent.appendChild(this.el);
   }
 

@@ -392,9 +392,14 @@ export class CommoditiesPanel extends Panel {
 
 export class CryptoPanel extends Panel {
   private cryptoData: CryptoData[] = [];
+  private onCoinClick?: (coin: CryptoData) => void;
 
   constructor() {
     super({ id: 'crypto', title: t('panels.crypto') });
+  }
+
+  public setOnCoinClick(cb: (coin: CryptoData) => void): void {
+    this.onCoinClick = cb;
   }
 
   private bindCryptoInteractions(): void {
@@ -404,9 +409,7 @@ export class CryptoPanel extends Panel {
         if (!symbol) return;
         const coin = this.cryptoData.find(c => c.symbol === symbol);
         if (!coin) return;
-        document.dispatchEvent(new CustomEvent('wm:open-entity-detail', {
-          detail: { type: 'crypto', data: coin },
-        }));
+        this.onCoinClick?.(coin);
       });
     });
   }

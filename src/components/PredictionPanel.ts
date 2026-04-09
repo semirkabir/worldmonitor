@@ -113,7 +113,6 @@ export class PredictionPanel extends Panel {
 
         return `
       <div class="prediction-item" data-slug="${p.slug || ''}" style="cursor: pointer;">
-        <div class="prediction-theme-pill">${escapeHtml(theme)}</div>
         ${titleHtml}
         ${metaHtml}
         <div class="prediction-bar">

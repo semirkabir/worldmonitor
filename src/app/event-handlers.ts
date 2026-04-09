@@ -878,33 +878,26 @@ export class EventHandlerManager implements AppModule {
   }
 
   setupNotificationCenter(): void {
+    this.ctx.notificationCenter?.destroy();
     const nc = new NotificationCenter();
+    this.ctx.notificationCenter = nc;
     nc.setLocationClickHandler((lat, lon) => {
       this.ctx.map?.setCenter(lat, lon, 6);
     });
     nc.setFindingClickHandler((signal) => {
       if (this.ctx.countryBriefPage?.isVisible()) return;
       if (localStorage.getItem('wm-settings-open') === '1') return;
-      this.ctx.signalModal?.showSignal(signal);
+      this.ctx.findingPanel?.showSignal(signal);
     });
     nc.setAlertClickHandler((alert) => {
+      if (this.ctx.countryBriefPage?.isVisible()) return;
       if (localStorage.getItem('wm-settings-open') === '1') return;
-      if (alert.components.ciiChange) {
-        const { country, countryName } = alert.components.ciiChange;
-        this.callbacks.openCountryBriefByCode?.(country, countryName);
-      } else if (alert.location) {
-        this.callbacks.openCountryBrief?.(alert.location.lat, alert.location.lon);
-      } else if (alert.components.convergence) {
-        this.callbacks.openCountryBrief?.(alert.components.convergence.lat, alert.components.convergence.lon);
-      } else if (alert.countries.length > 0 && alert.countries[0]) {
-        this.callbacks.openCountryBriefByCode?.(alert.countries[0], alert.countries[0]);
-      } else {
-        this.ctx.signalModal?.showAlert(alert);
-      }
+      this.ctx.findingPanel?.showAlert(alert);
     });
     const settingsMount = document.getElementById('unifiedSettingsMount');
-    if (settingsMount) {
-      settingsMount.parentElement?.insertBefore(nc['el'], settingsMount);
+    const headerRight = this.ctx.container.querySelector<HTMLElement>('.header-right');
+    if (headerRight) {
+      nc.mount(headerRight, settingsMount);
     }
   }
 

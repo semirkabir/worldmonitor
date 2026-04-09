@@ -130,6 +130,24 @@ export async function fetchRecommendationTrends(symbol: string): Promise<Recomme
   return fetchFinnhub('recommendation-trends', { symbol }) as Promise<RecommendationTrend[]>;
 }
 
+// ─── Stock Quote ─────────────────────────────────────────────────────────────
+
+export interface StockQuote {
+  c: number;   // current price
+  d: number;   // change
+  dp: number;  // change percent
+  h: number;   // high
+  l: number;   // low
+  o: number;   // open
+  pc: number;  // previous close
+}
+
+export async function fetchStockQuote(symbol: string): Promise<StockQuote | null> {
+  const data = await fetchFinnhub('quote', { symbol }) as StockQuote;
+  if (!data || !data.c) return null;
+  return data;
+}
+
 // ─── Company Profile ─────────────────────────────────────────────────────────
 
 export interface CompanyProfile {

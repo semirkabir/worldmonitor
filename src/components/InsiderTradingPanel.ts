@@ -22,6 +22,7 @@ export class InsiderTradingPanel extends Panel {
       id: 'insider-trading',
       title: t('panels.insiderTrading'),
     });
+    void this.render();
   }
 
   private formatValue(value: number): string {

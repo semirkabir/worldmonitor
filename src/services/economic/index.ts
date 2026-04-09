@@ -569,6 +569,68 @@ export interface TechReadinessScore {
   };
 }
 
+// Weights and normalize maxima match seed-wb-indicators.mjs exactly
+const TR_WEIGHTS = { internet: 30, mobile: 15, broadband: 20, rdSpend: 35 };
+const TR_MAX = { internet: 100, mobile: 150, broadband: 50, rdSpend: 5 };
+
+function trNormalize(val: number | null | undefined, max: number): number | null {
+  if (val == null) return null;
+  return Math.min(100, (val / max) * 100);
+}
+
+async function computeTechReadinessFromWorldBank(countries?: string[]): Promise<TechReadinessScore[]> {
+  const [internetResp, mobileResp, broadbandResp, rdResp] = await Promise.allSettled([
+    getIndicatorData('IT.NET.USER.ZS', { years: 5 }),
+    getIndicatorData('IT.CEL.SETS.P2', { years: 5 }),
+    getIndicatorData('IT.NET.BBND.P2', { years: 5 }),
+    getIndicatorData('GB.XPD.RSDV.GD.ZS', { years: 7 }),
+  ]);
+
+  const latest = (resp: PromiseSettledResult<WorldBankResponse>) =>
+    resp.status === 'fulfilled' ? resp.value.latestByCountry : {};
+
+  const iData = latest(internetResp);
+  const mData = latest(mobileResp);
+  const bData = latest(broadbandResp);
+  const rData = latest(rdResp);
+
+  const allCountries = new Set([
+    ...Object.keys(iData), ...Object.keys(mData),
+    ...Object.keys(bData), ...Object.keys(rData),
+  ]);
+
+  const scores: TechReadinessScore[] = [];
+  for (const cc of allCountries) {
+    if (countries && !countries.includes(cc)) continue;
+    const components = {
+      internet:  trNormalize(iData[cc]?.value ?? null, TR_MAX.internet),
+      mobile:    trNormalize(mData[cc]?.value ?? null, TR_MAX.mobile),
+      broadband: trNormalize(bData[cc]?.value ?? null, TR_MAX.broadband),
+      rdSpend:   trNormalize(rData[cc]?.value ?? null, TR_MAX.rdSpend),
+    };
+
+    let totalWeight = 0, weightedSum = 0;
+    for (const [key, weight] of Object.entries(TR_WEIGHTS)) {
+      const val = components[key as keyof typeof components];
+      if (val !== null) { weightedSum += val * weight; totalWeight += weight; }
+    }
+    if (totalWeight === 0) continue;
+
+    const countryName = iData[cc]?.name || mData[cc]?.name || bData[cc]?.name || rData[cc]?.name || cc;
+    scores.push({
+      country: cc,
+      countryName,
+      score: Math.round((weightedSum / totalWeight) * 10) / 10,
+      rank: 0,
+      components,
+    });
+  }
+
+  scores.sort((a, b) => b.score - a.score);
+  scores.forEach((s, i) => { s.rank = i + 1; });
+  return scores;
+}
+
 export async function getTechReadinessRankings(
   countries?: string[],
 ): Promise<TechReadinessScore[]> {
@@ -576,8 +638,7 @@ export async function getTechReadinessRankings(
   const hydrated = getHydratedData('techReadiness') as TechReadinessScore[] | undefined;
   if (hydrated?.length && !countries) return hydrated;
 
-  // Fallback: fetch the pre-computed seed key directly from bootstrap endpoint.
-  // Data is seeded by seed-wb-indicators.mjs — never call WB API from frontend.
+  // Try the pre-computed seed key from bootstrap endpoint (Redis-backed)
   try {
     const resp = await fetch('/api/bootstrap?keys=techReadiness', {
       signal: AbortSignal.timeout(5_000),
@@ -593,7 +654,8 @@ export async function getTechReadinessRankings(
     }
   } catch { /* fall through */ }
 
-  return [];
+  // Last resort: compute on-demand from World Bank API (no Redis required)
+  return computeTechReadinessFromWorldBank(countries);
 }
 
 export async function getCountryComparison(

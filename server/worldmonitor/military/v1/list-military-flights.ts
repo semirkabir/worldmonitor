@@ -38,6 +38,16 @@ function getRelayRequestHeaders(): Record<string, string> {
   return headers;
 }
 
+function getOpenSkyDirectHeaders(): Record<string, string> {
+  const clientId = process.env.OPENSKY_CLIENT_ID;
+  const clientSecret = process.env.OPENSKY_CLIENT_SECRET;
+  const headers: Record<string, string> = { Accept: 'application/json', 'User-Agent': CHROME_UA };
+  if (clientId && clientSecret) {
+    headers.Authorization = 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+  }
+  return headers;
+}
+
 function normalizeBounds(req: ListMilitaryFlightsRequest): RequestBounds {
   return {
     south: Math.min(req.swLat, req.neLat),
@@ -91,11 +101,20 @@ export async function listMilitaryFlights(
       REDIS_CACHE_TTL,
       async () => {
         const isSidecar = (process.env.LOCAL_API_MODE || '').includes('sidecar');
-        const baseUrl = isSidecar
-          ? 'https://opensky-network.org/api/states/all'
-          : process.env.WS_RELAY_URL ? process.env.WS_RELAY_URL + '/opensky' : null;
+        const hasRelay = !!process.env.WS_RELAY_URL;
+        const hasDirectCreds = !!(process.env.OPENSKY_CLIENT_ID && process.env.OPENSKY_CLIENT_SECRET);
 
-        if (!baseUrl) return null;
+        let baseUrl: string | null = null;
+        let reqHeaders: Record<string, string>;
+        if (hasRelay && !isSidecar) {
+          baseUrl = process.env.WS_RELAY_URL + '/opensky';
+          reqHeaders = getRelayRequestHeaders();
+        } else if (isSidecar || hasDirectCreds) {
+          baseUrl = 'https://opensky-network.org/api/states/all';
+          reqHeaders = getOpenSkyDirectHeaders();
+        } else {
+          return null;
+        }
 
         const fetchBB = {
           lamin: quantize(req.swLat, BBOX_GRID_STEP) - BBOX_GRID_STEP / 2,
@@ -109,9 +128,9 @@ export async function listMilitaryFlights(
         params.set('lomin', String(fetchBB.lomin));
         params.set('lomax', String(fetchBB.lomax));
 
-        const url = `${baseUrl!}${params.toString() ? '?' + params.toString() : ''}`;
+        const url = `${baseUrl}${params.toString() ? '?' + params.toString() : ''}`;
         const resp = await fetch(url, {
-          headers: getRelayRequestHeaders(),
+          headers: reqHeaders,
           signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
         });
 

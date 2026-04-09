@@ -776,6 +776,12 @@ export class PanelLayoutManager implements AppModule {
     this.ctx.panels['intel'] = intelPanel;
 
     const cryptoPanel = new CryptoPanel();
+    cryptoPanel.setOnCoinClick((coin) => {
+      if (this.ctx.entityDetailPanel) {
+        this.ctx.countryBriefPage?.hide();
+        this.ctx.entityDetailPanel.show('crypto', coin);
+      }
+    });
     this.ctx.panels['crypto'] = cryptoPanel;
 
     const middleeastPanel = new NewsPanel('middleeast', t('panels.middleeast'));

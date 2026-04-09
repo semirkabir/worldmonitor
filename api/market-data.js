@@ -90,6 +90,17 @@ export default async function handler(req) {
         finnhubUrl.searchParams.set('symbol', symbol);
         break;
 
+      case 'quote':
+        if (!symbol) {
+          return new Response(JSON.stringify({ error: 'symbol is required for quote' }), {
+            status: 400,
+            headers: { ...cors, 'Content-Type': 'application/json' },
+          });
+        }
+        finnhubUrl = new URL('https://finnhub.io/api/v1/quote');
+        finnhubUrl.searchParams.set('symbol', symbol);
+        break;
+
       case 'company-profile':
         if (!symbol) {
           return new Response(JSON.stringify({ error: 'symbol is required for company-profile' }), {

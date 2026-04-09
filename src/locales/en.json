@@ -2364,15 +2364,15 @@
         "description": "Cyber attacks, ransomware, and digital threats"
       },
       "ukraine": {
-        "name": "Ukraine",
+        "name": "Ukraine-Russia War",
         "description": "Ukraine war and related military activity"
       },
       "iran-war": {
-        "name": "Iran War",
+        "name": "Iran-Israel War",
         "description": "Iran-Israel conflict and Middle East tensions"
       },
       "china-taiwan": {
-        "name": "China, Taiwan",
+        "name": "China-Taiwan Conflict",
         "description": "China-Taiwan tensions and Indo-Pacific security"
       }
     }

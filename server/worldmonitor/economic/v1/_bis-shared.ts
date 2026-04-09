@@ -27,7 +27,7 @@ export const BIS_COUNTRIES: Record<string, { name: string; centralBank: string }
 
 export const BIS_COUNTRY_KEYS = Object.keys(BIS_COUNTRIES).join('+');
 
-export async function fetchBisCSV(dataset: string, key: string, timeout = 12000): Promise<string> {
+export async function fetchBisCSV(dataset: string, key: string, timeout = 18000): Promise<string> {
   const separator = key.includes('?') ? '&' : '?';
   const url = `${BIS_BASE}/${dataset}/${key}${separator}format=csv`;
   const controller = new AbortController();
@@ -56,6 +56,19 @@ export function parseBisCSV(csv: string): Array<Record<string, string>> {
     if (result.data.length === 0) return [];
   }
   return result.data;
+}
+
+// Case-insensitive column lookup — guards against BIS API column name variations
+export function bisCol(row: Record<string, string>, ...names: string[]): string {
+  for (const name of names) {
+    if (row[name] !== undefined) return row[name]!;
+  }
+  // Case-insensitive fallback
+  const lower = names.map(n => n.toLowerCase());
+  for (const key of Object.keys(row)) {
+    if (lower.includes(key.toLowerCase())) return row[key]!;
+  }
+  return '';
 }
 
 // Safe numeric parse — BIS uses '.' or empty for missing values

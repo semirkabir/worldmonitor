@@ -36,6 +36,7 @@ export class PortfolioPanel extends Panel {
       id: 'portfolio-tracker',
       title: t('panels.portfolioTracker'),
     });
+    void this.render();
   }
 
   public async render(): Promise<void> {
