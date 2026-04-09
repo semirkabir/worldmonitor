@@ -983,6 +983,14 @@ export class Panel {
     }, this.contentDebounceMs);
   }
 
+  protected setContentNow(html: string): void {
+    if (this._locked) return;
+    this.setErrorState(false);
+    this.clearRetryCountdown();
+    this.retryAttempt = 0;
+    this.setContentImmediate(html);
+  }
+
   private setContentImmediate(html: string): void {
     if (this.contentDebounceTimer) {
       clearTimeout(this.contentDebounceTimer);

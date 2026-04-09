@@ -1,5 +1,5 @@
 import type { CountryScore, ComponentScores } from './country-instability';
-import { setHasCachedScores } from './country-instability';
+import { calculateCII, hasIntelligenceSignalsLoaded, setHasCachedScores } from './country-instability';
 import {
   IntelligenceServiceClient,
   type GetRiskScoresResponse,
@@ -275,4 +275,16 @@ export function toCountryScore(cached: CachedCIIScore): CountryScore {
     components: cached.components,
     lastUpdated: new Date(cached.lastUpdated),
   };
+}
+
+export function getPreferredCountryScores(): CountryScore[] {
+  if (!hasIntelligenceSignalsLoaded()) {
+    const cached = getCachedScores();
+    if (cached?.cii.length) return cached.cii.map(toCountryScore);
+  }
+  return calculateCII();
+}
+
+export function getPreferredCountryScore(code: string): CountryScore | null {
+  return getPreferredCountryScores().find((score) => score.code === code) ?? null;
 }

@@ -18,8 +18,8 @@ import {
   iso3ToIso2Code,
   nameToCountryCode,
 } from '@/services/country-geometry';
-import { calculateCII, getCountryData, TIER1_COUNTRIES, hasIntelligenceSignalsLoaded, type CountryScore } from '@/services/country-instability';
-import { getCachedScores, toCountryScore } from '@/services/cached-risk-scores';
+import { getCountryData, TIER1_COUNTRIES, type CountryScore } from '@/services/country-instability';
+import { getPreferredCountryScore } from '@/services/cached-risk-scores';
 import { signalAggregator } from '@/services/signal-aggregator';
 import { supplementalBus } from '@/services/supplemental-signal-bus';
 import { dataFreshness } from '@/services/data-freshness';
@@ -37,6 +37,7 @@ import { trackCountrySelected, trackCountryBriefOpened } from '@/services/analyt
 import type { StrategicPosturePanel } from '@/components/StrategicPosturePanel';
 import type { NewsItem } from '@/types';
 import { getNearbyInfrastructure } from '@/services/related-assets';
+import type { CIIPanel } from '@/components';
 
 type IntlDisplayNamesCtor = new (
   locales: string | string[],
@@ -115,6 +116,7 @@ export class CountryIntelManager implements AppModule {
 
     this.ctx.countryBriefPage.onClose(() => {
       this.briefRequestToken++;
+      (this.ctx.panels['cii'] as CIIPanel | undefined)?.setActiveCountry(null);
       this.ctx.map?.clearCountryHighlight();
       this.ctx.map?.setRenderPaused(false);
       this.ctx.countryTimeline?.destroy();
@@ -158,17 +160,12 @@ export class CountryIntelManager implements AppModule {
     const canonicalName = TIER1_COUNTRIES[code] || CountryIntelManager.resolveCountryName(code);
     if (canonicalName !== code) country = canonicalName;
 
-    const scores = calculateCII();
-    let score = scores.find((s) => s.code === code) ?? null;
-
-    if (!hasIntelligenceSignalsLoaded()) {
-      const cached = getCachedScores()?.cii.find((c) => c.code === code);
-      if (cached) score = toCountryScore(cached);
-    }
+    const score = getPreferredCountryScore(code);
 
     const signals = this.getCountrySignals(code, country);
 
     this.ctx.countryBriefPage.show(country, code, score, signals);
+    (this.ctx.panels['cii'] as CIIPanel | undefined)?.setActiveCountry(code);
     this.ctx.map?.highlightCountry(code);
     this.ctx.map?.fitCountry(code);
 
@@ -359,12 +356,7 @@ export class CountryIntelManager implements AppModule {
     const code = page.getCode();
     if (!code || code === '__loading__' || code === '__error__') return;
     const name = TIER1_COUNTRIES[code] ?? CountryIntelManager.resolveCountryName(code);
-    const scores = calculateCII();
-    let score = scores.find((s) => s.code === code) ?? null;
-    if (!hasIntelligenceSignalsLoaded()) {
-      const cached = getCachedScores()?.cii.find((c) => c.code === code);
-      if (cached) score = toCountryScore(cached);
-    }
+    const score = getPreferredCountryScore(code);
     const signals = this.getCountrySignals(code, name);
     page.updateScore?.(score, signals);
   }

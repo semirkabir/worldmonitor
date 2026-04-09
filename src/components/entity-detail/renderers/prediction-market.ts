@@ -1,3 +1,4 @@
+import { row } from '../types';
 import type { EntityRenderer, EntityRenderContext } from '../types';
 
 const GAMMA_API = 'https://gamma-api.polymarket.com';
@@ -240,33 +241,51 @@ export class PredictionMarketRenderer implements EntityRenderer {
     const data = enrichedData as PredictionMarketPanelData;
     container.replaceChildren();
 
+    const leadMarket = [...data.markets].sort((a, b) => (b.volume || 0) - (a.volume || 0))[0] ?? null;
+
     const header = ctx.el('div', 'edp-header');
     header.append(ctx.el('h2', 'edp-title', data.title));
     if (data.category) header.append(ctx.el('div', 'edp-subtitle', data.category));
     const badgeRow = ctx.el('div', 'edp-badge-row');
     badgeRow.append(ctx.badge('Polymarket', 'edp-badge'));
-    if (data.closed) badgeRow.append(ctx.badge('CLOSED', 'edp-badge edp-badge--closed'));
+    if (data.closed) badgeRow.append(ctx.badge('Closed', 'edp-badge edp-badge-dim'));
     header.append(badgeRow);
     container.append(header);
 
     if (data.description && data.description !== data.title && data.description.length > 20) {
-      container.append(ctx.el('p', 'edp-description', data.description));
+      const callout = ctx.el('div', 'edp-callout edp-prediction-summary');
+      callout.append(ctx.el('p', 'edp-callout-text', data.description));
+      container.append(callout);
+    }
+
+    if (leadMarket) {
+      container.append(buildPredictionHero(ctx, data, leadMarket));
     }
 
     const [overviewCard, overviewBody] = ctx.sectionCard('Overview');
-    overviewBody.append(makeStatRow(ctx, 'Total Volume', formatVolume(data.totalVolume)));
-    overviewBody.append(makeStatRow(ctx, 'Liquidity', formatVolume(data.liquidity)));
-    if (data.endDate) overviewBody.append(makeStatRow(ctx, 'Resolution', formatDate(data.endDate)));
-    if (data.resolutionSource) overviewBody.append(makeStatRow(ctx, 'Source', data.resolutionSource));
+    const factGrid = ctx.el('div', 'edp-fact-grid edp-prediction-overview-grid');
+    factGrid.append(
+      makeFactCard(ctx, 'Total Volume', formatVolume(data.totalVolume)),
+      makeFactCard(ctx, 'Liquidity', formatVolume(data.liquidity || 0)),
+      makeFactCard(ctx, 'Resolution', data.endDate ? formatDate(data.endDate) : 'Open-ended'),
+    );
+    overviewBody.append(factGrid);
+    if (data.resolutionSource) overviewBody.append(row(ctx, 'Resolution Source', data.resolutionSource));
     container.append(overviewCard);
 
     const [marketsCard, marketsBody] = ctx.sectionCard(`${data.markets.length} Market${data.markets.length !== 1 ? 's' : ''}`);
     for (const market of data.markets) {
-      marketsBody.append(createMarketAccordion(ctx, market, data.priceHistory?.[market.slug] || [], data.holders?.[market.slug] || [], data.comments?.[market.slug] || []));
+      marketsBody.append(buildMarketCard(
+        ctx,
+        market,
+        data.priceHistory?.[market.slug] || [],
+        data.holders?.[market.slug] || [],
+        data.comments?.[market.slug] || [],
+      ));
     }
     container.append(marketsCard);
 
-    const tradeBtn = ctx.el('a', 'edp-trade-btn') as HTMLAnchorElement;
+    const tradeBtn = ctx.el('a', 'edp-trade-btn edp-prediction-trade-btn') as HTMLAnchorElement;
     tradeBtn.href = data.polymarketUrl;
     tradeBtn.target = '_blank';
     tradeBtn.rel = 'noopener noreferrer';
@@ -275,104 +294,113 @@ export class PredictionMarketRenderer implements EntityRenderer {
   }
 }
 
-function createMarketAccordion(ctx: EntityRenderContext, market: PredictionMarketSubMarket, history: PricePoint[], h: MarketHolder[], c: MarketComment[]): HTMLElement {
-  const wrapper = ctx.el('div', 'edp-poly-accordion');
-  const header = ctx.el('button', 'edp-poly-accordion-header');
-  header.append(ctx.el('span', 'edp-poly-accordion-title', market.question));
-  const priceBadge = ctx.el('span', `edp-poly-price edp-poly-price--${market.closed ? 'closed' : 'active'}`);
-  priceBadge.textContent = `${market.yesPrice}%`;
-  header.append(priceBadge);
-  header.append(ctx.el('span', 'edp-poly-chevron', '▸'));
+function buildPredictionHero(ctx: EntityRenderContext, data: PredictionMarketPanelData, leadMarket: PredictionMarketSubMarket): HTMLElement {
+  const hero = ctx.el('section', 'edp-prediction-hero');
+  const top = ctx.el('div', 'edp-prediction-hero-top');
+  const score = ctx.el('div', 'edp-prediction-hero-score');
+  score.append(
+    ctx.el('span', 'edp-prediction-hero-score-label', leadMarket.closed ? 'Final Yes' : 'Current Yes'),
+    ctx.el('span', 'edp-prediction-hero-score-value', `${leadMarket.yesPrice}%`),
+  );
+  const meta = ctx.el('div', 'edp-prediction-hero-meta');
+  meta.append(
+    makeInlineStat(ctx, 'No', `${leadMarket.noPrice}%`),
+    makeInlineStat(ctx, 'Markets', String(data.markets.length)),
+    makeInlineStat(ctx, 'Volume', formatVolume(leadMarket.volume || data.totalVolume)),
+  );
+  top.append(score, meta);
+  hero.append(top);
 
-  const body = ctx.el('div', 'edp-poly-accordion-body');
-  body.style.display = 'none';
-  header.addEventListener('click', () => {
-    const isOpen = body.style.display !== 'none';
-    body.style.display = isOpen ? 'none' : 'block';
-    const chev = header.querySelector('.edp-poly-chevron') as HTMLElement;
-    if (chev) chev.textContent = isOpen ? '▸' : '▾';
-    if (!isOpen && !body.dataset.loaded) {
-      body.dataset.loaded = 'true';
-      renderMarketDetail(ctx, body, market, history, h, c);
-    }
-  });
-
-  wrapper.append(header, body);
-  return wrapper;
+  const bar = buildProbabilityBar(ctx, leadMarket.yesPrice, leadMarket.noPrice);
+  hero.append(bar);
+  return hero;
 }
 
-function renderMarketDetail(ctx: EntityRenderContext, body: HTMLElement, market: PredictionMarketSubMarket, history: PricePoint[], holders: MarketHolder[], comments: MarketComment[]): void {
-  const chartSection = ctx.el('div', 'edp-poly-section');
-  const chartHeader = ctx.el('div', 'edp-poly-section-header');
-  chartHeader.append(ctx.el('span', 'edp-poly-section-title', 'Price History'));
-  chartSection.append(chartHeader);
-  const chartContainer = ctx.el('div', 'edp-poly-chart');
+function buildMarketCard(
+  ctx: EntityRenderContext,
+  market: PredictionMarketSubMarket,
+  history: PricePoint[],
+  holders: MarketHolder[],
+  comments: MarketComment[],
+): HTMLElement {
+  const card = ctx.el('article', 'edp-prediction-market-card');
+  const header = ctx.el('div', 'edp-prediction-market-head');
+  header.append(ctx.el('h4', 'edp-prediction-market-title', market.question));
+  const status = ctx.el('div', 'edp-prediction-market-badges');
+  status.append(ctx.el('span', `edp-prediction-pill ${market.closed ? 'is-closed' : 'is-live'}`, market.closed ? 'Closed' : 'Live'));
+  header.append(status);
+  card.append(header);
+
+  card.append(buildProbabilityBar(ctx, market.yesPrice, market.noPrice));
+
+  const stats = ctx.el('div', 'edp-fact-grid edp-prediction-market-grid');
+  stats.append(
+    makeFactCard(ctx, 'Yes', `${market.yesPrice}%`),
+    makeFactCard(ctx, 'No', `${market.noPrice}%`),
+    makeFactCard(ctx, 'Volume', formatVolume(market.volume)),
+  );
+  card.append(stats);
+
+  if (market.endDate) card.append(row(ctx, 'Resolves', formatDate(market.endDate)));
   if (history.length > 1) {
-    chartContainer.append(createPriceChart(history, market.yesPrice));
-  } else {
-    chartContainer.append(ctx.el('div', 'edp-poly-chart-placeholder', 'Insufficient history data'));
-  }
-  chartSection.append(chartContainer);
-  body.append(chartSection);
-
-  const barSection = ctx.el('div', 'edp-poly-section');
-  const yesBar = ctx.el('div', 'edp-poly-bar-track');
-  const yesFill = ctx.el('div', 'edp-poly-bar-yes');
-  yesFill.style.width = `${market.yesPrice}%`;
-  const noFill = ctx.el('div', 'edp-poly-bar-no');
-  noFill.style.width = `${market.noPrice}%`;
-  yesBar.append(yesFill, noFill);
-  const labels = ctx.el('div', 'edp-poly-bar-labels');
-  labels.append(ctx.el('span', 'edp-poly-bar-label edp-poly-bar-label--yes', `Yes ${market.yesPrice}%`));
-  labels.append(ctx.el('span', 'edp-poly-bar-label edp-poly-bar-label--no', `No ${market.noPrice}%`));
-  barSection.append(yesBar, labels);
-  body.append(barSection);
-
-  const stats = ctx.el('div', 'edp-poly-stats');
-  stats.append(makeStatRow(ctx, 'Volume', formatVolume(market.volume)));
-  if (market.endDate) stats.append(makeStatRow(ctx, 'Resolves', formatDate(market.endDate)));
-  body.append(stats);
-
-  if (holders.length > 0) {
-    body.append(createCollapsibleSection(ctx, `Top Holders (${holders.length})`, holders.map(h => createHolderRow(ctx, h))));
+    const chartWrap = ctx.el('div', 'edp-prediction-chart-wrap');
+    chartWrap.append(createPriceChart(history, market.yesPrice));
+    card.append(chartWrap);
   }
 
-  if (comments.length > 0) {
-    body.append(createCollapsibleSection(ctx, `Comments (${comments.length})`, comments.map(c => createCommentRow(ctx, c))));
-  }
+  const foot = ctx.el('div', 'edp-prediction-market-foot');
+  foot.append(
+    makeMetaChip(ctx, `${holders.length} holder${holders.length === 1 ? '' : 's'}`),
+    makeMetaChip(ctx, `${comments.length} comment${comments.length === 1 ? '' : 's'}`),
+  );
 
   if (!market.closed) {
-    const tradeLink = ctx.el('a', 'edp-poly-trade-link') as HTMLAnchorElement;
+    const tradeLink = ctx.el('a', 'edp-prediction-market-link') as HTMLAnchorElement;
     tradeLink.href = market.url;
     tradeLink.target = '_blank';
     tradeLink.rel = 'noopener noreferrer';
-    tradeLink.textContent = 'Trade on Polymarket →';
-    body.append(tradeLink);
-  } else {
-    body.append(ctx.el('div', 'edp-poly-closed', 'This market is closed'));
+    tradeLink.textContent = 'Open Market';
+    foot.append(tradeLink);
   }
+
+  card.append(foot);
+  return card;
 }
 
-function createCollapsibleSection(ctx: EntityRenderContext, title: string, children: HTMLElement[]): HTMLElement {
-  const section = ctx.el('div', 'edp-poly-section');
-  const header = ctx.el('button', 'edp-poly-section-header edp-poly-section-toggle');
-  header.append(ctx.el('span', 'edp-poly-section-title', title));
-  header.append(ctx.el('span', 'edp-poly-chevron', '▸'));
-  section.append(header);
+function buildProbabilityBar(ctx: EntityRenderContext, yesPrice: number, noPrice: number): HTMLElement {
+  const section = ctx.el('div', 'edp-prediction-bar-block');
+  const track = ctx.el('div', 'edp-prediction-bar-track');
+  const yes = ctx.el('div', 'edp-prediction-bar-fill is-yes');
+  yes.style.width = `${yesPrice}%`;
+  const no = ctx.el('div', 'edp-prediction-bar-fill is-no');
+  no.style.width = `${noPrice}%`;
+  track.append(yes, no);
 
-  const body = ctx.el('div', 'edp-poly-section-body');
-  body.style.display = 'none';
-  for (const child of children) body.append(child);
-  section.append(body);
-
-  header.addEventListener('click', () => {
-    const isOpen = body.style.display !== 'none';
-    body.style.display = isOpen ? 'none' : 'block';
-    const chev = header.querySelector('.edp-poly-chevron') as HTMLElement;
-    if (chev) chev.textContent = isOpen ? '▸' : '▾';
-  });
-
+  const labels = ctx.el('div', 'edp-prediction-bar-labels');
+  labels.append(
+    ctx.el('span', 'edp-prediction-bar-label is-yes', `Yes ${yesPrice}%`),
+    ctx.el('span', 'edp-prediction-bar-label is-no', `No ${noPrice}%`),
+  );
+  section.append(track, labels);
   return section;
+}
+
+function makeFactCard(ctx: EntityRenderContext, label: string, value: string): HTMLElement {
+  const fact = ctx.el('div', 'edp-fact-card');
+  fact.append(ctx.el('div', 'edp-fact-label', label));
+  fact.append(ctx.el('div', 'edp-fact-value', value));
+  return fact;
+}
+
+function makeInlineStat(ctx: EntityRenderContext, label: string, value: string): HTMLElement {
+  const stat = ctx.el('div', 'edp-hotspot-inline-stat');
+  stat.append(ctx.el('span', 'edp-hotspot-inline-label', label));
+  stat.append(ctx.el('span', 'edp-hotspot-inline-value', value));
+  return stat;
+}
+
+function makeMetaChip(ctx: EntityRenderContext, text: string): HTMLElement {
+  return ctx.el('span', 'edp-prediction-meta-chip', text);
 }
 
 function createPriceChart(history: PricePoint[], currentPrice: number): SVGElement {
@@ -434,42 +462,6 @@ function createPriceChart(history: PricePoint[], currentPrice: number): SVGEleme
   return svg;
 }
 
-function createHolderRow(ctx: EntityRenderContext, h: MarketHolder): HTMLElement {
-  const row = ctx.el('div', 'edp-poly-holder');
-  const avatar = ctx.el('div', `edp-poly-holder-avatar edp-poly-holder-avatar--${h.side}`);
-  avatar.textContent = h.address.slice(0, 2).toUpperCase();
-  row.append(avatar);
-  const info = ctx.el('div', 'edp-poly-holder-info');
-  info.append(ctx.el('div', 'edp-poly-holder-address', h.label || `${h.address.slice(0, 6)}…${h.address.slice(-4)}`));
-  info.append(ctx.el('div', 'edp-poly-holder-shares', `${h.shares.toLocaleString()} shares · ${formatVolume(h.value)}`));
-  row.append(info);
-  row.append(ctx.el('span', `edp-poly-holder-side edp-poly-holder-side--${h.side}`, h.side.toUpperCase()));
-  return row;
-}
-
-function createCommentRow(ctx: EntityRenderContext, c: MarketComment): HTMLElement {
-  const row = ctx.el('div', 'edp-poly-comment');
-  const avatar = ctx.el('div', 'edp-poly-comment-avatar');
-  avatar.textContent = c.author.slice(0, 2).toUpperCase();
-  row.append(avatar);
-  const content = ctx.el('div', 'edp-poly-comment-content');
-  const top = ctx.el('div', 'edp-poly-comment-top');
-  top.append(ctx.el('span', 'edp-poly-comment-author', c.author));
-  top.append(ctx.el('span', 'edp-poly-comment-time', formatRelativeTime(c.timestamp)));
-  content.append(top);
-  content.append(ctx.el('div', 'edp-poly-comment-text', c.text));
-  content.append(ctx.el('div', 'edp-poly-comment-likes', `♥ ${c.likes}`));
-  row.append(content);
-  return row;
-}
-
-function makeStatRow(ctx: EntityRenderContext, label: string, value: string): HTMLElement {
-  const row = ctx.el('div', 'edp-poly-stat');
-  row.append(ctx.el('span', 'edp-poly-stat-label', label));
-  row.append(ctx.el('span', 'edp-poly-stat-value', value));
-  return row;
-}
-
 function formatVolume(v: number): string {
   if (!v || v === 0) return '—';
   if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
@@ -479,14 +471,4 @@ function formatVolume(v: number): string {
 
 function formatDate(d: string): string {
   try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch { return d; }
-}
-
-function formatRelativeTime(ts: string): string {
-  try {
-    const diff = Date.now() - new Date(ts).getTime();
-    const hours = Math.floor(diff / 3600000);
-    if (hours < 1) return 'Just now';
-    if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
-  } catch { return ''; }
 }

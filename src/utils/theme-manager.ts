@@ -2,9 +2,12 @@ import { invalidateColorCache } from './theme-colors';
 
 export type Theme = 'dark' | 'light';
 export type ThemePreference = 'auto' | 'dark' | 'light';
+export type FontPreference = 'theme' | 'article';
 
 const STORAGE_KEY = 'worldmonitor-theme';
+const FONT_STORAGE_KEY = 'worldmonitor-font-preference';
 const DEFAULT_THEME: Theme = 'dark';
+const DEFAULT_FONT: FontPreference = 'theme';
 
 /**
  * Read the stored theme preference from localStorage.
@@ -26,6 +29,14 @@ export function getThemePreference(): ThemePreference {
     if (stored === 'auto' || stored === 'dark' || stored === 'light') return stored;
   } catch { /* noop */ }
   return 'auto';
+}
+
+export function getFontPreference(): FontPreference {
+  try {
+    const stored = localStorage.getItem(FONT_STORAGE_KEY);
+    if (stored === 'theme' || stored === 'article') return stored;
+  } catch { /* noop */ }
+  return DEFAULT_FONT;
 }
 
 function resolveAutoTheme(): Theme {
@@ -56,6 +67,16 @@ export function setThemePreference(pref: ThemePreference): void {
     autoMediaHandler = () => setTheme(resolveAutoTheme());
     autoMediaQuery.addEventListener('change', autoMediaHandler);
   }
+}
+
+function applyFontPreference(pref: FontPreference): void {
+  document.documentElement.dataset.fontPreference = pref;
+  window.dispatchEvent(new CustomEvent('font-changed', { detail: { fontPreference: pref } }));
+}
+
+export function setFontPreference(pref: FontPreference): void {
+  try { localStorage.setItem(FONT_STORAGE_KEY, pref); } catch { /* noop */ }
+  applyFontPreference(pref);
 }
 
 /**
@@ -121,4 +142,5 @@ export function applyStoredTheme(): void {
       meta.content = variant === 'happy' ? '#FAFAF5' : '#f8f9fa';
     }
   }
+  applyFontPreference(getFontPreference());
 }

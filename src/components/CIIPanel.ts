@@ -1,14 +1,15 @@
 import { Panel } from './Panel';
-import { calculateCII, type CountryScore } from '@/services/country-instability';
+import type { CountryScore } from '@/services/country-instability';
 import { t } from '../services/i18n';
 import { h, replaceChildren, rawHtml } from '@/utils/dom-utils';
 import type { CachedRiskScores } from '@/services/cached-risk-scores';
-import { toCountryScore } from '@/services/cached-risk-scores';
+import { getPreferredCountryScores, toCountryScore } from '@/services/cached-risk-scores';
 
 export class CIIPanel extends Panel {
   private scores: CountryScore[] = [];
   private focalPointsReady = false;
   private hasCachedRender = false;
+  private activeCountryCode: string | null = null;
   private onShareStory?: (code: string, name: string) => void;
   private onCountryClick?: (code: string) => void;
   private compareTarget: CountryScore | null = null;
@@ -61,7 +62,11 @@ export class CIIPanel extends Panel {
       title: 'Compare with another country',
     }, 'vs');
 
-    return h('div', { className: 'cii-country', dataset: { code: country.code } },
+    return h('div', {
+      className: `cii-country${this.activeCountryCode === country.code ? ' cii-country-active' : ''}`,
+      dataset: { code: country.code },
+      ...(this.activeCountryCode === country.code ? { 'aria-current': 'true' } : {}),
+    },
       h('div', { className: 'cii-header' },
         h('span', { className: 'cii-score-dot', style: `background:${color}; box-shadow: 0 0 10px ${color}55;` }),
         h('span', { className: 'cii-name' }, country.name),
@@ -202,6 +207,7 @@ export class CIIPanel extends Panel {
         const target = e.currentTarget as HTMLElement;
         const code = target.dataset.code;
         if (code && this.onCountryClick) {
+          this.setActiveCountry(code);
           this.onCountryClick(code);
         }
       });
@@ -231,10 +237,10 @@ export class CIIPanel extends Panel {
     if (!this.hasCachedRender) this.showLoading();
 
     try {
-      const localScores = calculateCII();
-      const localWithData = localScores.filter(s => s.score > 0).length;
-      this.scores = localScores;
-      console.log(`[CIIPanel] Calculated ${localWithData} countries with focal point intelligence`);
+      const scores = getPreferredCountryScores();
+      const withScore = scores.filter(s => s.score > 0).length;
+      this.scores = scores;
+      console.log(`[CIIPanel] Loaded ${withScore} country scores`);
 
       const withData = this.scores.filter(s => s.score > 0);
       this.setCount(withData.length);
@@ -268,6 +274,27 @@ export class CIIPanel extends Panel {
     this.bindShareButtons();
     this.bindVsButtons();
     console.log(`[CIIPanel] Rendered ${scores.length} countries from cached/bootstrap data`);
+  }
+
+  public setActiveCountry(code: string | null): void {
+    this.activeCountryCode = code;
+    this.updateActiveCountryUI();
+  }
+
+  private updateActiveCountryUI(): void {
+    const rows = this.content.querySelectorAll<HTMLElement>('.cii-country');
+    rows.forEach((rowEl) => {
+      const isActive = !!this.activeCountryCode && rowEl.dataset.code === this.activeCountryCode;
+      rowEl.classList.toggle('cii-country-active', isActive);
+      if (isActive) {
+        rowEl.setAttribute('aria-current', 'true');
+      } else {
+        rowEl.removeAttribute('aria-current');
+      }
+    });
+    if (!this.activeCountryCode) return;
+    const activeEl = this.content.querySelector<HTMLElement>(`.cii-country[data-code="${this.activeCountryCode}"]`);
+    activeEl?.scrollIntoView({ block: 'nearest' });
   }
 
   public getScores(): CountryScore[] {

@@ -563,26 +563,50 @@ export async function fetchCountryMarkets(country: string): Promise<PredictionMa
 export async function searchPredictions(query: string): Promise<PredictionMarket[]> {
   if (!query || query.length < 2) return [];
   const lowerQuery = query.toLowerCase();
+  const dedupeAndSort = (markets: PredictionMarket[]): PredictionMarket[] => {
+    const deduped = new Map<string, PredictionMarket>();
+    for (const market of markets) {
+      const key = market.slug || market.url || market.title;
+      if (!key) continue;
+      const existing = deduped.get(key);
+      if (!existing || (market.volume ?? 0) > (existing.volume ?? 0)) {
+        deduped.set(key, market);
+      }
+    }
+    return [...deduped.values()].sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0));
+  };
 
   // Strategy 1: Sebuf RPC (works in production on Vercel)
   try {
-    const resp = await client.listPredictionMarkets({
-      category: '',
-      query,
-      pageSize: 10,
-      cursor: '',
-    });
-    if (resp.markets && resp.markets.length > 0) {
-      return resp.markets
-        .filter(m => !isExpired(m.closesAt ? new Date(m.closesAt).toISOString() : undefined))
-        .map(m => ({
+    const markets: PredictionMarket[] = [];
+    const seen = new Set<string>();
+    let cursor = '';
+    for (let page = 0; page < 5; page++) {
+      const resp = await client.listPredictionMarkets({
+        category: '',
+        query,
+        pageSize: 100,
+        cursor,
+      });
+      for (const m of resp.markets ?? []) {
+        const closesAt = m.closesAt ? new Date(m.closesAt).toISOString() : undefined;
+        if (isExpired(closesAt)) continue;
+        if (seen.has(m.id)) continue;
+        seen.add(m.id);
+        markets.push({
           title: m.title,
           yesPrice: m.yesPrice * 100,
           volume: m.volume,
           url: m.url,
-          endDate: m.closesAt ? new Date(m.closesAt).toISOString() : undefined,
+          endDate: closesAt,
           slug: m.id,
-        }));
+        });
+      }
+      cursor = resp.pagination?.nextCursor ?? '';
+      if (!cursor) break;
+    }
+    if (markets.length > 0) {
+      return dedupeAndSort(markets);
     }
   } catch { /* RPC unavailable (e.g. localhost), fall through */ }
 
@@ -595,7 +619,7 @@ export async function searchPredictions(query: string): Promise<PredictionMarket
       end_date_min: new Date().toISOString(),
       order: 'volume',
       ascending: 'false',
-      limit: '100',
+      limit: '250',
     });
     if (!response.ok) return [];
     const events: PolymarketEvent[] = await response.json();
@@ -621,19 +645,19 @@ export async function searchPredictions(query: string): Promise<PredictionMarket
         : (event.markets ?? []).filter(m => !m.closed && !isExpired(m.endDate));
 
       if (candidates.length > 0) {
-        const topMarket = candidates.reduce((best, m) => {
-          const vol = m.volumeNum ?? (m.volume ? parseFloat(m.volume) : 0);
-          const bestVol = best.volumeNum ?? (best.volume ? parseFloat(best.volume) : 0);
-          return vol > bestVol ? m : best;
-        });
-        results.push({
-          title: topMarket.question || event.title,
-          yesPrice: parseMarketPrice(topMarket),
-          volume: event.volume ?? 0,
-          url: buildMarketUrl(event.slug),
-          endDate: parseEndDate(topMarket.endDate ?? event.endDate),
-          slug: topMarket.slug,
-        });
+        for (const market of candidates) {
+          const marketKey = market.slug || `${event.id}:${market.question || event.title}`;
+          if (seen.has(marketKey)) continue;
+          seen.add(marketKey);
+          results.push({
+            title: market.question || event.title,
+            yesPrice: parseMarketPrice(market),
+            volume: market.volumeNum ?? (market.volume ? parseFloat(market.volume) : event.volume ?? 0),
+            url: market.slug ? buildMarketUrl(market.slug) : buildMarketUrl(event.slug),
+            endDate: parseEndDate(market.endDate ?? event.endDate),
+            slug: market.slug,
+          });
+        }
       } else if (titleMatches) {
         results.push({
           title: event.title,
@@ -646,8 +670,6 @@ export async function searchPredictions(query: string): Promise<PredictionMarket
       }
     }
 
-    return results
-      .sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0))
-      .slice(0, 10);
+    return dedupeAndSort(results);
   } catch { return []; }
 }

@@ -587,12 +587,12 @@ export class SearchManager implements AppModule {
     this.ctx.searchModal.registerAsyncSource('prediction', async (query) => {
       const markets = await searchPredictions(query);
       return markets.map(p => ({
-        id: `live-${p.title}`,
+        id: `live-${p.slug || p.title}`,
         title: p.title,
-        subtitle: `${Math.round(p.yesPrice)}% probability`,
+        subtitle: `${Math.round(p.yesPrice)}% probability${p.volume ? ` • $${Math.round(p.volume).toLocaleString()} vol` : ''}`,
         data: p,
       }));
-    });
+    }, { limit: 250 });
 
     if (this.ctx.latestMarkets.length > 0) {
       this.ctx.searchModal.registerSource('market', this.ctx.latestMarkets.map(m => ({

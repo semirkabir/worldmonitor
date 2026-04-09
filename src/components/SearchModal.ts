@@ -68,6 +68,12 @@ interface SearchableSource {
   items: { id: string; title: string; subtitle?: string; data: unknown }[];
 }
 
+interface AsyncSearchSource {
+  type: SearchResultType;
+  fetcher: (query: string) => Promise<SearchableSource['items']>;
+  limit?: number;
+}
+
 const RECENT_SEARCHES_KEY = 'worldmonitor_recent_searches';
 const MAX_RECENT = 8;
 const MAX_RESULTS = 24;
@@ -86,7 +92,7 @@ export class SearchModal {
   private closeTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private viewportHandler: (() => void) | null = null;
   private sources: SearchableSource[] = [];
-  private asyncSources: { type: SearchResultType; fetcher: (query: string) => Promise<SearchableSource['items']> }[] = [];
+  private asyncSources: AsyncSearchSource[] = [];
   private results: SearchResult[] = [];
   private renderedResults: SearchResult[] = []; // mirrors DOM render order (differs from results when grouped)
   private commandResults: CommandResult[] = [];
@@ -117,12 +123,12 @@ export class SearchModal {
     }
   }
 
-  public registerAsyncSource(type: SearchResultType, fetcher: (query: string) => Promise<SearchableSource['items']>): void {
+  public registerAsyncSource(type: SearchResultType, fetcher: (query: string) => Promise<SearchableSource['items']>, options?: { limit?: number }): void {
     const idx = this.asyncSources.findIndex(s => s.type === type);
     if (idx >= 0) {
-      this.asyncSources[idx] = { type, fetcher };
+      this.asyncSources[idx] = { type, fetcher, limit: options?.limit };
     } else {
-      this.asyncSources.push({ type, fetcher });
+      this.asyncSources.push({ type, fetcher, limit: options?.limit });
     }
   }
 
@@ -407,7 +413,8 @@ export class SearchModal {
         // Stale check — user may have typed more
         if (version !== this.asyncSearchVersion) return;
 
-        for (const item of items.slice(0, 5)) {
+        const limit = source.limit ?? 5;
+        for (const item of items.slice(0, limit)) {
           if (existingIds.has(item.id)) continue;
           // Also dedupe by title (static uses title as id, live prefixes with "live-")
           if (this.results.some(r => r.type === source.type && r.title === item.title)) continue;

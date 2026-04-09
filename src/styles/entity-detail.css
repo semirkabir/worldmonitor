@@ -685,6 +685,221 @@
   border-radius: 0;
 }
 
+.edp-prediction-summary {
+  margin-bottom: 14px;
+  background: linear-gradient(180deg, rgba(96, 165, 250, 0.1), rgba(96, 165, 250, 0.04));
+  border-color: rgba(96, 165, 250, 0.18);
+}
+
+.edp-prediction-hero {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  margin-bottom: 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(96, 165, 250, 0.18);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.86));
+  box-shadow: 0 18px 40px color-mix(in srgb, var(--overlay-heavy) 22%, transparent);
+}
+
+.edp-prediction-hero-top {
+  display: grid;
+  grid-template-columns: minmax(0, 150px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.edp-prediction-hero-score {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.9), rgba(22, 163, 74, 0.78));
+}
+
+.edp-prediction-hero-score-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.edp-prediction-hero-score-value {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  color: white;
+}
+
+.edp-prediction-hero-meta {
+  display: grid;
+  gap: 10px;
+}
+
+.edp-prediction-overview-grid,
+.edp-prediction-market-grid {
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+}
+
+.edp-prediction-market-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  background: color-mix(in srgb, var(--bg) 32%, var(--surface) 68%);
+}
+
+.edp-prediction-market-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.edp-prediction-market-title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.edp-prediction-market-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.edp-prediction-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.edp-prediction-pill.is-live {
+  background: rgba(34, 197, 94, 0.14);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.18);
+}
+
+.edp-prediction-pill.is-closed {
+  background: rgba(148, 163, 184, 0.14);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.edp-prediction-bar-block {
+  display: grid;
+  gap: 8px;
+}
+
+.edp-prediction-bar-track {
+  display: flex;
+  width: 100%;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border) 52%, transparent);
+}
+
+.edp-prediction-bar-fill {
+  height: 100%;
+}
+
+.edp-prediction-bar-fill.is-yes {
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+}
+
+.edp-prediction-bar-fill.is-no {
+  background: linear-gradient(90deg, #ef4444, #f97316);
+}
+
+.edp-prediction-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.edp-prediction-bar-label {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.edp-prediction-bar-label.is-yes {
+  color: #86efac;
+}
+
+.edp-prediction-bar-label.is-no {
+  color: #fca5a5;
+}
+
+.edp-prediction-chart-wrap {
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--border) 64%, transparent);
+  background: color-mix(in srgb, var(--surface) 82%, black 18%);
+  padding: 12px;
+}
+
+.edp-prediction-market-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.edp-prediction-meta-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  background: color-mix(in srgb, var(--surface) 84%, black 16%);
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.edp-prediction-market-link,
+.edp-prediction-trade-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  margin-left: auto;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--accent-blue, #60a5fa) 90%, white 10%);
+  border: 1px solid color-mix(in srgb, var(--accent-blue, #60a5fa) 28%, transparent);
+  background: color-mix(in srgb, var(--accent-blue, #60a5fa) 14%, transparent);
+}
+
+.edp-prediction-market-link:hover,
+.edp-prediction-trade-btn:hover {
+  color: white;
+  background: color-mix(in srgb, var(--accent-blue, #60a5fa) 24%, transparent);
+  border-color: color-mix(in srgb, var(--accent-blue, #60a5fa) 40%, transparent);
+}
+
+@media (max-width: 640px) {
+  .edp-prediction-hero-top {
+    grid-template-columns: 1fr;
+  }
+}
+
 .edp-wiki-section {
   gap: 14px;
 }

@@ -30,7 +30,7 @@ import { getApiBaseUrl, isDesktopRuntime, resolveLocalApiPort, startSmartPollLoo
 import { tryInvokeTauri, invokeTauri } from '@/services/tauri-bridge';
 import { escapeHtml } from '@/utils/sanitize';
 import { initI18n, t } from '@/services/i18n';
-import { applyStoredTheme } from '@/utils/theme-manager';
+import { applyStoredTheme, getFontPreference, setFontPreference, type FontPreference } from '@/utils/theme-manager';
 import { trackFeatureToggle } from '@/services/analytics';
 
 let activeSection = 'overview';
@@ -218,6 +218,21 @@ function renderOverview(area: HTMLElement): void {
       <div class="settings-ov-cats">${catCards}</div>
     </div>
 
+    <section class="settings-appearance-card">
+      <div class="settings-appearance-copy">
+        <h2 class="wm-section-title">Font</h2>
+        <p class="wm-section-desc">Choose between the current console theme font and the current news/article font.</p>
+      </div>
+      <select class="settings-font-select" id="settingsFontPreference">
+        <option value="theme"${getFontPreference() === 'theme' ? ' selected' : ''}>Theme font</option>
+        <option value="article"${getFontPreference() === 'article' ? ' selected' : ''}>Article font</option>
+      </select>
+      <div class="settings-font-preview-grid">
+        ${renderFontPreviewCard('theme', 'Theme font', 'Operator console', 'CURRENT SITUATION UPDATE // SIGNALS STABLE')}
+        ${renderFontPreviewCard('article', 'Article font', 'News/article reading', 'Current situation update: signals stable.')}
+      </div>
+    </section>
+
     <div class="settings-ov-license">
       <section class="wm-section">
         <h2 class="wm-section-title">${t('modals.settingsWindow.worldMonitor.apiKey.title')}</h2>
@@ -259,6 +274,31 @@ function renderOverview(area: HTMLElement): void {
 }
 
 function initOverviewListeners(area: HTMLElement): void {
+  const syncFontPreviewState = (value: FontPreference): void => {
+    area.querySelectorAll<HTMLElement>('.settings-font-preview-card').forEach((card) => {
+      card.classList.toggle('active', card.dataset.fontPreference === value);
+    });
+  };
+
+  area.querySelector<HTMLSelectElement>('#settingsFontPreference')?.addEventListener('change', (e) => {
+    const value = (e.target as HTMLSelectElement).value as FontPreference;
+    setFontPreference(value);
+    syncFontPreviewState(value);
+    setActionStatus('Font preference updated.', 'ok');
+  });
+
+  area.querySelectorAll<HTMLElement>('.settings-font-preview-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      const value = card.dataset.fontPreference as FontPreference | undefined;
+      if (!value) return;
+      const select = area.querySelector<HTMLSelectElement>('#settingsFontPreference');
+      if (select) select.value = value;
+      setFontPreference(value);
+      syncFontPreviewState(value);
+      setActionStatus('Font preference updated.', 'ok');
+    });
+  });
+
   area.querySelector('[data-wm-toggle]')?.addEventListener('click', () => {
     const input = area.querySelector<HTMLInputElement>('[data-wm-key-input]');
     if (input) input.type = input.type === 'password' ? 'text' : 'password';
@@ -319,6 +359,19 @@ function initOverviewListeners(area: HTMLElement): void {
       if (section) renderSection(section);
     });
   });
+}
+
+function renderFontPreviewCard(value: FontPreference, title: string, subtitle: string, sample: string): string {
+  const active = getFontPreference() === value ? ' active' : '';
+  return `
+    <button type="button" class="settings-font-preview-card${active}" data-font-preference="${value}">
+      <div class="settings-font-preview-top">
+        <span class="settings-font-preview-title">${escapeHtml(title)}</span>
+        <span class="settings-font-preview-subtitle">${escapeHtml(subtitle)}</span>
+      </div>
+      <div class="settings-font-preview-sample settings-font-preview-sample-${value}">${escapeHtml(sample)}</div>
+    </button>
+  `;
 }
 
 // ── Feature sections ──

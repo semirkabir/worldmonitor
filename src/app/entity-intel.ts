@@ -20,7 +20,9 @@ import {
   CentralBankRenderer,
   CommodityHubRenderer,
 } from '@/components/entity-detail/renderers/financial-center';
-import { TechHQRenderer } from '@/components/entity-detail/renderers/tech-hq';
+import { TechHQClusterRenderer, TechHQRenderer } from '@/components/entity-detail/renderers/tech-hq';
+import { AcceleratorRenderer } from '@/components/entity-detail/renderers/accelerator';
+import { TechEventClusterRenderer } from '@/components/entity-detail/renderers/tech-event-cluster';
 import { AircraftRenderer } from '@/components/entity-detail/renderers/aircraft';
 import { SpaceportRenderer } from '@/components/entity-detail/renderers/spaceport';
 import { CompanyRenderer } from '@/components/entity-detail/renderers/company';
@@ -114,6 +116,9 @@ export class EntityIntelManager implements AppModule {
       centralBank: new CentralBankRenderer(),
       commodityHub: new CommodityHubRenderer(),
       techHQ: new TechHQRenderer(),
+      techHQCluster: new TechHQClusterRenderer(),
+      accelerator: new AcceleratorRenderer(),
+      techEventCluster: new TechEventClusterRenderer(),
       aircraft: new AircraftRenderer(),
       spaceport: new SpaceportRenderer(),
       company: new CompanyRenderer(),

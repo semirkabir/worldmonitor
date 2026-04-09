@@ -14,6 +14,7 @@ import { deletePersistentCache, getPersistentCache, setPersistentCache, describe
 import { t } from '@/services/i18n';
 import { isDesktopRuntime } from '@/services/runtime';
 import { getAiFlowSettings, isAnyAiProviderEnabled, subscribeAiFlowChange } from '@/services/ai-flow-settings';
+import { getInsightSeverityPreference, subscribeInsightSeverityPreferenceChange } from '@/services/insight-severity-settings';
 import { getServerInsights, type ServerInsights, type ServerInsightStory } from '@/services/insights-loader';
 import type { ClusteredEvent, FocalPoint, MilitaryFlight } from '@/types';
 import { triggerUrgencyMode } from '@/services/urgency-mode';
@@ -27,6 +28,7 @@ export class InsightsPanel extends Panel {
   private lastMilitaryFlights: MilitaryFlight[] = [];
   private lastClusters: ClusteredEvent[] = [];
   private aiFlowUnsubscribe: (() => void) | null = null;
+  private insightSeverityUnsubscribe: (() => void) | null = null;
   private updateGeneration = 0;
   private static readonly BRIEF_COOLDOWN_MS = 120_000; // 2 min cooldown (API has limits)
   private static readonly BRIEF_CACHE_KEY = 'summary:world-brief';
@@ -49,6 +51,10 @@ export class InsightsPanel extends Panel {
         void this.onAiFlowChanged();
       });
     }
+
+    this.insightSeverityUnsubscribe = subscribeInsightSeverityPreferenceChange(() => {
+      void this.onAiFlowChanged();
+    });
   }
 
   public setMilitaryFlights(flights: MilitaryFlight[]): void {
@@ -201,6 +207,74 @@ export class InsightsPanel extends Panel {
     score *= recencyMultiplier;
 
     return score;
+  }
+
+  private getKeywordMatchCount(titleLower: string, keywords: readonly string[]): number {
+    return keywords.reduce((count, keyword) => count + (titleLower.includes(keyword) ? 1 : 0), 0);
+  }
+
+  private getSemanticSeverityClass(input: {
+    title: string;
+    sourceCount: number;
+    isAlert?: boolean;
+    velocityLevel?: string;
+    threatLevel?: string;
+    importanceScore?: number;
+  }): 'critical' | 'high' | 'elevated' | 'watch' | null {
+    const titleLower = input.title.toLowerCase();
+    const velocityLevel = input.velocityLevel?.toLowerCase() ?? 'normal';
+    const threatLevel = input.threatLevel?.toLowerCase() ?? 'moderate';
+
+    let score = 0;
+
+    if (input.isAlert) score += 4;
+
+    if (input.sourceCount >= 5) score += 3;
+    else if (input.sourceCount >= 3) score += 2;
+    else if (input.sourceCount >= 2) score += 1;
+
+    if (velocityLevel === 'viral') score += 4;
+    else if (velocityLevel === 'spike' || velocityLevel === 'critical') score += 3;
+    else if (velocityLevel === 'high') score += 2;
+    else if (velocityLevel === 'elevated') score += 1;
+
+    if (threatLevel === 'critical') score += 4;
+    else if (threatLevel === 'high') score += 3;
+    else if (threatLevel === 'elevated') score += 2;
+
+    const violenceMatches = this.getKeywordMatchCount(titleLower, InsightsPanel.VIOLENCE_KEYWORDS);
+    const militaryMatches = this.getKeywordMatchCount(titleLower, InsightsPanel.MILITARY_KEYWORDS);
+    const unrestMatches = this.getKeywordMatchCount(titleLower, InsightsPanel.UNREST_KEYWORDS);
+    const flashpointMatches = this.getKeywordMatchCount(titleLower, InsightsPanel.FLASHPOINT_KEYWORDS);
+    const crisisMatches = this.getKeywordMatchCount(titleLower, InsightsPanel.CRISIS_KEYWORDS);
+    const demoteMatches = this.getKeywordMatchCount(titleLower, InsightsPanel.DEMOTE_KEYWORDS);
+
+    if (violenceMatches > 0) score += 3 + violenceMatches;
+    if (militaryMatches > 0) score += 2 + Math.min(militaryMatches, 2);
+    if (unrestMatches > 0) score += 2;
+    if (flashpointMatches > 0) score += 2;
+    if (crisisMatches > 0) score += 1;
+
+    if (flashpointMatches > 0 && (violenceMatches > 0 || militaryMatches > 0 || unrestMatches > 0)) {
+      score += 2;
+    }
+
+    if (typeof input.importanceScore === 'number') {
+      if (input.importanceScore >= 160) score += 3;
+      else if (input.importanceScore >= 100) score += 2;
+      else if (input.importanceScore >= 60) score += 1;
+    }
+
+    if (demoteMatches > 0) score -= demoteMatches * 3;
+
+    const sensitivity = getInsightSeverityPreference();
+    const thresholdShift = sensitivity === 'conservative' ? 2 : sensitivity === 'aggressive' ? -2 : 0;
+
+    if (score >= 10 + thresholdShift) return 'critical';
+    if (score >= 7 + thresholdShift) return 'high';
+    if (score >= 4 + thresholdShift) return 'elevated';
+    if (score >= Math.max(1, 2 + thresholdShift) || velocityLevel !== 'normal' || input.sourceCount >= 2) return 'watch';
+    return null;
   }
 
   private selectTopStories(clusters: ClusteredEvent[], maxCount: number): ClusteredEvent[] {
@@ -556,6 +630,16 @@ export class InsightsPanel extends Panel {
       const sentiment = sentiments?.[i];
       const sentimentClass = sentiment?.label === 'negative' ? 'negative' :
         sentiment?.label === 'positive' ? 'positive' : 'neutral';
+      const storyClasses = ['insight-story'];
+      const semanticClass = this.getSemanticSeverityClass({
+        title: story.primaryTitle,
+        sourceCount: story.sourceCount,
+        isAlert: story.isAlert,
+        velocityLevel: story.velocity?.level,
+        threatLevel: story.threatLevel,
+        importanceScore: story.importanceScore,
+      });
+      if (semanticClass) storyClasses.push(semanticClass);
 
       const badges: string[] = [];
 
@@ -566,6 +650,7 @@ export class InsightsPanel extends Panel {
       }
 
       if (story.isAlert) {
+        storyClasses.push('alert');
         badges.push('<span class="insight-badge alert">⚠ ALERT</span>');
       }
 
@@ -576,7 +661,7 @@ export class InsightsPanel extends Panel {
       }
 
       return `
-        <div class="insight-story">
+        <div class="${storyClasses.join(' ')}">
           <div class="insight-story-header">
             <span class="insight-sentiment-dot ${sentimentClass}"></span>
             <span class="insight-story-title">${escapeHtml(story.primaryTitle.slice(0, 100))}${story.primaryTitle.length > 100 ? '...' : ''}</span>
@@ -623,6 +708,15 @@ export class InsightsPanel extends Panel {
       const sentiment = sentiments?.[i];
       const sentimentClass = sentiment?.label === 'negative' ? 'negative' :
         sentiment?.label === 'positive' ? 'positive' : 'neutral';
+      const storyClasses = ['insight-story'];
+      const semanticClass = this.getSemanticSeverityClass({
+        title: cluster.primaryTitle,
+        sourceCount: cluster.sourceCount,
+        isAlert: cluster.isAlert,
+        velocityLevel: cluster.velocity?.level,
+        importanceScore: this.getImportanceScore(cluster),
+      });
+      if (semanticClass) storyClasses.push(semanticClass);
 
       const badges: string[] = [];
 
@@ -638,11 +732,12 @@ export class InsightsPanel extends Panel {
       }
 
       if (cluster.isAlert) {
+        storyClasses.push('alert');
         badges.push('<span class="insight-badge alert">⚠ ALERT</span>');
       }
 
       return `
-        <div class="insight-story">
+        <div class="${storyClasses.join(' ')}">
           <div class="insight-story-header">
             <span class="insight-sentiment-dot ${sentimentClass}"></span>
             <span class="insight-story-title">${escapeHtml(cluster.primaryTitle.slice(0, 100))}${cluster.primaryTitle.length > 100 ? '...' : ''}</span>
@@ -878,6 +973,7 @@ export class InsightsPanel extends Panel {
 
   public override destroy(): void {
     this.aiFlowUnsubscribe?.();
+    this.insightSeverityUnsubscribe?.();
     super.destroy();
   }
 }

@@ -3,8 +3,9 @@ import { getAiFlowSettings, setAiFlowSetting, getStreamQuality, setStreamQuality
 import { getUnifiedTheme, setUnifiedTheme, UNIFIED_THEME_OPTIONS } from '@/config/basemap';
 import { getLiveStreamsAlwaysOn, setLiveStreamsAlwaysOn } from '@/services/live-stream-settings';
 import { getGlobeVisualPreset, setGlobeVisualPreset, GLOBE_VISUAL_PRESET_OPTIONS, type GlobeVisualPreset } from '@/services/globe-render-settings';
+import { getInsightSeverityPreference, setInsightSeverityPreference, INSIGHT_SEVERITY_OPTIONS, type InsightSeverityPreference } from '@/services/insight-severity-settings';
 import type { StreamQuality } from '@/services/ai-flow-settings';
-import { getThemePreference, setThemePreference, type ThemePreference } from '@/utils/theme-manager';
+import { getThemePreference, setThemePreference, getFontPreference, setFontPreference, type ThemePreference, type FontPreference } from '@/utils/theme-manager';
 import { escapeHtml } from '@/utils/sanitize';
 import { trackLanguageChange } from '@/services/analytics';
 import { exportSettings, importSettings, type ImportResult } from '@/utils/settings-persistence';
@@ -87,6 +88,37 @@ function toggleRowHtml(id: string, label: string, desc: string, checked: boolean
   `;
 }
 
+function renderInsightSeverityControl(current: InsightSeverityPreference): string {
+  const currentOption = INSIGHT_SEVERITY_OPTIONS.find((option) => option.value === current) ?? INSIGHT_SEVERITY_OPTIONS[1]!;
+  return `
+    <div class="ai-flow-toggle-row">
+      <div class="ai-flow-toggle-label-wrap">
+        <div class="ai-flow-toggle-label">Insight Sensitivity</div>
+        <div class="ai-flow-toggle-desc">Choose how strict AI Market Insights should be before marking a story as elevated or critical.</div>
+      </div>
+    </div>
+    <div class="us-insight-sensitivity" data-current-value="${current}">
+      <input type="range" min="0" max="2" step="1" value="${INSIGHT_SEVERITY_OPTIONS.findIndex((option) => option.value === current)}" id="us-insight-sensitivity-range" class="us-insight-sensitivity-range" aria-label="Insight sensitivity">
+      <div class="us-insight-sensitivity-track" role="radiogroup" aria-label="Insight sensitivity presets">
+        ${INSIGHT_SEVERITY_OPTIONS.map((option, index) => `
+          <button
+            type="button"
+            class="us-insight-sensitivity-option${option.value === current ? ' active' : ''}"
+            data-insight-sensitivity="${option.value}"
+            data-insight-index="${index}"
+            role="radio"
+            aria-checked="${option.value === current ? 'true' : 'false'}"
+          >
+            <span class="us-insight-sensitivity-option-title">${escapeHtml(option.label)}</span>
+            <span class="us-insight-sensitivity-option-desc">${escapeHtml(option.description)}</span>
+          </button>
+        `).join('')}
+      </div>
+      <div class="us-insight-sensitivity-summary" id="usInsightSensitivitySummary">${escapeHtml(currentOption.description)}</div>
+    </div>
+  `;
+}
+
 
 function updateAiStatus(container: HTMLElement): void {
   const settings = getAiFlowSettings();
@@ -122,6 +154,7 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
 
   // Appearance
   const currentThemePref = getThemePreference();
+  const currentFontPref = getFontPreference();
   html += `<div class="ai-flow-toggle-row">
     <div class="ai-flow-toggle-label-wrap">
       <div class="ai-flow-toggle-label">${t('preferences.theme')}</div>
@@ -138,6 +171,26 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
     html += `<option value="${opt.value}"${selected}>${escapeHtml(opt.label)}</option>`;
   }
   html += `</select>`;
+
+  html += `<div class="ai-flow-toggle-row">
+    <div class="ai-flow-toggle-label-wrap">
+      <div class="ai-flow-toggle-label">Font</div>
+      <div class="ai-flow-toggle-desc">Choose between the current theme font and the news/article reading font.</div>
+    </div>
+  </div>`;
+  html += `<select class="unified-settings-select" id="us-font-preference">`;
+  for (const opt of [
+    { value: 'theme', label: 'Theme font' },
+    { value: 'article', label: 'Article font' },
+  ] as { value: FontPreference; label: string }[]) {
+    const selected = opt.value === currentFontPref ? ' selected' : '';
+    html += `<option value="${opt.value}"${selected}>${escapeHtml(opt.label)}</option>`;
+  }
+  html += `</select>`;
+  html += `<div class="us-font-preview-grid">
+    ${renderFontPreviewCard('theme', 'Theme font', 'Operator console', 'CURRENT SITUATION UPDATE // SIGNALS STABLE', currentFontPref)}
+    ${renderFontPreviewCard('article', 'Article font', 'News/article reading', 'Current situation update: signals stable.', currentFontPref)}
+  </div>`;
 
   // Map theme (unified — all providers in one grouped dropdown)
   const currentUnifiedTheme = getUnifiedTheme();
@@ -249,6 +302,7 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
   }
 
   html += toggleRowHtml('us-headline-memory', t('components.insights.headlineMemoryLabel'), t('components.insights.headlineMemoryDesc'), settings.headlineMemory);
+  html += renderInsightSeverityControl(getInsightSeverityPreference());
 
   html += `</div></details>`;
 
@@ -362,6 +416,13 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
           markDirty();
           return;
         }
+        if (target.id === 'us-font-preference') {
+          const value = target.value as FontPreference;
+          setFontPreference(value);
+          syncFontPreviewState(container, value);
+          markDirty();
+          return;
+        }
         if (target.id === 'us-map-theme') {
           setUnifiedTheme(target.value);
           window.dispatchEvent(new CustomEvent('map-theme-changed'));
@@ -376,6 +437,14 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
         if (target.id === 'us-language') {
           trackLanguageChange(target.value);
           void changeLanguage(target.value);
+          markDirty();
+          return;
+        }
+        if (target.id === 'us-insight-sensitivity-range') {
+          const option = INSIGHT_SEVERITY_OPTIONS[Number(target.value)]?.value;
+          if (!option) return;
+          setInsightSeverityPreference(option);
+          syncInsightSeverityControl(container, option);
           markDirty();
           return;
         }
@@ -403,6 +472,16 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
 
       container.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
+        const fontCard = target.closest<HTMLElement>('.us-font-preview-card');
+        if (fontCard?.dataset.fontPreference) {
+          const value = fontCard.dataset.fontPreference as FontPreference;
+          const select = container.querySelector<HTMLSelectElement>('#us-font-preference');
+          if (select) select.value = value;
+          setFontPreference(value);
+          syncFontPreviewState(container, value);
+          markDirty();
+          return;
+        }
         if (target.closest('#usSaveChangesBtn')) {
           const btn = container.querySelector<HTMLButtonElement>('#usSaveChangesBtn');
           const footer = container.querySelector<HTMLElement>('.us-save-footer');
@@ -431,13 +510,57 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
           container.querySelector<HTMLInputElement>('#usImportInput')?.click();
           return;
         }
+        const sensitivityOption = target.closest<HTMLElement>('[data-insight-sensitivity]');
+        if (sensitivityOption?.dataset.insightSensitivity) {
+          const value = sensitivityOption.dataset.insightSensitivity as InsightSeverityPreference;
+          const range = container.querySelector<HTMLInputElement>('#us-insight-sensitivity-range');
+          const nextIndex = INSIGHT_SEVERITY_OPTIONS.findIndex((option) => option.value === value);
+          if (range && nextIndex >= 0) range.value = String(nextIndex);
+          setInsightSeverityPreference(value);
+          syncInsightSeverityControl(container, value);
+          markDirty();
+          return;
+        }
       }, { signal });
 
       if (!host.isDesktopApp) updateAiStatus(container);
+      syncInsightSeverityControl(container, getInsightSeverityPreference());
 
       return () => ac.abort();
     },
   };
+}
+
+function renderFontPreviewCard(value: FontPreference, title: string, subtitle: string, sample: string, current: FontPreference): string {
+  const active = current === value ? ' active' : '';
+  return `
+    <button type="button" class="us-font-preview-card${active}" data-font-preference="${value}">
+      <div class="us-font-preview-top">
+        <span class="us-font-preview-title">${escapeHtml(title)}</span>
+        <span class="us-font-preview-subtitle">${escapeHtml(subtitle)}</span>
+      </div>
+      <div class="us-font-preview-sample us-font-preview-sample-${value}">${escapeHtml(sample)}</div>
+    </button>
+  `;
+}
+
+function syncFontPreviewState(container: HTMLElement, value: FontPreference): void {
+  container.querySelectorAll<HTMLElement>('.us-font-preview-card').forEach((card) => {
+    card.classList.toggle('active', card.dataset.fontPreference === value);
+  });
+}
+
+function syncInsightSeverityControl(container: HTMLElement, value: InsightSeverityPreference): void {
+  const summary = container.querySelector<HTMLElement>('#usInsightSensitivitySummary');
+  const wrapper = container.querySelector<HTMLElement>('.us-insight-sensitivity');
+  const nextOption = INSIGHT_SEVERITY_OPTIONS.find((option) => option.value === value);
+  if (wrapper) wrapper.dataset.currentValue = value;
+  if (summary && nextOption) summary.textContent = nextOption.description;
+  container.querySelectorAll<HTMLElement>('.us-insight-sensitivity-option').forEach((optionEl) => {
+    const active = optionEl.dataset.insightSensitivity === value;
+    optionEl.classList.toggle('active', active);
+    optionEl.setAttribute('aria-checked', active ? 'true' : 'false');
+  });
 }
 
 function showToast(container: HTMLElement, msg: string, success: boolean): void {

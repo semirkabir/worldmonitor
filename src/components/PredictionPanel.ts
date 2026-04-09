@@ -1,10 +1,14 @@
 import { Panel } from './Panel';
-import type { PredictionMarket } from '@/services/prediction';
+import { searchPredictions, type PredictionMarket } from '@/services/prediction';
 import { escapeHtml } from '@/utils/sanitize';
 import { t } from '@/services/i18n';
 
 export class PredictionPanel extends Panel {
   private onMarketClick?: (market: PredictionMarket) => void;
+  private allPredictions: PredictionMarket[] = [];
+  private searchInput: HTMLInputElement | null = null;
+  private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private searchVersion = 0;
 
   private getTheme(title: string): string {
     const lower = title.toLowerCase();
@@ -22,6 +26,31 @@ export class PredictionPanel extends Panel {
       title: t('panels.polymarket'),
       infoTooltip: t('components.prediction.infoTooltip'),
     });
+
+    const searchWrap = document.createElement('label');
+    searchWrap.className = 'prediction-panel-search';
+    searchWrap.title = 'Search Polymarket markets';
+    searchWrap.innerHTML = '<span class="prediction-panel-search-icon" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>';
+
+    const searchInput = document.createElement('input');
+    searchInput.className = 'prediction-panel-search-input';
+    searchInput.type = 'search';
+    searchInput.placeholder = 'Search Polymarket';
+    searchInput.setAttribute('aria-label', 'Search Polymarket markets');
+    searchInput.setAttribute('autocomplete', 'off');
+    searchInput.setAttribute('spellcheck', 'false');
+    searchInput.addEventListener('input', () => {
+      void this.handlePanelSearchInput();
+    });
+    searchWrap.appendChild(searchInput);
+    this.searchInput = searchInput;
+
+    const anchor = this.header.querySelector('.panel-copy-btn, .panel-remove-btn, .panel-data-badge, .panel-count');
+    if (anchor) {
+      this.header.insertBefore(searchWrap, anchor);
+    } else {
+      this.header.appendChild(searchWrap);
+    }
   }
 
   public setOnMarketClick(cb: (market: PredictionMarket) => void): void {
@@ -36,8 +65,18 @@ export class PredictionPanel extends Panel {
   }
 
   public renderPredictions(data: PredictionMarket[]): void {
+    this.allPredictions = [...data];
+    const activeQuery = this.searchInput?.value.trim() ?? '';
+    if (activeQuery) {
+      void this.runSearch(activeQuery);
+      return;
+    }
+    this.renderMarketList(this.allPredictions, data.length === 0 ? t('common.failedPredictions') : undefined);
+  }
+
+  private renderMarketList(data: PredictionMarket[], emptyMessage?: string): void {
     if (data.length === 0) {
-      this.showError(t('common.failedPredictions'));
+      this.setContentNow(`<div class="panel-empty-state">${escapeHtml(emptyMessage || 'No matching markets')}</div>`);
       return;
     }
 
@@ -93,7 +132,7 @@ export class PredictionPanel extends Panel {
       })
       .join('');
 
-    this.setContent(html);
+    this.setContentNow(html);
 
     // Attach click listeners
     const items = this.element.querySelectorAll('.prediction-item');
@@ -105,5 +144,64 @@ export class PredictionPanel extends Panel {
         }
       });
     });
+  }
+
+  private filterLocalPredictions(query: string): PredictionMarket[] {
+    const lower = query.toLowerCase();
+    return this.allPredictions.filter((market) => market.title.toLowerCase().includes(lower));
+  }
+
+  private async handlePanelSearchInput(): Promise<void> {
+    const query = this.searchInput?.value.trim() ?? '';
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = null;
+    }
+    if (!query) {
+      this.searchVersion++;
+      this.header.classList.remove('prediction-searching');
+      this.renderMarketList(this.allPredictions, this.allPredictions.length === 0 ? t('common.failedPredictions') : undefined);
+      return;
+    }
+    this.searchDebounceTimer = setTimeout(() => {
+      void this.runSearch(query);
+    }, 80);
+  }
+
+  private async runSearch(query: string): Promise<void> {
+    const normalized = query.trim();
+    if (!normalized) {
+      this.header.classList.remove('prediction-searching');
+      this.renderMarketList(this.allPredictions, this.allPredictions.length === 0 ? t('common.failedPredictions') : undefined);
+      return;
+    }
+
+    const version = ++this.searchVersion;
+    const localMatches = this.filterLocalPredictions(normalized);
+    this.renderMarketList(localMatches, `Searching Polymarket for "${normalized}"...`);
+
+    if (normalized.length < 2) return;
+
+    this.header.classList.add('prediction-searching');
+    try {
+      const liveMatches = await searchPredictions(normalized);
+      if (version !== this.searchVersion) return;
+      const merged = new Map<string, PredictionMarket>();
+      for (const market of [...localMatches, ...liveMatches]) {
+        const key = market.slug || market.url || market.title;
+        const existing = merged.get(key);
+        if (!existing || (market.volume ?? 0) > (existing.volume ?? 0)) {
+          merged.set(key, market);
+        }
+      }
+      this.renderMarketList([...merged.values()], `No Polymarket markets found for "${normalized}"`);
+    } catch {
+      if (version !== this.searchVersion) return;
+      this.renderMarketList(localMatches, `Unable to search Polymarket for "${normalized}"`);
+    } finally {
+      if (version === this.searchVersion) {
+        this.header.classList.remove('prediction-searching');
+      }
+    }
   }
 }

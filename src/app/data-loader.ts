@@ -176,8 +176,9 @@ export class DataLoaderManager implements AppModule {
   private readonly applyTimeRangeFilterToNewsPanelsDebounced = debounce(() => {
     this.applyTimeRangeFilterToNewsPanels();
   }, 120);
-  private readonly debouncedRefreshCiiAndBrief = debounce(() => {
-    this.refreshCiiAndBriefInternal(false);
+  private readonly debouncedRefreshCiiAndBrief = debounce((...args: unknown[]) => {
+    const [forceLocal = false] = args as [boolean?];
+    this.refreshCiiAndBriefInternal(forceLocal);
   }, 500);
 
   private lastIntelligenceFetch: Record<string, number> = {};
@@ -267,8 +268,8 @@ export class DataLoaderManager implements AppModule {
     this.ctx.map?.setLayerReady('ciiChoropleth', scores.length > 0);
   }
 
-  private refreshCiiAndBrief(_forceLocal = false): void {
-    this.debouncedRefreshCiiAndBrief();
+  private refreshCiiAndBrief(forceLocal = false): void {
+    this.debouncedRefreshCiiAndBrief(forceLocal);
   }
 
   private publishSupplementalSignals(options: {

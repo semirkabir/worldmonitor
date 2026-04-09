@@ -180,7 +180,7 @@ export { CircuitBreaker, createCircuitBreaker, getCircuitBreakerStatus, getCircu
 export type { CircuitBreakerOptions } from './circuit-breaker';
 export * from './analysis-constants';
 export { getCSSColor, invalidateColorCache } from './theme-colors';
-export { getStoredTheme, getCurrentTheme, setTheme, applyStoredTheme, getThemePreference, setThemePreference } from './theme-manager';
+export { getStoredTheme, getCurrentTheme, setTheme, applyStoredTheme, getThemePreference, setThemePreference, getFontPreference, setFontPreference } from './theme-manager';
 export type { Theme, ThemePreference } from './theme-manager';
 
 import { getCurrentLanguage } from '../services/i18n';

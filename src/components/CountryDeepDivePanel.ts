@@ -12,10 +12,13 @@ import { PORTS } from '@/config/ports';
 import { haversineKm } from '@/utils/geo';
 import type {
   CountryBriefPanel,
+  CountryDeepDiveSignalItem,
   CountryDeepDiveSignalDetails,
   CountryDeepDiveMilitarySummary,
   CountryDeepDiveEconomicIndicator,
   MacroEconomicCardData,
+  CountryIntelData,
+  StockIndexData,
 } from './CountryBriefPanel';
 import type { MapContainer } from './MapContainer';
 
@@ -957,12 +960,6 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
   private trendArrow(trend: CountryScore['trend']): string {
     if (trend === 'rising') return '↑';
     if (trend === 'falling') return '↓';
-    return '→';
-  }
-
-  private trendArrowFromDirection(trend: TrendDirection): string {
-    if (trend === 'up') return '↑';
-    if (trend === 'down') return '↓';
     return '→';
   }
 

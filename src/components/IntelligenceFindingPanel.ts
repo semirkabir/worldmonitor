@@ -389,11 +389,11 @@ export class IntelligenceFindingPanel {
       return this.renderKeywordSpikeNarrative(signal, focalPoints, newsCorrelation, correlatedNews, relatedTopics);
     }
 
-    const contextRows = [
+    const contextRows: Array<[string, string]> = [
       ['Why it matters', context.whyItMatters],
       ['Actionable insight', context.actionableInsight],
       ['Confidence note', context.confidenceNote],
-    ].filter(([, value]) => value && value.trim().length > 0);
+    ].filter((entry): entry is [string, string] => Boolean(entry[1] && entry[1].trim().length > 0));
 
     return `
       ${contextRows.length ? `
