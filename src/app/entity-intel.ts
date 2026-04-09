@@ -26,6 +26,7 @@ import { TechEventClusterRenderer } from '@/components/entity-detail/renderers/t
 import { AircraftRenderer } from '@/components/entity-detail/renderers/aircraft';
 import { SpaceportRenderer } from '@/components/entity-detail/renderers/spaceport';
 import { CompanyRenderer } from '@/components/entity-detail/renderers/company';
+import { CryptoRenderer } from '@/components/entity-detail/renderers/crypto';
 import { WeatherAlertRenderer } from '@/components/entity-detail/renderers/weather';
 import { APTGroupRenderer } from '@/components/entity-detail/renderers/apt';
 import { PredictionMarketRenderer } from '@/components/entity-detail/renderers/prediction-market';
@@ -122,6 +123,7 @@ export class EntityIntelManager implements AppModule {
       aircraft: new AircraftRenderer(),
       spaceport: new SpaceportRenderer(),
       company: new CompanyRenderer(),
+      crypto: new CryptoRenderer(),
       weather: new WeatherAlertRenderer(),
       apt: new APTGroupRenderer(),
       predictionMarket: new PredictionMarketRenderer(),

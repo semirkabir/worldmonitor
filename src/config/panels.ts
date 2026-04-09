@@ -96,6 +96,7 @@ const FULL_PANELS: Record<string, PanelConfig> = {
   'insider-trading':     p2('Insider Trading'),
   'social-sentiment':    p2('Social Sentiment'),
   'options-chain':       p2('Options Chain'),
+  'portfolio-tracker':   p2('Portfolio Tracker'),
   marketplace:           { name: 'Marketplace Data', enabled: false, priority: 2 },
 };
 
@@ -224,6 +225,7 @@ const FINANCE_PANELS: Record<string, PanelConfig> = {
   'insider-trading':  p2('Insider Trading'),
   'social-sentiment': p2('Social Sentiment'),
   'options-chain':    p2('Options Chain'),
+  'portfolio-tracker': p1('Portfolio Tracker'),
   marketplace:        { name: 'Marketplace Data', enabled: false, priority: 2 },
 };
 
@@ -445,7 +447,7 @@ export const PANEL_CATEGORY_MAP: Record<string, { labelKey: string; panelKeys: s
   },
   marketsFinance: {
     labelKey: 'header.panelCatMarketsFinance',
-    panelKeys: ['commodities', 'markets', 'economic', 'trade-policy', 'supply-chain', 'finance', 'polymarket', 'macro-signals', 'gulf-economies', 'crypto', 'heatmap'],
+    panelKeys: ['commodities', 'markets', 'economic', 'trade-policy', 'supply-chain', 'finance', 'polymarket', 'macro-signals', 'gulf-economies', 'crypto', 'heatmap', 'portfolio-tracker'],
     variants: ['full'],
   },
   topical: {
@@ -484,7 +486,7 @@ export const PANEL_CATEGORY_MAP: Record<string, { labelKey: string; panelKeys: s
   // Finance variant
   finMarkets: {
     labelKey: 'header.panelCatMarkets',
-    panelKeys: ['markets', 'markets-news', 'heatmap', 'macro-signals', 'analysis', 'polymarket'],
+    panelKeys: ['markets', 'markets-news', 'heatmap', 'macro-signals', 'analysis', 'polymarket', 'portfolio-tracker'],
     variants: ['finance'],
   },
   fixedIncomeFx: {

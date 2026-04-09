@@ -46,6 +46,7 @@ import {
   InsiderTradingPanel,
   SocialSentimentPanel,
   OptionsChainPanel,
+  PortfolioPanel,
 } from '@/components';
 import { SatelliteFiresPanel } from '@/components/SatelliteFiresPanel';
 import { MarketplacePanel } from '@/components/MarketplacePanel';
@@ -1072,6 +1073,7 @@ export class PanelLayoutManager implements AppModule {
       this.ctx.panels['insider-trading'] = new InsiderTradingPanel();
       this.ctx.panels['social-sentiment'] = new SocialSentimentPanel();
       this.ctx.panels['options-chain'] = new OptionsChainPanel();
+      this.ctx.panels['portfolio-tracker'] = new PortfolioPanel();
     }
 
     if (this.ctx.isDesktopApp) {
