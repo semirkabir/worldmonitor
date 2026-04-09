@@ -1117,9 +1117,10 @@ export class EventHandlerManager implements AppModule {
         const clamped = clamp(numeric, getMinHeight(), getMaxHeight());
         if (window.innerWidth >= 1600) {
           mapContainer.style.flex = 'none';
-          mapContainer.style.height = `${clamped}px`;
+          mapContainer.style.setProperty('height', `${clamped}px`, 'important');
         } else {
-          mapSection.style.height = `${clamped}px`;
+          mapSection.style.flex = 'none';
+          mapSection.style.setProperty('height', `${clamped}px`, 'important');
         }
         if (clamped !== numeric) {
           localStorage.setItem(MAP_HEIGHT_KEY, `${clamped}px`);
@@ -1185,8 +1186,8 @@ export class EventHandlerManager implements AppModule {
         this.ctx.map?.setIsResizing(true);
         target.classList.add('map-section-smooth');
 
-        if (isWide) target.style.flex = 'none';
-        target.style.height = `${finalHeight}px`;
+        target.style.flex = 'none';
+        target.style.setProperty('height', `${finalHeight}px`, 'important');
 
         let fired = false;
         const onEnd = () => {
@@ -1253,7 +1254,8 @@ export class EventHandlerManager implements AppModule {
           // Double-click resets to 50% height in stacked layout
           const target = getBottomResizeTarget();
           const finalHeight = clamp(window.innerHeight * 0.5, getMinHeight(), getMaxHeight());
-          target.style.height = `${finalHeight}px`;
+          target.style.flex = 'none';
+          target.style.setProperty('height', `${finalHeight}px`, 'important');
           localStorage.setItem(MAP_HEIGHT_KEY, `${finalHeight}px`);
           this.ctx.map?.resize();
         }
@@ -1269,8 +1271,8 @@ export class EventHandlerManager implements AppModule {
         const deltaY = e.clientY - startY;
         const newHeight = clamp(startHeight + deltaY, getMinHeight(), getMaxHeight());
 
-        if (isWide) target.style.flex = 'none';
-        target.style.height = `${newHeight}px`;
+        target.style.flex = 'none';
+        target.style.setProperty('height', `${newHeight}px`, 'important');
         this.ctx.map?.resize();
         return;
       }
@@ -1293,8 +1295,8 @@ export class EventHandlerManager implements AppModule {
         const target = isWide ? mapContainer : mapSection;
         const deltaY = e.clientY - startY;
         const newHeight = clamp(startHeight + deltaY, getMinHeight(), getMaxHeight());
-        if (isWide) target.style.flex = 'none';
-        target.style.height = `${newHeight}px`;
+        target.style.flex = 'none';
+        target.style.setProperty('height', `${newHeight}px`, 'important');
         // Resize width
         const totalWidth = mainContent.getBoundingClientRect().width;
         if (totalWidth > 0) {

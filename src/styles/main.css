@@ -2481,7 +2481,7 @@ body.panel-resize-active iframe {
 
 /* ── Panel copy button ────────────────────────────────────────── */
 .panel-copy-btn {
-  display: inline-flex;
+  display: none !important;
   align-items: center;
   justify-content: center;
   width: 24px;
@@ -2517,6 +2517,7 @@ body.panel-resize-active iframe {
 
 .prediction-panel-search {
   margin-left: auto;
+  margin-right: 8px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -16451,72 +16452,62 @@ button.cluster-flight-item:focus-visible {
 .deckgl-time-slider .layers-row .layers-row-help,
 .deckgl-time-slider .layers-row .layers-row-clear,
 .deckgl-time-slider .layers-row .layers-row-marketplace {
-  width: 26px;
+  width: 44px;
   flex-shrink: 0;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  /* Subtle 3D raised effect */
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  transition: background 0.15s, color 0.15s, box-shadow 0.08s, transform 0.08s;
+  gap: 2px;
+  padding: 4px 2px;
+  background: rgba(255, 255, 255, 0.04);
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.deckgl-time-slider .layers-row .layers-row-help:hover,
+.deckgl-time-slider .layers-row .layers-row-clear:hover,
+.deckgl-time-slider .layers-row .layers-row-marketplace:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .deckgl-time-slider .layers-row .layers-row-help:active,
 .deckgl-time-slider .layers-row .layers-row-clear:active,
 .deckgl-time-slider .layers-row .layers-row-marketplace:active {
-  box-shadow: 0 0 0 rgba(0, 0, 0, 0.35), inset 0 1px 2px rgba(0, 0, 0, 0.3);
-  transform: translateY(1px);
+  background: rgba(255, 255, 255, 0.06);
 }
 
+/* Override .layer-help-btn base styles when inside layers-row */
 .deckgl-time-slider .layers-row .layers-row-help {
-  background: rgba(74, 158, 255, 0.06);
-  border: none;
-  border-left: 1px solid rgba(74, 158, 255, 0.14);
+  width: 44px;
+  height: auto;
+  padding: 4px 2px;
   border-radius: 0;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 10px;
-  font-family: inherit;
-  cursor: pointer;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.deckgl-time-slider .layers-row .layers-row-help:hover {
-  background: rgba(74, 158, 255, 0.14);
-  color: #fff;
-}
-
-.deckgl-time-slider .layers-row .layers-row-clear {
-  background: rgba(255, 68, 68, 0.06);
-  border: none;
-  border-left: 1px solid rgba(255, 68, 68, 0.14);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 10px;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.deckgl-time-slider .layers-row .layers-row-clear:hover {
-  background: rgba(255, 68, 68, 0.14);
-  color: #fff;
-}
-
-.deckgl-time-slider .layers-row .layers-row-marketplace {
-  background: rgba(212, 160, 23, 0.07);
-  border: none;
-  border-left: 1px solid rgba(212, 160, 23, 0.16);
-  color: rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-
-.deckgl-time-slider .layers-row .layers-row-marketplace:hover {
-  background: rgba(212, 160, 23, 0.16);
-  color: #fff;
-}
-
+.deckgl-time-slider .layers-row .layers-row-help svg,
+.deckgl-time-slider .layers-row .layers-row-clear svg,
 .deckgl-time-slider .layers-row .layers-row-marketplace svg {
-  width: 13px;
-  height: 13px;
+  width: 12px;
+  height: 12px;
   display: block;
+  flex-shrink: 0;
+}
+
+.deckgl-time-slider .layers-row .layers-row-btn-label {
+  font-size: 8px;
+  font-family: "SF Mono", Monaco, "Cascadia Code", "Fira Code", "DejaVu Sans Mono", "Liberation Mono", monospace;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 /* Layers panel expands below the LAYERS button */

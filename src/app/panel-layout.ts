@@ -1445,8 +1445,16 @@ export class PanelLayoutManager implements AppModule {
       if (Math.abs(e.clientX - btnDownX) > 4 || Math.abs(e.clientY - btnDownY) > 4) return;
       this.panelsHidden = !this.panelsHidden;
       mainContent.classList.toggle('panels-hidden', this.panelsHidden);
+      // Clear inline resize styles so CSS layout rules take effect
+      if (mapSection) { mapSection.style.height = ''; mapSection.style.flex = ''; }
+      const mc = document.getElementById('mapContainer') as HTMLElement | null;
+      if (mc) { mc.style.height = ''; mc.style.flex = ''; }
+      try { localStorage.removeItem('map-height'); } catch { /* noop */ }
       try { localStorage.setItem(this.panelsCollapsedStorageKey, String(this.panelsHidden)); } catch { /* noop */ }
       updateIcon();
+      this.ctx.map?.resize();
+      window.dispatchEvent(new Event('resize'));
+      requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
       setTimeout(() => this.ctx.map?.setIsResizing(false), 320);
     });
 
@@ -1460,16 +1468,11 @@ export class PanelLayoutManager implements AppModule {
       if (mapSection) mapSection.classList.toggle('bottom-grid-hidden', this.bottomGridHidden);
       if (mainContent) mainContent.classList.toggle('bottom-grid-hidden', this.bottomGridHidden);
       try { localStorage.setItem(this.bottomGridCollapsedStorageKey, String(this.bottomGridHidden)); } catch { /* noop */ }
-      if (this.bottomGridHidden) {
+      {
+        // Clear inline resize styles so CSS layout rules take effect
         const mapContainer = document.getElementById('mapContainer') as HTMLElement | null;
         if (mapContainer) { mapContainer.style.height = ''; mapContainer.style.flex = ''; }
-        if (mapSection) mapSection.style.height = '';
-        try { localStorage.removeItem('map-height'); } catch { /* noop */ }
-      } else {
-        // When expanding, reset map height to trigger layout recalculation
-        if (mapSection) mapSection.style.height = '';
-        const mapContainer = document.getElementById('mapContainer') as HTMLElement | null;
-        if (mapContainer) { mapContainer.style.height = ''; }
+        if (mapSection) { mapSection.style.height = ''; mapSection.style.flex = ''; }
         try { localStorage.removeItem('map-height'); } catch { /* noop */ }
       }
       updateBottomIcon();
@@ -2140,10 +2143,10 @@ export class PanelLayoutManager implements AppModule {
     const strip = document.getElementById('shellGuidanceStrip');
     if (strip) {
       const shouldHide = this.ctx.isMobile || localStorage.getItem('wm-ui-desktop-onboarding-dismissed') === 'true';
-      strip.hidden = shouldHide;
+      strip.classList.toggle('hidden', shouldHide);
       document.getElementById('shellGuidanceDismiss')?.addEventListener('click', () => {
         localStorage.setItem('wm-ui-desktop-onboarding-dismissed', 'true');
-        strip.hidden = true;
+        strip.classList.add('hidden');
       });
     }
   }
