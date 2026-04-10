@@ -1,5 +1,5 @@
 import type { CountryScore, ComponentScores } from './country-instability';
-import { calculateCII, hasIntelligenceSignalsLoaded, setHasCachedScores } from './country-instability';
+import { calculateCII, getPendingCoreIntelligenceSources, hasIntelligenceSignalsLoaded, setHasCachedScores } from './country-instability';
 import {
   IntelligenceServiceClient,
   type GetRiskScoresResponse,
@@ -138,6 +138,10 @@ function isValidCiiEntry(e: unknown): e is CachedCIIScore {
 
 const LS_KEY = 'wm:risk-scores';
 const LS_MAX_STALENESS_MS = 24 * 60 * 60 * 1000;
+const LIVE_CII_LS_KEY = 'wm:live-cii';
+const LIVE_CII_MAX_STALENESS_MS = 6 * 60 * 60 * 1000;
+let lastPreferredScoreLog = '';
+let lastPersistedLiveFingerprint = '';
 
 function loadFromStorage(): CachedRiskScores | null {
   try {
@@ -164,6 +168,77 @@ function saveToStorage(data: CachedRiskScores): void {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify({ data, savedAt: Date.now() }));
   } catch { /* quota exceeded */ }
+}
+
+function toCachedCountryScore(score: CountryScore): CachedCIIScore {
+  return {
+    code: score.code,
+    name: score.name,
+    score: score.score,
+    level: score.level,
+    trend: score.trend,
+    change24h: score.change24h,
+    components: score.components,
+    lastUpdated: score.lastUpdated.toISOString(),
+  };
+}
+
+function loadPersistedLiveCountryScoresFromStorage(): CountryScore[] | null {
+  try {
+    const raw = localStorage.getItem(LIVE_CII_LS_KEY);
+    if (!raw) return null;
+    const { data, savedAt } = JSON.parse(raw) as { data?: CachedCIIScore[]; savedAt?: number };
+    const savedAtMs = typeof savedAt === 'number' ? savedAt : NaN;
+    if (!Number.isFinite(savedAtMs) || !Array.isArray(data)) {
+      localStorage.removeItem(LIVE_CII_LS_KEY);
+      return null;
+    }
+    if (Date.now() - savedAtMs > LIVE_CII_MAX_STALENESS_MS) {
+      localStorage.removeItem(LIVE_CII_LS_KEY);
+      return null;
+    }
+    if (!data.every(isValidCiiEntry)) {
+      localStorage.removeItem(LIVE_CII_LS_KEY);
+      return null;
+    }
+    return data.map(toCountryScore);
+  } catch {
+    return null;
+  }
+}
+
+let persistedLiveCountryScores = loadPersistedLiveCountryScoresFromStorage();
+
+export function getPersistedLiveCountryScores(): CountryScore[] {
+  return persistedLiveCountryScores?.map((score) => ({
+    ...score,
+    components: { ...score.components },
+    lastUpdated: new Date(score.lastUpdated),
+  })) ?? [];
+}
+
+export function savePersistedLiveCountryScores(scores: CountryScore[]): void {
+  if (scores.length === 0) return;
+  const fingerprint = scores
+    .slice(0, 25)
+    .map((score) => `${score.code}:${score.score}:${score.change24h}`)
+    .join('|');
+  if (fingerprint === lastPersistedLiveFingerprint) return;
+  lastPersistedLiveFingerprint = fingerprint;
+  persistedLiveCountryScores = scores.map((score) => ({
+    ...score,
+    components: { ...score.components },
+    lastUpdated: new Date(score.lastUpdated),
+  }));
+  try {
+    localStorage.setItem(LIVE_CII_LS_KEY, JSON.stringify({
+      data: scores.map(toCachedCountryScore),
+      savedAt: Date.now(),
+    }));
+    console.debug('[CII] Persisted live local scores', { count: scores.length });
+  } catch {
+    // Ignore storage quota failures.
+  }
 }
 
 // ---- Circuit breaker ----
@@ -279,8 +354,32 @@ export function toCountryScore(cached: CachedCIIScore): CountryScore {
 
 export function getPreferredCountryScores(): CountryScore[] {
   if (!hasIntelligenceSignalsLoaded()) {
+    const persistedLive = getPersistedLiveCountryScores();
+    if (persistedLive.length > 0) {
+      const pendingSources = getPendingCoreIntelligenceSources();
+      const logKey = `persisted-live:${pendingSources.join(',')}`;
+      if (lastPreferredScoreLog !== logKey) {
+        lastPreferredScoreLog = logKey;
+        console.debug('[CII] Using persisted live local scores while core feeds settle', { pendingSources });
+      }
+      return persistedLive;
+    }
     const cached = getCachedScores();
-    if (cached?.cii.length) return cached.cii.map(toCountryScore);
+    if (cached?.cii.length) {
+      const pendingSources = getPendingCoreIntelligenceSources();
+      const logKey = `cached:${pendingSources.join(',')}`;
+      if (lastPreferredScoreLog !== logKey) {
+        lastPreferredScoreLog = logKey;
+        console.debug('[CII] Using cached scores while core feeds settle', { pendingSources });
+      }
+      return cached.cii.map(toCountryScore);
+    }
+  }
+  if (lastPreferredScoreLog !== 'live') {
+    lastPreferredScoreLog = 'live';
+    console.debug('[CII] Using live calculated scores', {
+      pendingSources: getPendingCoreIntelligenceSources(),
+    });
   }
   return calculateCII();
 }

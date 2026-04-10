@@ -9,6 +9,7 @@ import { getThemePreference, setThemePreference, getFontPreference, setFontPrefe
 import { escapeHtml } from '@/utils/sanitize';
 import { trackLanguageChange } from '@/services/analytics';
 import { exportSettings, importSettings, type ImportResult } from '@/utils/settings-persistence';
+import { getCursorPreference, setCursorPreference, type CursorPreference } from '@/utils/forced-cursor';
 
 const DESKTOP_RELEASES_URL = 'https://github.com/koala73/worldmonitor/releases';
 
@@ -190,6 +191,18 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
   html += `<div class="us-font-preview-grid">
     ${renderFontPreviewCard('theme', 'Theme font', 'Operator console', 'CURRENT SITUATION UPDATE // SIGNALS STABLE', currentFontPref)}
     ${renderFontPreviewCard('article', 'Article font', 'News/article reading', 'Current situation update: signals stable.', currentFontPref)}
+  </div>`;
+
+  const currentCursorPref = getCursorPreference();
+  html += `<div class="ai-flow-toggle-row">
+    <div class="ai-flow-toggle-label-wrap">
+      <div class="ai-flow-toggle-label">Cursor mode</div>
+      <div class="ai-flow-toggle-desc">Choose between the browser cursor and the custom overlay cursor used when CSS cursors are ignored.</div>
+    </div>
+  </div>`;
+  html += `<div class="us-cursor-preview-grid">
+    ${renderCursorPreviewCard('auto', 'Default', 'Use the browser / webview cursor stack', 'Standard CSS cursor mode', currentCursorPref)}
+    ${renderCursorPreviewCard('forced', 'Custom overlay', 'Hide the OS cursor inside the app and draw the cursor manually', 'Best when the browser keeps showing the system cursor', currentCursorPref)}
   </div>`;
 
   // Map theme (unified — all providers in one grouped dropdown)
@@ -482,6 +495,14 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
           markDirty();
           return;
         }
+        const cursorCard = target.closest<HTMLElement>('.us-cursor-preview-card');
+        if (cursorCard?.dataset.cursorPreference) {
+          const value = cursorCard.dataset.cursorPreference as CursorPreference;
+          setCursorPreference(value);
+          syncCursorPreviewState(container, value);
+          markDirty();
+          return;
+        }
         if (target.closest('#usSaveChangesBtn')) {
           const btn = container.querySelector<HTMLButtonElement>('#usSaveChangesBtn');
           const footer = container.querySelector<HTMLElement>('.us-save-footer');
@@ -524,6 +545,7 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
       }, { signal });
 
       if (!host.isDesktopApp) updateAiStatus(container);
+      syncCursorPreviewState(container, currentCursorPref);
       syncInsightSeverityControl(container, getInsightSeverityPreference());
 
       return () => ac.abort();
@@ -544,9 +566,38 @@ function renderFontPreviewCard(value: FontPreference, title: string, subtitle: s
   `;
 }
 
+function renderCursorPreviewCard(value: CursorPreference, title: string, subtitle: string, sample: string, current: CursorPreference): string {
+  const active = current === value ? ' active' : '';
+  const icon = value === 'forced'
+    ? '/cursors/13-Move.cur.png?v=20260410a'
+    : '/cursors/1-Normal-Select.cur.png?v=20260410a';
+  const badge = value === 'forced' ? 'CUSTOM' : 'DEFAULT';
+  return `
+    <button type="button" class="us-cursor-preview-card${active}" data-cursor-preference="${value}">
+      <div class="us-font-preview-top">
+        <span class="us-font-preview-title">${escapeHtml(title)}</span>
+        <span class="us-font-preview-subtitle">${escapeHtml(subtitle)}</span>
+      </div>
+      <div class="us-cursor-preview-sample">
+        <img src="${icon}" alt="" class="us-cursor-preview-image" />
+        <div class="us-cursor-preview-copy">
+          <span class="us-cursor-preview-badge">${escapeHtml(badge)}</span>
+          <span class="us-cursor-preview-text">${escapeHtml(sample)}</span>
+        </div>
+      </div>
+    </button>
+  `;
+}
+
 function syncFontPreviewState(container: HTMLElement, value: FontPreference): void {
   container.querySelectorAll<HTMLElement>('.us-font-preview-card').forEach((card) => {
     card.classList.toggle('active', card.dataset.fontPreference === value);
+  });
+}
+
+function syncCursorPreviewState(container: HTMLElement, value: CursorPreference): void {
+  container.querySelectorAll<HTMLElement>('.us-cursor-preview-card').forEach((card) => {
+    card.classList.toggle('active', card.dataset.cursorPreference === value);
   });
 }
 

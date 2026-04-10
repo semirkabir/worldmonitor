@@ -578,9 +578,6 @@ export class App {
     this.eventHandlers.setupPizzIntIndicator();
     this.eventHandlers.setupExportPanel();
     this.eventHandlers.setupUnifiedSettings();
-    if (!this.state.isMobile) {
-      this.eventHandlers.setupNotificationCenter();
-    }
 
     // Phase 4: SearchManager, MapLayerHandlers, CountryIntel
     await this.marketplace.init();

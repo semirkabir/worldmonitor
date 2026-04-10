@@ -1,4 +1,5 @@
 import './styles/main.css';
+import './styles/cursors.css';
 import './styles/settings-window.css';
 import { SettingsManager } from '@/services/settings-manager';
 import { exportSettings, importSettings, type ImportResult } from '@/utils/settings-persistence';
@@ -32,10 +33,15 @@ import { escapeHtml } from '@/utils/sanitize';
 import { initI18n, t } from '@/services/i18n';
 import { applyStoredTheme, getFontPreference, setFontPreference, type FontPreference } from '@/utils/theme-manager';
 import { trackFeatureToggle } from '@/services/analytics';
+import { installCursorDiagnostics } from '@/utils/cursor-diagnostics';
+import { installForcedCursor } from '@/utils/forced-cursor';
 
 let activeSection = 'overview';
 let settingsManager: SettingsManager;
 let _diagCleanup: (() => void) | null = null;
+
+installCursorDiagnostics();
+installForcedCursor();
 
 function setActionStatus(message: string, tone: 'ok' | 'error' = 'ok'): void {
   const statusEl = document.getElementById('settingsActionStatus');

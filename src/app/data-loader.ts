@@ -68,7 +68,8 @@ import { updateAndCheck, consumeServerAnomalies, fetchLiveAnomalies } from '@/se
 import { fetchAllFires, flattenFires, computeRegionStats, toMapFires } from '@/services/wildfires';
 import { analyzeFlightsForSurge, surgeAlertToSignal, detectForeignMilitaryPresence, foreignPresenceToSignal, type TheaterPostureSummary } from '@/services/military-surge';
 import { fetchCachedTheaterPosture } from '@/services/cached-theater-posture';
-import { ingestProtestsForCII, ingestMilitaryForCII, ingestNewsForCII, ingestOutagesForCII, ingestUcdpForCII, ingestHapiForCII, ingestDisplacementForCII, ingestClimateForCII, ingestStrikesForCII, ingestOrefForCII, ingestAviationForCII, ingestAdvisoriesForCII, ingestGpsJammingForCII, ingestAisDisruptionsForCII, ingestSatelliteFiresForCII, ingestCyberThreatsForCII, ingestTemporalAnomaliesForCII, isInLearningMode, resetHotspotActivity, setIntelligenceSignalsLoaded, hasAnyIntelligenceData, calculateCII } from '@/services/country-instability';
+import { ingestProtestsForCII, ingestMilitaryForCII, ingestNewsForCII, ingestOutagesForCII, ingestUcdpForCII, ingestHapiForCII, ingestDisplacementForCII, ingestClimateForCII, ingestStrikesForCII, ingestOrefForCII, ingestAviationForCII, ingestAdvisoriesForCII, ingestGpsJammingForCII, ingestAisDisruptionsForCII, ingestSatelliteFiresForCII, ingestCyberThreatsForCII, ingestTemporalAnomaliesForCII, hasIntelligenceSignalsLoaded, isInLearningMode, markCoreIntelligenceSourceSettled, resetHotspotActivity, calculateCII } from '@/services/country-instability';
+import { fetchCachedRiskScores, getPersistedLiveCountryScores, savePersistedLiveCountryScores } from '@/services/cached-risk-scores';
 import { fetchGpsInterference } from '@/services/gps-interference';
 import { dataFreshness, type DataSourceId } from '@/services/data-freshness';
 import { createSupplementalAlert } from '@/services/cross-module-integration';
@@ -129,7 +130,6 @@ import { fetchPositiveGeoEvents, geocodePositiveNewsItems, type PositiveGeoEvent
 import type { HappyContentCategory } from '@/services/positive-classifier';
 import { fetchKindnessData } from '@/services/kindness-data';
 import { getPersistentCache, setPersistentCache } from '@/services/persistent-cache';
-import { fetchCachedRiskScores } from '@/services/cached-risk-scores';
 import type { ThreatLevel as ClientThreatLevel } from '@/services/threat-classifier';
 import type { NewsItem as ProtoNewsItem, ThreatLevel as ProtoThreatLevel } from '@/generated/client/worldmonitor/news/v1/service_client';
 
@@ -264,6 +264,9 @@ export class DataLoaderManager implements AppModule {
     (this.ctx.panels['cii'] as CIIPanel)?.refresh(forceLocal);
     this.callbacks.refreshOpenCountryBrief();
     const scores = calculateCII();
+    if (hasIntelligenceSignalsLoaded() && scores.some((score) => score.score > 0)) {
+      savePersistedLiveCountryScores(scores);
+    }
     this.ctx.map?.setCIIScores(scores.map(s => ({ code: s.code, score: s.score, level: s.level })));
     this.ctx.map?.setLayerReady('ciiChoropleth', scores.length > 0);
   }
@@ -449,8 +452,17 @@ export class DataLoaderManager implements AppModule {
 
     if (SITE_VARIANT === 'full') {
       try {
+        let hasStartupCiiRender = false;
+        const persistedLiveScores = getPersistedLiveCountryScores().filter((score) => score.score > 0);
+        if (persistedLiveScores.length > 0) {
+          (this.ctx.panels['cii'] as CIIPanel)?.renderScores(persistedLiveScores);
+          this.ctx.map?.setCIIScores(persistedLiveScores.map((s) => ({ code: s.code, score: s.score, level: s.level })));
+          this.ctx.map?.setLayerReady('ciiChoropleth', true);
+          hasStartupCiiRender = true;
+          console.debug('[CII] Rendered persisted live local scores on startup', { count: persistedLiveScores.length });
+        }
         const cached = await fetchCachedRiskScores().catch(() => null);
-        if (cached && cached.cii.length > 0) {
+        if (!hasStartupCiiRender && cached && cached.cii.length > 0) {
           (this.ctx.panels['cii'] as CIIPanel)?.renderFromCached(cached);
           this.ctx.map?.setCIIScores(cached.cii.map(s => ({ code: s.code, score: s.score, level: s.level })));
           this.ctx.map?.setLayerReady('ciiChoropleth', true);
@@ -1281,11 +1293,15 @@ export class DataLoaderManager implements AppModule {
     const hydratedUcdp = getHydratedData('ucdpEvents') as import('@/generated/client/worldmonitor/conflict/v1/service_client').ListUcdpEventsResponse | undefined;
 
     tasks.push((async () => {
+      let ok = false;
+      let itemCount = 0;
       try {
         const outages = await fetchInternetOutages();
         this.ctx.intelligenceCache.outages = outages;
         ingestOutagesForCII(outages);
         signalAggregator.ingestOutages(outages);
+        ok = true;
+        itemCount = outages.length;
         dataFreshness.recordUpdate('outages', outages.length);
         if (this.ctx.mapLayers.outages) {
           this.ctx.map?.setOutages(outages);
@@ -1295,16 +1311,22 @@ export class DataLoaderManager implements AppModule {
       } catch (error) {
         console.error('[Intelligence] Outages fetch failed:', error);
         dataFreshness.recordError('outages', String(error));
+      } finally {
+        markCoreIntelligenceSourceSettled('outages', { ok, itemCount });
       }
     })());
 
     const protestsTask = (async (): Promise<SocialUnrestEvent[]> => {
+      let ok = false;
+      let itemCount = 0;
       try {
         const protestData = await fetchProtestEvents();
         this.ctx.intelligenceCache.protests = protestData;
         ingestProtests(protestData.events);
         ingestProtestsForCII(protestData.events);
         signalAggregator.ingestProtests(protestData.events);
+        ok = true;
+        itemCount = protestData.events.length;
         const protestCount = protestData.sources.acled + protestData.sources.gdelt;
         if (protestCount > 0) dataFreshness.recordUpdate('acled', protestCount);
         if (protestData.sources.gdelt > 0) dataFreshness.recordUpdate('gdelt', protestData.sources.gdelt);
@@ -1324,6 +1346,8 @@ export class DataLoaderManager implements AppModule {
         console.error('[Intelligence] Protests fetch failed:', error);
         dataFreshness.recordError('acled', String(error));
         return [];
+      } finally {
+        markCoreIntelligenceSourceSettled('protests', { ok, itemCount });
       }
     })();
     tasks.push(protestsTask.then(() => undefined));
@@ -1355,6 +1379,8 @@ export class DataLoaderManager implements AppModule {
     })());
 
     tasks.push((async () => {
+      let ok = false;
+      let itemCount = 0;
       try {
         if (isMilitaryVesselTrackingConfigured()) {
           initMilitaryVesselStream();
@@ -1377,6 +1403,8 @@ export class DataLoaderManager implements AppModule {
         ingestMilitaryForCII(flightData.flights, vesselData.vessels);
         signalAggregator.ingestFlights(flightData.flights);
         signalAggregator.ingestVessels(vesselData.vessels);
+        ok = true;
+        itemCount = flightData.flights.length + vesselData.vessels.length;
         dataFreshness.recordUpdate('opensky', flightData.flights.length);
         updateAndCheck([
           { type: 'military_flights', region: 'global', count: flightData.flights.length },
@@ -1415,6 +1443,8 @@ export class DataLoaderManager implements AppModule {
       } catch (error) {
         console.error('[Intelligence] Military fetch failed:', error);
         dataFreshness.recordError('opensky', String(error));
+      } finally {
+        markCoreIntelligenceSourceSettled('military', { ok, itemCount });
       }
     })());
 
@@ -1564,9 +1594,6 @@ export class DataLoaderManager implements AppModule {
       dataFreshness.recordError('worldpop', String(error));
     }
 
-    if (hasAnyIntelligenceData()) {
-      setIntelligenceSignalsLoaded();
-    }
     this.refreshCiiAndBrief(true);
     console.log('[Intelligence] All signals loaded for CII calculation');
   }

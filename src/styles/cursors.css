@@ -1,0 +1,208 @@
+/*
+ * Custom Cursors — Green & Black Terminal Theme
+ *
+ * This file is intentionally NOT wrapped in @layer (unlike main.css which is
+ * inside @layer base). Unlayered CSS always wins over any @layer for normal
+ * declarations, and this file is imported last in main.ts so it beats
+ * everything else including maplibre-gl.css at equal specificity.
+ *
+ * .ani files animate in Firefox; Chrome/Edge use the browser fallback cursor.
+ */
+
+/* ── Default arrow ─────────────────────────────────────────── */
+html {
+  cursor: url('/cursors/1-Normal-Select.cur.png?v=20260410a') 0 0, url('/cursors/1-Normal-Select.cur?v=20260410a'), default;
+}
+
+/* ── Pointer (links, buttons, all interactive controls) ────── */
+a,
+button,
+select,
+label,
+summary,
+details,
+[role="button"],
+[role="tab"],
+[role="option"],
+[role="menuitem"],
+[role="treeitem"],
+[role="switch"],
+[role="checkbox"],
+[role="radio"],
+[role="slider"],
+[role="combobox"],
+[tabindex="0"],
+[data-toggle],
+[data-filter],
+[data-tab],
+[data-clickable],
+[data-search-query],
+.clickable,
+.panel-tab,
+.findings-filter-btn,
+.finding-item,
+.findings-more,
+.popup-toggle-row,
+.intel-findings-badge,
+.intel-findings-badge *,
+.ifp-chip,
+.ifp-location-btn,
+.ifp-news-item,
+.context-menu-item,
+.intel-notif-expand,
+.intel-notif-close,
+.close-btn,
+.map-control-btn,
+.layer-toggle,
+.dropdown-item,
+.menu-item,
+.chip,
+.tag,
+.btn,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+input[type="checkbox"],
+input[type="radio"] {
+  cursor: url('/cursors/15-Link-Select.cur.png?v=20260410a') 5 0, url('/cursors/15-Link-Select.cur?v=20260410a'), pointer;
+}
+
+/* ── Text / caret ──────────────────────────────────────────── */
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="url"],
+input[type="tel"],
+input[type="date"],
+input:not([type]),
+textarea,
+[contenteditable="true"],
+[contenteditable=""] {
+  cursor: url('/cursors/6-Text-Select.cur.png?v=20260410a') 13 12, url('/cursors/6-Text-Select.cur?v=20260410a'), text;
+}
+
+/* ── Not-allowed / disabled ────────────────────────────────── */
+[disabled],
+[aria-disabled="true"],
+.disabled,
+button[disabled],
+input[disabled],
+select[disabled] {
+  cursor: url('/cursors/8-Unavailable.ani?v=20260410a'), not-allowed;
+}
+
+/* ── Resize handles ────────────────────────────────────────── */
+.resize-v { cursor: url('/cursors/9-Vertical-Resize.cur.png?v=20260410a') 15 15, url('/cursors/9-Vertical-Resize.cur?v=20260410a'), ns-resize; }
+.resize-h { cursor: url('/cursors/10-Horizontal-Resize.cur.png?v=20260410a') 15 15, url('/cursors/10-Horizontal-Resize.cur?v=20260410a'), ew-resize; }
+.resize-nwse { cursor: url('/cursors/11-Diagonal-Resize-1.cur.png?v=20260410a') 15 15, url('/cursors/11-Diagonal-Resize-1.cur?v=20260410a'), nwse-resize; }
+.resize-nesw { cursor: url('/cursors/12-Diagonal-Resize-2.cur.png?v=20260410a') 15 15, url('/cursors/12-Diagonal-Resize-2.cur?v=20260410a'), nesw-resize; }
+
+/* ── Default app surfaces ──────────────────────────────────── */
+.main-content,
+.map-section,
+.bottom-grid,
+.panel,
+.panel-content {
+  cursor: url('/cursors/1-Normal-Select.cur.png?v=20260410a') 0 0, url('/cursors/1-Normal-Select.cur?v=20260410a'), default;
+}
+
+/* ── Drag / move affordances ───────────────────────────────── */
+.panel-header,
+.wc-drag-handle,
+.live-channel-btn,
+.live-news-manage-row,
+.map-container,
+.map-container canvas,
+.map-container > div,
+.maplibregl-canvas-container.maplibregl-interactive,
+.maplibregl-canvas-container.maplibregl-interactive canvas,
+#deckgl-overlay canvas {
+  cursor: url('/cursors/13-Move.cur.png?v=20260410a') 15 15, url('/cursors/13-Move.cur?v=20260410a'), grab !important;
+}
+
+.panel-header:active,
+.live-channel-btn.live-channel-dragging,
+.live-news-manage-row:active,
+.live-news-manage-row-dragging,
+.map-container:active,
+.map-container:active canvas,
+.map-container:active > div,
+.maplibregl-canvas-container.maplibregl-interactive:active,
+.maplibregl-canvas-container.maplibregl-interactive:active canvas,
+#deckgl-overlay canvas:active {
+  cursor: url('/cursors/13-Move.cur.png?v=20260410a') 15 15, url('/cursors/13-Move.cur.png?v=20260410a') 15 15, url('/cursors/13-Move.cur?v=20260410a'), grabbing !important;
+}
+
+/* ── Explicit panel and map resize handles ─────────────────── */
+.map-resize-handle,
+.bottom-grid-resize-handle,
+.panel-resize-handle,
+body.panel-resize-active .map-resize-handle,
+body.panel-resize-active .bottom-grid-resize-handle,
+body.panel-resize-active .panel-resize-handle {
+  cursor: url('/cursors/9-Vertical-Resize.cur.png?v=20260410a') 15 15, url('/cursors/9-Vertical-Resize.cur?v=20260410a'), ns-resize !important;
+}
+
+.panel-col-resize-handle,
+body.panel-resize-active .panel-col-resize-handle,
+.main-content.layout-side .map-resize-handle {
+  cursor: url('/cursors/10-Horizontal-Resize.cur.png?v=20260410a') 15 15, url('/cursors/10-Horizontal-Resize.cur?v=20260410a'), ew-resize !important;
+}
+
+.corner-resize-handle,
+.main-content.layout-side .corner-resize-handle {
+  cursor: url('/cursors/11-Diagonal-Resize-1.cur.png?v=20260410a') 15 15, url('/cursors/11-Diagonal-Resize-1.cur?v=20260410a'), nwse-resize !important;
+}
+
+/* ── Restore map grab cursor ───────────────────────────────── */
+/* MapLibre uses compound class selectors (0,2,0+) which already beat our
+   element-level rules above. These explicit restores cover edge cases
+   where our .btn / [role] selectors might match maplibre control buttons. */
+.maplibregl-canvas-container.maplibregl-interactive,
+.maplibregl-canvas-container.maplibregl-interactive canvas {
+  cursor: url('/cursors/13-Move.cur.png?v=20260410a') 15 15, url('/cursors/13-Move.cur?v=20260410a'), grab !important;
+}
+.maplibregl-canvas-container.maplibregl-interactive:active,
+.maplibregl-canvas-container.maplibregl-interactive:active canvas {
+  cursor: url('/cursors/13-Move.cur.png?v=20260410a') 15 15, url('/cursors/13-Move.cur?v=20260410a'), grabbing !important;
+}
+
+body.forced-cursor-enabled,
+body.forced-cursor-enabled * {
+  cursor: none !important;
+}
+
+/* High-specificity map selectors need explicit overrides — they beat the wildcard above */
+body.forced-cursor-enabled .map-container,
+body.forced-cursor-enabled .map-container canvas,
+body.forced-cursor-enabled .map-container > div,
+body.forced-cursor-enabled .maplibregl-canvas-container.maplibregl-interactive,
+body.forced-cursor-enabled .maplibregl-canvas-container.maplibregl-interactive canvas,
+body.forced-cursor-enabled .maplibregl-canvas-container.maplibregl-interactive:active,
+body.forced-cursor-enabled .maplibregl-canvas-container.maplibregl-interactive:active canvas,
+body.forced-cursor-enabled #deckgl-overlay canvas,
+body.forced-cursor-enabled #deckgl-overlay canvas:active {
+  cursor: none !important;
+}
+
+.forced-cursor-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 2147483647;
+  opacity: 0;
+  will-change: transform;
+}
+
+.forced-cursor-image {
+  display: block;
+  width: 32px;
+  height: 32px;
+  pointer-events: none;
+  user-select: none;
+}

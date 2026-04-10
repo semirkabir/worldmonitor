@@ -432,7 +432,7 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
     this.renderEconomicIndicators();
   }
 
-  public updateScore(score: CountryScore | null, _signals: CountryBriefSignals): void {
+  public updateScore(score: CountryScore | null, signals: CountryBriefSignals): void {
     if (!this.scoreCard) return;
     // Partial DOM update: score number, level color, trend, component bars only
     const top = this.scoreCard.firstElementChild as HTMLElement | null;
@@ -454,6 +454,8 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
     } else {
       this.scoreCard.append(this.makeEmpty(t('countryBrief.ciiUnavailable')));
     }
+
+    this.renderInitialSignals(signals);
   }
 
   public updateStock(data: StockIndexData): void {
@@ -633,6 +635,7 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
     this.scoreCard = scoreCard;
     const top = this.el('div', 'cdp-score-top');
     const label = this.el('span', 'cdp-score-label', t('countryBrief.instabilityIndex'));
+    label.setAttribute('title', '40% baseline risk + 60% live signals. Live signals blend unrest (25%), conflict (30%), security (20%), and information (25%), with event floors and regional boosts.');
     const updated = this.el('span', 'cdp-updated', `Updated ${this.shortDate(score?.lastUpdated ?? new Date())}`);
     top.append(label, updated);
     scoreCard.append(top);

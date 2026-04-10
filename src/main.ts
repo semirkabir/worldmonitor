@@ -1,10 +1,13 @@
 import './styles/base-layer.css';
 import './styles/happy-theme.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import './styles/cursors.css';
 import * as Sentry from '@sentry/browser';
 import { inject } from '@vercel/analytics';
 import { App } from './App';
 import { initCustomSelects } from '@/utils/custom-select';
+import { installCursorDiagnostics } from '@/utils/cursor-diagnostics';
+import { installForcedCursor } from '@/utils/forced-cursor';
 
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN?.trim();
 
@@ -387,3 +390,6 @@ if (!('__TAURI_INTERNALS__' in window) && !('__TAURI__' in window) && 'serviceWo
       console.warn('[PWA] Service worker registration failed:', err);
     });
 }
+
+installCursorDiagnostics();
+installForcedCursor();

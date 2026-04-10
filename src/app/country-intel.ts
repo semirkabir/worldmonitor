@@ -359,6 +359,18 @@ export class CountryIntelManager implements AppModule {
     const score = getPreferredCountryScore(code);
     const signals = this.getCountrySignals(code, name);
     page.updateScore?.(score, signals);
+    page.updateSignalDetails?.(this.buildSignalDetails(code));
+    page.updateMilitaryActivity?.(this.buildMilitarySummary(code, name));
+    this.mountCountryTimeline(code, name);
+    console.debug('[CountryBrief] Refreshed open brief', {
+      code,
+      score: score?.score ?? null,
+      protests: signals.protests,
+      militaryFlights: signals.militaryFlights,
+      militaryVessels: signals.militaryVessels,
+      conflictEvents: signals.conflictEvents,
+      activeStrikes: signals.activeStrikes,
+    });
   }
 
   private async fetchCountryIntelBrief(code: string, contextSnapshot: string): Promise<string> {
@@ -517,7 +529,18 @@ export class CountryIntelManager implements AppModule {
     }
 
     this.ctx.countryTimeline = new CountryTimeline(mount);
-    this.ctx.countryTimeline.render(events.filter(e => e.timestamp >= sevenDaysAgo));
+    const recentEvents = events.filter(e => e.timestamp >= sevenDaysAgo);
+    this.ctx.countryTimeline.render(recentEvents);
+    console.debug('[CountryBrief] Timeline events rendered', {
+      code,
+      country,
+      totalEvents: events.length,
+      recentEvents: recentEvents.length,
+      byLane: recentEvents.reduce<Record<string, number>>((acc, event) => {
+        acc[event.lane] = (acc[event.lane] || 0) + 1;
+        return acc;
+      }, {}),
+    });
   }
 
   getCountrySignals(code: string, country: string): CountryBriefSignals {

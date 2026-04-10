@@ -4,10 +4,14 @@ import { checkFeatureAccess } from '@/services/auth-modal';
 
 export class PlaybackControl {
   private element: HTMLElement;
+  private toggleButton: HTMLButtonElement;
+  private panel: HTMLElement;
   private isPlaybackMode = false;
+  private isPanelOpen = false;
   private timestamps: number[] = [];
   private currentIndex = 0;
   private onSnapshotChange: ((snapshot: DashboardSnapshot | null) => void) | null = null;
+  private closeTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     this.element = document.createElement('div');
@@ -35,25 +39,60 @@ export class PlaybackControl {
       </div>
     `;
 
+    this.toggleButton = this.element.querySelector('.playback-toggle') as HTMLButtonElement;
+    this.panel = this.element.querySelector('.playback-panel') as HTMLElement;
+
     this.setupEventListeners();
   }
 
   private setupEventListeners(): void {
-    const toggle = this.element.querySelector('.playback-toggle')!;
-    const panel = this.element.querySelector('.playback-panel')!;
     const closeBtn = this.element.querySelector('.playback-close')!;
     const slider = this.element.querySelector('.playback-slider') as HTMLInputElement;
 
-    toggle.addEventListener('click', async () => {
+    this.toggleButton.addEventListener('click', async (event) => {
+      event.stopPropagation();
       if (!checkFeatureAccess('historical-playback')) return;
-      panel.classList.toggle('hidden');
-      if (!panel.classList.contains('hidden')) {
-        await this.loadTimestamps();
+      if (this.isPanelOpen) {
+        this.closePanel();
+        return;
       }
+      await this.openPanel();
     });
 
+    this.element.addEventListener('mouseenter', () => {
+      void this.openPanel();
+    });
+    this.element.addEventListener('mouseleave', () => {
+      this.scheduleClose();
+    });
+    this.element.addEventListener('focusin', () => {
+      void this.openPanel();
+    });
+    this.element.addEventListener('focusout', (event) => {
+      const related = event.relatedTarget as Node | null;
+      if (related && (this.element.contains(related) || this.panel.contains(related))) return;
+      this.scheduleClose();
+    });
+
+    this.panel.addEventListener('mouseenter', () => this.cancelClose());
+    this.panel.addEventListener('mouseleave', () => this.scheduleClose());
+    this.panel.addEventListener('focusin', () => this.cancelClose());
+    this.panel.addEventListener('focusout', (event) => {
+      const related = event.relatedTarget as Node | null;
+      if (related && (this.element.contains(related) || this.panel.contains(related))) return;
+      this.scheduleClose();
+    });
+
+    document.addEventListener('click', (event) => {
+      const target = event.target as Node | null;
+      if (target && (this.element.contains(target) || this.panel.contains(target))) return;
+      this.closePanel();
+    });
+    window.addEventListener('resize', () => this.positionPanel());
+    window.addEventListener('scroll', () => this.positionPanel(), true);
+
     closeBtn.addEventListener('click', () => {
-      panel.classList.add('hidden');
+      this.closePanel();
       this.goLive();
     });
 
@@ -69,6 +108,55 @@ export class PlaybackControl {
         this.handleAction(action!);
       });
     });
+  }
+
+  private cancelClose(): void {
+    if (this.closeTimer) {
+      clearTimeout(this.closeTimer);
+      this.closeTimer = null;
+    }
+  }
+
+  private scheduleClose(): void {
+    this.cancelClose();
+    this.closeTimer = setTimeout(() => this.closePanel(), 140);
+  }
+
+  private async openPanel(): Promise<void> {
+    this.cancelClose();
+    if (!this.panel.isConnected || this.panel.parentElement !== document.body) {
+      document.body.appendChild(this.panel);
+    }
+    this.panel.classList.remove('hidden');
+    this.toggleButton.setAttribute('aria-expanded', 'true');
+    this.isPanelOpen = true;
+    this.positionPanel();
+    await this.loadTimestamps();
+  }
+
+  private closePanel(): void {
+    this.cancelClose();
+    if (!this.isPanelOpen) return;
+    this.panel.classList.add('hidden');
+    this.toggleButton.setAttribute('aria-expanded', 'false');
+    this.isPanelOpen = false;
+  }
+
+  private positionPanel(): void {
+    if (!this.isPanelOpen) return;
+    const rect = this.toggleButton.getBoundingClientRect();
+    const panelWidth = this.panel.offsetWidth || 280;
+    const panelHeight = this.panel.offsetHeight || 220;
+    const viewportPadding = 8;
+    let left = rect.right - panelWidth;
+    left = Math.min(left, window.innerWidth - panelWidth - viewportPadding);
+    left = Math.max(viewportPadding, left);
+    let top = rect.bottom + 8;
+    if (top + panelHeight > window.innerHeight - viewportPadding) {
+      top = Math.max(viewportPadding, rect.top - panelHeight - 8);
+    }
+    this.panel.style.left = `${left}px`;
+    this.panel.style.top = `${top}px`;
   }
 
   private async loadTimestamps(): Promise<void> {

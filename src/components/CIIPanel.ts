@@ -265,6 +265,11 @@ export class CIIPanel extends Panel {
   public renderFromCached(cached: CachedRiskScores): void {
     const scores = cached.cii.map(toCountryScore).filter(s => s.score > 0);
     if (scores.length === 0) return;
+    this.renderScores(scores);
+    console.log(`[CIIPanel] Rendered ${scores.length} countries from cached/bootstrap data`);
+  }
+
+  public renderScores(scores: CountryScore[]): void {
     this.scores = scores;
     this.hasCachedRender = true;
     this.setCount(scores.length);
@@ -273,7 +278,6 @@ export class CIIPanel extends Panel {
     replaceChildren(this.content, listEl);
     this.bindShareButtons();
     this.bindVsButtons();
-    console.log(`[CIIPanel] Rendered ${scores.length} countries from cached/bootstrap data`);
   }
 
   public setActiveCountry(code: string | null): void {
