@@ -107,9 +107,13 @@ export default async function handler(request) {
     function startMuteSync(){
       if(muteSyncIntervalId)return;
       var lastMuted=readMuted();
+      var lastVolume=typeof player?.getVolume==='function'?player.getVolume():null;
       if(lastMuted!==null)window.parent.postMessage({type:'yt-mute-state',muted:lastMuted},parentOrigin);
+      if(lastVolume!==null)window.parent.postMessage({type:'yt-volume-state',volume:lastVolume},parentOrigin);
       muteSyncIntervalId=setInterval(function(){
+        var volume=typeof player?.getVolume==='function'?player.getVolume():null;
         var m=readMuted();
+        if(volume!==null&&volume!==lastVolume){lastVolume=volume;window.parent.postMessage({type:'yt-volume-state',volume:volume},parentOrigin)}
         if(m!==null&&m!==lastMuted){lastMuted=m;window.parent.postMessage({type:'yt-mute-state',muted:m},parentOrigin)}
       },500);
     }
@@ -146,6 +150,7 @@ export default async function handler(request) {
         case'pause':player.pauseVideo();break;
         case'mute':player.mute();break;
         case'unmute':player.unMute();break;
+        case'setVolume':if(typeof m.volume==='number'&&player.setVolume){player.setVolume(Math.max(0,Math.min(100,m.volume)));}break;
         case'loadVideo':if(m.videoId)player.loadVideoById(m.videoId);break;
         case'setQuality':if(m.quality&&player.setPlaybackQuality)player.setPlaybackQuality(m.quality);break;
       }

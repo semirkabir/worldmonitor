@@ -11,6 +11,7 @@ export class IPOCalendarPanel extends Panel {
       id: 'ipo-calendar',
       title: t('panels.ipoCalendar'),
     });
+    void this.render();
   }
 
   public async render(): Promise<void> {

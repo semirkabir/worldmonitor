@@ -1,26 +1,23 @@
 import { Panel } from './Panel';
 import { escapeHtml } from '@/utils/sanitize';
 import { t } from '@/services/i18n';
-
-interface OptionContract {
-  strike: string | number;
-  type: string;
-  last_price?: number;
-  bid?: number;
-  ask?: number;
-  volume?: number;
-  open_interest?: number;
-  implied_volatility?: number;
-}
+import {
+  fetchStockQuote,
+  fetchOptionChain,
+  type OptionContract,
+  type OptionChainExpiry,
+} from '@/services/market/finnhub-extra';
 
 export class OptionsChainPanel extends Panel {
   private currentSymbol = 'AAPL';
+  private selectedExpiry = 0;
 
   constructor() {
     super({
       id: 'options-chain',
       title: t('panels.optionsChain'),
     });
+    void this.render();
   }
 
   public async render(symbol?: string): Promise<void> {
@@ -29,24 +26,28 @@ export class OptionsChainPanel extends Panel {
     this.showLoading();
 
     try {
-      const quote = await this.fetchQuote(this.currentSymbol);
-      const options = await this.fetchOptions(this.currentSymbol);
+      const [quote, chain] = await Promise.all([
+        fetchStockQuote(this.currentSymbol).catch(() => null),
+        fetchOptionChain(this.currentSymbol),
+      ]);
 
-      if (!options || options.length === 0) {
+      if (!chain || chain.length === 0) {
         this.showError(`No options data for ${this.currentSymbol}`);
         return;
       }
 
-      const opts = options as OptionContract[];
-      const calls = opts.filter(o => o.type === 'call').sort((a, b) => Number(a.strike) - Number(b.strike));
-      const puts = opts.filter(o => o.type === 'put').sort((a, b) => Number(a.strike) - Number(b.strike));
+      const expiry = chain[Math.min(this.selectedExpiry, chain.length - 1)] as OptionChainExpiry;
+      const underlyingPrice = quote?.c ?? 0;
 
-      const underlyingPrice = (quote as Record<string, unknown>)?.c as number || (quote as Record<string, unknown>)?.price as number || 0;
+      const expiryOptions = chain.map((e, i) => `
+        <option value="${i}" ${i === this.selectedExpiry ? 'selected' : ''}>${escapeHtml(e.expirationDate)}</option>
+      `).join('');
 
       const html = `
         <div class="opt-controls">
           <input type="text" class="opt-symbol-input" id="opt-symbol" placeholder="Symbol..." value="${escapeHtml(this.currentSymbol)}" />
-          <span class="opt-price">Price: $${typeof underlyingPrice === 'number' ? underlyingPrice.toFixed(2) : '—'}</span>
+          ${underlyingPrice ? `<span class="opt-price">$${underlyingPrice.toFixed(2)}</span>` : ''}
+          <select class="opt-expiry-select" id="opt-expiry">${expiryOptions}</select>
         </div>
         <div class="opt-container">
           <div class="opt-side">
@@ -55,7 +56,7 @@ export class OptionsChainPanel extends Panel {
               <div class="opt-header">
                 <span>Strike</span><span>Last</span><span>Bid</span><span>Ask</span><span>Vol</span><span>OI</span><span>IV</span>
               </div>
-              ${calls.slice(0, 20).map(o => this.renderOptionRow(o, underlyingPrice, 'call')).join('')}
+              ${expiry.calls.slice(0, 20).map(o => this.renderOptionRow(o, underlyingPrice, 'call')).join('')}
             </div>
           </div>
           <div class="opt-side">
@@ -64,7 +65,7 @@ export class OptionsChainPanel extends Panel {
               <div class="opt-header">
                 <span>Strike</span><span>Last</span><span>Bid</span><span>Ask</span><span>Vol</span><span>OI</span><span>IV</span>
               </div>
-              ${puts.slice(0, 20).map(o => this.renderOptionRow(o, underlyingPrice, 'put')).join('')}
+              ${expiry.puts.slice(0, 20).map(o => this.renderOptionRow(o, underlyingPrice, 'put')).join('')}
             </div>
           </div>
         </div>
@@ -80,9 +81,16 @@ export class OptionsChainPanel extends Panel {
           const val = symbolInput.value.trim().toUpperCase();
           if (val) {
             this.currentSymbol = val;
-            this.render();
+            this.selectedExpiry = 0;
+            void this.render();
           }
         }, 500);
+      });
+
+      const expirySelect = document.getElementById('opt-expiry') as HTMLSelectElement | null;
+      expirySelect?.addEventListener('change', () => {
+        this.selectedExpiry = parseInt(expirySelect.value, 10);
+        void this.render();
       });
     } catch (err) {
       this.showError(`Failed to load options: ${err}`);
@@ -90,14 +98,14 @@ export class OptionsChainPanel extends Panel {
   }
 
   private renderOptionRow(o: OptionContract, underlying: number, type: string): string {
-    const strike = Number(o.strike || 0);
+    const strike = o.strike ?? 0;
     const itm = type === 'call' ? strike < underlying : strike > underlying;
-    const last = o.last_price != null ? o.last_price.toFixed(2) : '—';
+    const last = o.lastPrice != null ? o.lastPrice.toFixed(2) : '—';
     const bid = o.bid != null ? o.bid.toFixed(2) : '—';
     const ask = o.ask != null ? o.ask.toFixed(2) : '—';
     const vol = o.volume != null ? o.volume.toLocaleString() : '—';
-    const oi = o.open_interest != null ? o.open_interest.toLocaleString() : '—';
-    const iv = o.implied_volatility != null ? `${(o.implied_volatility * 100).toFixed(1)}%` : '—';
+    const oi = o.openInterest != null ? o.openInterest.toLocaleString() : '—';
+    const iv = o.impliedVolatility != null ? `${(o.impliedVolatility * 100).toFixed(1)}%` : '—';
 
     return `
       <div class="opt-row ${itm ? 'opt-itm' : ''}">
@@ -110,24 +118,5 @@ export class OptionsChainPanel extends Panel {
         <span class="opt-iv">${iv}</span>
       </div>
     `;
-  }
-
-  private async fetchQuote(symbol: string): Promise<Record<string, unknown> | null> {
-    const url = `/api/market/v1/list-market-quotes?symbols=${encodeURIComponent(symbol)}`;
-    const resp = await fetch(url);
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    return data.quotes?.[0] || null;
-  }
-
-  private async fetchOptions(symbol: string): Promise<unknown[]> {
-    const url = `/api/market-data?endpoint=option-chain&symbol=${encodeURIComponent(symbol)}`;
-    const resp = await fetch(url);
-    if (!resp.ok) {
-      const error = await resp.json().catch(() => ({ error: resp.statusText }));
-      throw new Error((error as { error?: string }).error || `HTTP ${resp.status}`);
-    }
-    const data = await resp.json();
-    return (data as Record<string, unknown>).data as unknown[] || (data as Record<string, unknown>).options as unknown[] || [];
   }
 }

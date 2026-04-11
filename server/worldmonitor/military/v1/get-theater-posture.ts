@@ -46,6 +46,16 @@ function getRelayRequestHeaders(): Record<string, string> {
   return headers;
 }
 
+function getOpenSkyDirectHeaders(): Record<string, string> {
+  const clientId = process.env.OPENSKY_CLIENT_ID;
+  const clientSecret = process.env.OPENSKY_CLIENT_SECRET;
+  const headers: Record<string, string> = { Accept: 'application/json', 'User-Agent': CHROME_UA };
+  if (clientId && clientSecret) {
+    headers.Authorization = 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+  }
+  return headers;
+}
+
 // Two bounding boxes covering all 9 POSTURE_THEATERS instead of fetching every
 // aircraft globally.  Returns ~hundreds of relevant states instead of ~10,000+.
 const THEATER_QUERY_REGIONS = [
@@ -79,9 +89,22 @@ function parseOpenSkyStates(
 
 async function fetchMilitaryFlightsFromOpenSky(): Promise<RawFlight[]> {
   const isSidecar = (process.env.LOCAL_API_MODE || '').includes('sidecar');
-  const baseUrl = isSidecar
-    ? 'https://opensky-network.org/api/states/all'
-    : process.env.WS_RELAY_URL ? process.env.WS_RELAY_URL + '/opensky' : null;
+  const hasRelay = !!process.env.WS_RELAY_URL;
+  const hasDirectCreds = !!(process.env.OPENSKY_CLIENT_ID && process.env.OPENSKY_CLIENT_SECRET);
+
+  // Determine source: relay preferred in production, direct with credentials as fallback
+  let baseUrl: string | null = null;
+  let requestHeaders: Record<string, string>;
+
+  if (isSidecar || !hasRelay) {
+    // Direct OpenSky: works in sidecar (desktop), local dev, or any non-rate-limited IP
+    if (!hasDirectCreds && !isSidecar) return [];
+    baseUrl = 'https://opensky-network.org/api/states/all';
+    requestHeaders = getOpenSkyDirectHeaders();
+  } else {
+    baseUrl = process.env.WS_RELAY_URL + '/opensky';
+    requestHeaders = getRelayRequestHeaders();
+  }
 
   if (!baseUrl) return [];
 
@@ -91,7 +114,7 @@ async function fetchMilitaryFlightsFromOpenSky(): Promise<RawFlight[]> {
   for (const region of THEATER_QUERY_REGIONS) {
     const params = `lamin=${region.lamin}&lamax=${region.lamax}&lomin=${region.lomin}&lomax=${region.lomax}`;
     const resp = await fetch(`${baseUrl}?${params}`, {
-      headers: getRelayRequestHeaders(),
+      headers: requestHeaders,
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
     if (!resp.ok) throw new Error(`OpenSky API error: ${resp.status} for ${region.name}`);

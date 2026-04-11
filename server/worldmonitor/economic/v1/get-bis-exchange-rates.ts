@@ -11,7 +11,7 @@ import type {
 } from '../../../../src/generated/server/worldmonitor/economic/v1/service_server';
 
 import { cachedFetchJson } from '../../../_shared/redis';
-import { fetchBisCSV, parseBisCSV, parseBisNumber, BIS_COUNTRIES, BIS_COUNTRY_KEYS } from './_bis-shared';
+import { fetchBisCSV, parseBisCSV, parseBisNumber, bisCol, BIS_COUNTRIES, BIS_COUNTRY_KEYS } from './_bis-shared';
 
 const REDIS_CACHE_KEY = 'economic:bis:eer:v1';
 const REDIS_CACHE_TTL = 21600; // 6 hours — monthly data
@@ -33,9 +33,9 @@ export async function getBisExchangeRates(
       // Group by country, take last 2 observations for change calculation
       const byCountry = new Map<string, Array<{ date: string; value: number }>>();
       for (const row of rows) {
-        const cc = row['REF_AREA'] || row['Reference area'] || '';
-        const date = row['TIME_PERIOD'] || row['Time period'] || '';
-        const val = parseBisNumber(row['OBS_VALUE'] || row['Observation value']);
+        const cc = bisCol(row, 'REF_AREA', 'Reference area', 'ref_area');
+        const date = bisCol(row, 'TIME_PERIOD', 'Time period', 'time_period');
+        const val = parseBisNumber(bisCol(row, 'OBS_VALUE', 'Observation value', 'obs_value') || undefined);
         if (!cc || !date || val === null) continue;
         if (!byCountry.has(cc)) byCountry.set(cc, []);
         byCountry.get(cc)!.push({ date, value: val });

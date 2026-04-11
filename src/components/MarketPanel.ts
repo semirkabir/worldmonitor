@@ -15,6 +15,15 @@ import { MARKET_SYMBOLS, SECTORS, COMMODITIES } from '@/config/markets';
 import { COMMODITY_MARKET_SYMBOLS, COMMODITY_SECTORS, COMMODITY_PRICES } from '@/config/commodity-markets';
 import { marketWebSocket } from '@/services/market/realtime';
 
+function formatCryptoPrice(price: number): string {
+  if (!Number.isFinite(price)) return '—';
+  const abs = Math.abs(price);
+  const maximumFractionDigits = abs >= 1000 ? 0 : abs >= 1 ? 2 : abs >= 0.01 ? 4 : 6;
+  const minimumFractionDigits = maximumFractionDigits === 0 ? 0 : Math.min(maximumFractionDigits, abs >= 1 ? 2 : maximumFractionDigits);
+  return `$${price.toLocaleString(undefined, { minimumFractionDigits, maximumFractionDigits })}`;
+}
+
+
 export class MarketPanel extends Panel {
   private settingsBtn: HTMLButtonElement | null = null;
   private overlay: HTMLElement | null = null;
@@ -382,8 +391,27 @@ export class CommoditiesPanel extends Panel {
 }
 
 export class CryptoPanel extends Panel {
+  private cryptoData: CryptoData[] = [];
+  private onCoinClick?: (coin: CryptoData) => void;
+
   constructor() {
     super({ id: 'crypto', title: t('panels.crypto') });
+  }
+
+  public setOnCoinClick(cb: (coin: CryptoData) => void): void {
+    this.onCoinClick = cb;
+  }
+
+  private bindCryptoInteractions(): void {
+    this.content.querySelectorAll<HTMLButtonElement>('[data-crypto-symbol]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const symbol = button.dataset.cryptoSymbol;
+        if (!symbol) return;
+        const coin = this.cryptoData.find(c => c.symbol === symbol);
+        if (!coin) return;
+        this.onCoinClick?.(coin);
+      });
+    });
   }
 
   public renderCrypto(data: CryptoData[]): void {
@@ -392,24 +420,28 @@ export class CryptoPanel extends Panel {
       return;
     }
 
-    const html = data
-      .map(
-        (coin) => `
-      <div class="market-item">
+    this.cryptoData = data;
+
+    const rows = data.map((coin) => `
+      <button
+        type="button"
+        class="market-item crypto-market-item"
+        data-crypto-symbol="${escapeHtml(coin.symbol)}"
+        aria-label="Open ${escapeHtml(coin.name)} details"
+      >
         <div class="market-info">
           <span class="market-name">${escapeHtml(coin.name)}</span>
           <span class="market-symbol">${escapeHtml(coin.symbol)}</span>
         </div>
         <div class="market-data">
           ${miniSparkline(coin.sparkline, coin.change)}
-          <span class="market-price">$${coin.price.toLocaleString()}</span>
+          <span class="market-price">${formatCryptoPrice(coin.price)}</span>
           <span class="market-change ${getChangeClass(coin.change)}">${formatChange(coin.change)}</span>
         </div>
-      </div>
-    `
-      )
-      .join('');
+      </button>
+    `).join('');
 
-    this.setContent(html);
+    this.setContentNow(`<div class="crypto-market-list">${rows}</div>`);
+    this.bindCryptoInteractions();
   }
 }

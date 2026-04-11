@@ -129,3 +129,232 @@ export async function fetchSocialSentiment(symbol: string): Promise<SocialSentim
 export async function fetchRecommendationTrends(symbol: string): Promise<RecommendationTrend[]> {
   return fetchFinnhub('recommendation-trends', { symbol }) as Promise<RecommendationTrend[]>;
 }
+
+// ─── Stock Quote ─────────────────────────────────────────────────────────────
+
+export interface StockQuote {
+  c: number;   // current price
+  d: number;   // change
+  dp: number;  // change percent
+  h: number;   // high
+  l: number;   // low
+  o: number;   // open
+  pc: number;  // previous close
+}
+
+export async function fetchStockQuote(symbol: string): Promise<StockQuote | null> {
+  const data = await fetchFinnhub('quote', { symbol }) as StockQuote;
+  if (!data || !data.c) return null;
+  return data;
+}
+
+// ─── Company Profile ─────────────────────────────────────────────────────────
+
+export interface CompanyProfile {
+  country: string;
+  currency: string;
+  exchange: string;
+  finnhubIndustry: string;
+  gicsSector?: string;
+  gicsIndustry?: string;
+  ipo: string;
+  logo: string;
+  marketCapitalization: number;
+  name: string;
+  phone: string;
+  shareOutstanding: number;
+  ticker: string;
+  weburl: string;
+  // Extended fields (returned by Finnhub for US stocks)
+  description?: string;
+  ceo?: string;
+  employeeTotal?: number;
+  address?: string;
+  city?: string;
+  state?: string;
+}
+
+export async function fetchCompanyProfile(symbol: string): Promise<CompanyProfile | null> {
+  const data = await fetchFinnhub('company-profile', { symbol }) as CompanyProfile;
+  if (!data || !data.name) return null;
+  return data;
+}
+
+// ─── Company Metrics (Basic Financials) ──────────────────────────────────────
+
+export interface CompanyMetrics {
+  '10DayAverageTradingVolume'?: number;
+  '52WeekHigh'?: number;
+  '52WeekLow'?: number;
+  beta?: number;
+  bookValuePerShareAnnual?: number;
+  dividendYieldIndicatedAnnual?: number;
+  epsAnnual?: number;
+  epsGrowthTTMYoy?: number;
+  marketCapitalization?: number;
+  peAnnual?: number;
+  peBasicExclExtraTTM?: number;
+  pbAnnual?: number;
+  psAnnual?: number;
+  revenuePerShareAnnual?: number;
+  roaRfy?: number;
+  roeRfy?: number;
+  roiAnnual?: number;
+  totalDebtToEquityAnnual?: number;
+  currentRatioAnnual?: number;
+  netProfitMarginAnnual?: number;
+  operatingMarginAnnual?: number;
+  grossMarginAnnual?: number;
+  freeCashFlowPerShareAnnual?: number;
+  revenueGrowthTTMYoy?: number;
+  [key: string]: number | undefined;
+}
+
+export async function fetchCompanyMetrics(symbol: string): Promise<CompanyMetrics | null> {
+  const data = await fetchFinnhub('company-metrics', { symbol }) as { metric?: CompanyMetrics };
+  return data?.metric ?? null;
+}
+
+// ─── Company Peers ───────────────────────────────────────────────────────────
+
+export async function fetchCompanyPeers(symbol: string): Promise<string[]> {
+  const data = await fetchFinnhub('company-peers', { symbol });
+  return Array.isArray(data) ? data.filter((s: string) => s !== symbol) : [];
+}
+
+// ─── Company News ────────────────────────────────────────────────────────────
+
+export interface CompanyNewsItem {
+  category: string;
+  datetime: number;
+  headline: string;
+  id: number;
+  image: string;
+  related: string;
+  source: string;
+  summary: string;
+  url: string;
+}
+
+export async function fetchCompanyNews(symbol: string): Promise<CompanyNewsItem[]> {
+  const data = await fetchFinnhub('company-news', { symbol });
+  return Array.isArray(data) ? data.slice(0, 20) : [];
+}
+
+// ─── Price Target ────────────────────────────────────────────────────────────
+
+export interface PriceTarget {
+  lastUpdated: string;
+  targetHigh: number;
+  targetLow: number;
+  targetMean: number;
+  targetMedian: number;
+}
+
+export async function fetchPriceTarget(symbol: string): Promise<PriceTarget | null> {
+  const data = await fetchFinnhub('price-target', { symbol }) as PriceTarget;
+  if (!data || !data.targetMean) return null;
+  return data;
+}
+
+// ─── Financials Reported ─────────────────────────────────────────────────────
+
+export interface FinancialReport {
+  accessNumber: string;
+  symbol: string;
+  cik: string;
+  year: number;
+  quarter: number;
+  form: string;
+  startDate: string;
+  endDate: string;
+  filedDate: string;
+  report: {
+    bs?: Array<{ concept: string; label: string; value: number; unit: string }>;
+    ic?: Array<{ concept: string; label: string; value: number; unit: string }>;
+    cf?: Array<{ concept: string; label: string; value: number; unit: string }>;
+  };
+}
+
+export async function fetchFinancialsReported(symbol: string, freq: 'annual' | 'quarterly' = 'annual'): Promise<FinancialReport[]> {
+  const url = new URL('/api/market-data', window.location.origin);
+  url.searchParams.set('endpoint', 'financials-reported');
+  url.searchParams.set('symbol', symbol);
+  url.searchParams.set('freq', freq);
+
+  const resp = await fetch(url.toString());
+  if (!resp.ok) return [];
+  const data = await resp.json() as { data?: FinancialReport[] };
+  return data?.data?.slice(0, 4) ?? [];
+}
+
+// ─── Option Chain ─────────────────────────────────────────────────────────────
+
+export interface OptionContract {
+  contractName: string;
+  strike: number;
+  expirationDate: string;
+  impliedVolatility: number;
+  lastPrice: number;
+  bid: number;
+  ask: number;
+  volume: number;
+  openInterest: number;
+  inTheMoney: boolean;
+  side: 'CALL' | 'PUT';
+}
+
+export interface OptionChainExpiry {
+  expirationDate: string;
+  calls: OptionContract[];
+  puts: OptionContract[];
+}
+
+export async function fetchOptionChain(symbol: string): Promise<OptionChainExpiry[]> {
+  const data = await fetchFinnhub('option-chain', { symbol }) as {
+    data?: Array<{
+      expirationDate: string;
+      options: { CALL?: OptionContract[]; PUT?: OptionContract[] };
+    }>;
+  };
+  if (!data?.data) return [];
+  return data.data.map(expiry => ({
+    expirationDate: expiry.expirationDate,
+    calls: expiry.options.CALL ?? [],
+    puts: expiry.options.PUT ?? [],
+  }));
+}
+
+// ─── Institutional Ownership ──────────────────────────────────────────────────
+
+export interface InstitutionalHolder {
+  name: string;
+  share: number;
+  date: string;
+  change: number;
+  filingDate: string;
+  percent: number;
+}
+
+export async function fetchInstitutionalOwnership(symbol: string): Promise<InstitutionalHolder[]> {
+  const data = await fetchFinnhub('stock-ownership', { symbol }) as { ownership?: InstitutionalHolder[] };
+  return data?.ownership ?? [];
+}
+
+// ─── Earnings Surprises ───────────────────────────────────────────────────────
+
+export interface EarningsSurprise {
+  actual: number;
+  estimate: number;
+  period: string;
+  quarter: number;
+  surprise: number;
+  surprisePercent: number;
+  symbol: string;
+  year: number;
+}
+
+export async function fetchEarningsSurprises(symbol: string): Promise<EarningsSurprise[]> {
+  const data = await fetchFinnhub('earnings-surprises', { symbol });
+  return Array.isArray(data) ? data : [];
+}

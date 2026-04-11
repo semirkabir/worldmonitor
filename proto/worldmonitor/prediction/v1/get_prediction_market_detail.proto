@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package worldmonitor.prediction.v1;
+
+import "buf/validate/validate.proto";
+import "sebuf/http/annotations.proto";
+
+message GetPredictionMarketDetailRequest {
+  string slug = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).string.min_len = 1,
+    (sebuf.http.query) = { name: "slug" }
+  ];
+
+  string event_id = 2 [(sebuf.http.query) = { name: "event_id" }];
+  int32 book_depth = 3 [(sebuf.http.query) = { name: "book_depth" }];
+  int32 trade_limit = 4 [(sebuf.http.query) = { name: "trade_limit" }];
+  bool refresh = 5 [(sebuf.http.query) = { name: "refresh" }];
+}
+
+message GetPredictionMarketDetailResponse {
+  PredictionMarketDetail market = 1;
+  PredictionMarketPricing pricing = 2;
+  PredictionMarketOrderBook order_book = 3;
+  repeated PredictionMarketTrade recent_trades = 4;
+  repeated PredictionMarketPricePoint history = 5;
+  repeated PredictionMarketHolder holders = 6;
+  repeated PredictionMarketComment comments = 7;
+}
+
+message PredictionMarketDetail {
+  string slug = 1;
+  string title = 2;
+  string url = 3;
+  string category = 4;
+  string event_id = 5;
+  string event_slug = 6;
+  string market_id = 7;
+  string condition_id = 8;
+  repeated string token_ids = 9;
+  bool closed = 10;
+  int64 closes_at = 11 [(sebuf.http.int64_encoding) = INT64_ENCODING_NUMBER];
+  string description = 12;
+  string resolution_source = 13;
+  double volume = 14;
+  double liquidity = 15;
+}
+
+message PredictionMarketPricing {
+  double yes_price = 1;
+  double no_price = 2;
+  double midpoint = 3;
+  double best_bid = 4;
+  double best_ask = 5;
+  double spread = 6;
+  double last_trade_price = 7;
+  string last_trade_side = 8;
+}
+
+message PredictionMarketOrderLevel {
+  double price = 1;
+  double size = 2;
+}
+
+message PredictionMarketOrderBook {
+  repeated PredictionMarketOrderLevel bids = 1;
+  repeated PredictionMarketOrderLevel asks = 2;
+  string tick_size = 3;
+  string min_order_size = 4;
+  string hash = 5;
+  int64 updated_at = 6 [(sebuf.http.int64_encoding) = INT64_ENCODING_NUMBER];
+}
+
+message PredictionMarketTrade {
+  double price = 1;
+  double size = 2;
+  string side = 3;
+  int64 timestamp = 4 [(sebuf.http.int64_encoding) = INT64_ENCODING_NUMBER];
+}
+
+message PredictionMarketPricePoint {
+  int64 timestamp = 1 [(sebuf.http.int64_encoding) = INT64_ENCODING_NUMBER];
+  double price = 2;
+}
+
+message PredictionMarketHolder {
+  string address = 1;
+  string label = 2;
+  string profile_image = 3;
+  double shares = 4;
+  double value = 5;
+  string side = 6;
+}
+
+message PredictionMarketComment {
+  string author = 1;
+  string text = 2;
+  string profile_image = 3;
+  string user_address = 4;
+  int32 likes = 5;
+  int64 created_at = 6 [(sebuf.http.int64_encoding) = INT64_ENCODING_NUMBER];
+}

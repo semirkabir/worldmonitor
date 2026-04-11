@@ -15,6 +15,7 @@ import { getNaturalEventIcon, getNaturalEventIconUrl } from '@/services/eonet';
 import type { WeatherAlert } from '@/services/weather';
 import { getSeverityColor, getWeatherAlertIconUrl } from '@/services/weather';
 import { startSmartPollLoop, type SmartPollLoopHandle } from '@/services/runtime';
+import { resolveInlineCursor } from '@/utils/forced-cursor';
 import {
   MAP_URLS,
   INTEL_HOTSPOTS,
@@ -559,6 +560,30 @@ export class MapComponent {
     helpBtn.title = t('components.deckgl.layerGuide');
     helpBtn.setAttribute('aria-label', t('components.deckgl.layerGuide'));
     helpBtn.addEventListener('click', () => this.showLayerHelp());
+    let helpCloseTimeout: number | null = null;
+    const cancelHelpClose = () => {
+      if (helpCloseTimeout !== null) {
+        window.clearTimeout(helpCloseTimeout);
+        helpCloseTimeout = null;
+      }
+    };
+    const queueHelpClose = () => {
+      cancelHelpClose();
+      helpCloseTimeout = window.setTimeout(() => this.hideLayerHelp(), 120);
+    };
+    helpBtn.addEventListener('mouseenter', () => {
+      cancelHelpClose();
+      this.showLayerHelp();
+      const popup = this.container.querySelector('.layer-help-popup');
+      if (popup && !popup.hasAttribute('data-hover-bound')) {
+        popup.setAttribute('data-hover-bound', 'true');
+        popup.addEventListener('mouseenter', cancelHelpClose);
+        popup.addEventListener('mouseleave', queueHelpClose);
+      }
+    });
+    helpBtn.addEventListener('mouseleave', queueHelpClose);
+    helpBtn.addEventListener('focus', () => this.showLayerHelp());
+    helpBtn.addEventListener('blur', queueHelpClose);
     body.appendChild(helpBtn);
     enforceLayerLimit();
     applyCollapsedState(getTrayOpenPreference('svgLayersCollapsed', false));
@@ -720,6 +745,10 @@ export class MapComponent {
     this.container.appendChild(popup);
   }
 
+  private hideLayerHelp(): void {
+    this.container.querySelector('.layer-help-popup')?.remove();
+  }
+
   private syncLayerButtons(): void {
     this.container.querySelectorAll<HTMLButtonElement>('.layer-toggle').forEach((btn) => {
       const layer = btn.dataset.layer as keyof MapLayers | undefined;
@@ -830,7 +859,7 @@ export class MapComponent {
       if (e.button === 0) { // Left click
         isDragging = true;
         lastPos = { x: e.clientX, y: e.clientY };
-        this.container.style.cursor = 'grabbing';
+        this.container.style.cursor = resolveInlineCursor('grabbing');
       }
     });
 
@@ -851,7 +880,7 @@ export class MapComponent {
     document.addEventListener('mouseup', () => {
       if (isDragging) {
         isDragging = false;
-        this.container.style.cursor = 'grab';
+        this.container.style.cursor = resolveInlineCursor('grab');
       }
     });
 
@@ -993,7 +1022,7 @@ export class MapComponent {
       }
     });
 
-    this.container.style.cursor = 'grab';
+    this.container.style.cursor = resolveInlineCursor('grab');
   }
 
   private async loadMapData(): Promise<void> {
@@ -1560,7 +1589,7 @@ export class MapComponent {
         clickArea.style.top = `${centerPos[1] - 20}px`;
         clickArea.style.width = '80px';
         clickArea.style.height = '40px';
-        clickArea.style.cursor = 'pointer';
+        clickArea.style.cursor = resolveInlineCursor('pointer');
 
         clickArea.addEventListener('click', (e) => {
           e.stopPropagation();
@@ -2534,7 +2563,7 @@ export class MapComponent {
         div.style.transform = `translate(-50%, -50%) rotate(${ac.trackDeg}deg)`;
         div.style.lineHeight = '1';
         div.style.pointerEvents = 'auto';
-        div.style.cursor = 'pointer';
+        div.style.cursor = resolveInlineCursor('pointer');
         div.innerHTML = AIRCRAFT_MARKER_SVG;
 
         div.addEventListener('click', (e) => {

@@ -246,7 +246,6 @@ export class CountryIntelModal {
         const panel = (window as any).__entityDetailPanel;
         if (panel) {
           panel.show('predictionMarket', {
-            id: market.slug || '',
             title: market.title,
             slug: market.slug || '',
             category: 'geopolitics',

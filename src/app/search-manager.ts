@@ -265,7 +265,6 @@ export class SearchManager implements AppModule {
       case 'prediction': {
         const market = result.data as { title?: string; slug?: string; url?: string; volume?: number; endDate?: string; yesPrice?: number };
         this.ctx.entityDetailPanel?.show('predictionMarket', {
-          id: market.slug || '',
           title: market.title || '',
           slug: market.slug || '',
           category: 'geopolitics',

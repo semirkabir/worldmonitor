@@ -2,6 +2,7 @@ import type { PanelConfig, MapLayers } from '@/types';
 import type { DataSourceId } from '@/services/data-freshness';
 import { SITE_VARIANT } from './variant';
 import { isDesktopRuntime } from '@/services/runtime';
+import { applyLocalDevPanelStability } from '@/services/local-dev-stability';
 
 const _desktop = isDesktopRuntime();
 
@@ -96,6 +97,7 @@ const FULL_PANELS: Record<string, PanelConfig> = {
   'insider-trading':     p2('Insider Trading'),
   'social-sentiment':    p2('Social Sentiment'),
   'options-chain':       p2('Options Chain'),
+  'portfolio-tracker':   p2('Portfolio Tracker'),
   marketplace:           { name: 'Marketplace Data', enabled: false, priority: 2 },
 };
 
@@ -224,6 +226,7 @@ const FINANCE_PANELS: Record<string, PanelConfig> = {
   'insider-trading':  p2('Insider Trading'),
   'social-sentiment': p2('Social Sentiment'),
   'options-chain':    p2('Options Chain'),
+  'portfolio-tracker': p1('Portfolio Tracker'),
   marketplace:        { name: 'Marketplace Data', enabled: false, priority: 2 },
 };
 
@@ -399,7 +402,7 @@ const MOBILE_LAYERS_BY_VARIANT: Record<string, MapLayers> = {
   commodity: COMMODITY_MOBILE_MAP_LAYERS, conflicts: CONFLICTS_MOBILE_MAP_LAYERS,
 };
 
-export const DEFAULT_PANELS              = PANELS_BY_VARIANT[SITE_VARIANT]        ?? FULL_PANELS;
+export const DEFAULT_PANELS              = applyLocalDevPanelStability(PANELS_BY_VARIANT[SITE_VARIANT] ?? FULL_PANELS);
 export const DEFAULT_MAP_LAYERS          = LAYERS_BY_VARIANT[SITE_VARIANT]        ?? FULL_MAP_LAYERS;
 export const MOBILE_DEFAULT_MAP_LAYERS   = MOBILE_LAYERS_BY_VARIANT[SITE_VARIANT] ?? FULL_MOBILE_MAP_LAYERS;
 
@@ -445,7 +448,7 @@ export const PANEL_CATEGORY_MAP: Record<string, { labelKey: string; panelKeys: s
   },
   marketsFinance: {
     labelKey: 'header.panelCatMarketsFinance',
-    panelKeys: ['commodities', 'markets', 'economic', 'trade-policy', 'supply-chain', 'finance', 'polymarket', 'macro-signals', 'gulf-economies', 'crypto', 'heatmap'],
+    panelKeys: ['commodities', 'markets', 'economic', 'trade-policy', 'supply-chain', 'finance', 'polymarket', 'macro-signals', 'gulf-economies', 'crypto', 'heatmap', 'portfolio-tracker'],
     variants: ['full'],
   },
   topical: {
@@ -484,7 +487,7 @@ export const PANEL_CATEGORY_MAP: Record<string, { labelKey: string; panelKeys: s
   // Finance variant
   finMarkets: {
     labelKey: 'header.panelCatMarkets',
-    panelKeys: ['markets', 'markets-news', 'heatmap', 'macro-signals', 'analysis', 'polymarket'],
+    panelKeys: ['markets', 'markets-news', 'heatmap', 'macro-signals', 'analysis', 'polymarket', 'portfolio-tracker'],
     variants: ['finance'],
   },
   fixedIncomeFx: {

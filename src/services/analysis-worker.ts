@@ -8,9 +8,6 @@ import type { PredictionMarket } from '@/services/prediction';
 import type { CorrelationSignal } from './correlation';
 import { SOURCE_TIERS, SOURCE_TYPES, type SourceType } from '@/config/feeds';
 
-// Import worker using Vite's worker syntax
-import AnalysisWorker from '@/workers/analysis.worker?worker';
-
 interface PendingRequest<T> {
   resolve: (value: T) => void;
   reject: (error: Error) => void;
@@ -65,7 +62,7 @@ class AnalysisWorkerManager {
     }, AnalysisWorkerManager.READY_TIMEOUT_MS);
 
     try {
-      this.worker = new AnalysisWorker();
+      this.worker = new Worker(new URL('../workers/analysis.worker.ts', import.meta.url), { type: 'module' });
     } catch (error) {
       console.error('[AnalysisWorker] Failed to create worker:', error);
       this.readyReject?.(error instanceof Error ? error : new Error(String(error)));

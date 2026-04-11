@@ -12,6 +12,7 @@ export class EarningsCalendarPanel extends Panel {
       id: 'earnings-calendar',
       title: t('panels.earningsCalendar'),
     });
+    void this.render();
   }
 
   private formatRevenue(rev: number): string {

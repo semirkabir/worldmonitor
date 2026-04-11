@@ -46,6 +46,7 @@ import {
   InsiderTradingPanel,
   SocialSentimentPanel,
   OptionsChainPanel,
+  PortfolioPanel,
 } from '@/components';
 import { SatelliteFiresPanel } from '@/components/SatelliteFiresPanel';
 import { MarketplacePanel } from '@/components/MarketplacePanel';
@@ -67,6 +68,7 @@ import { trackCriticalBannerAction } from '@/services/analytics';
 import { getSecretState } from '@/services/runtime-config';
 import { checkFeatureAccess } from '@/services/auth-modal';
 import { isLoggedIn } from '@/services/user-auth';
+import { LIMITED_LOCAL_RPC_DEV_MODE } from '@/services/local-dev-stability';
 
 export interface PanelLayoutCallbacks {
   openCountryStory: (code: string, name: string) => void;
@@ -298,6 +300,13 @@ export class PanelLayoutManager implements AppModule {
           <button type="button" class="shell-guidance-btn" id="shellGuidanceDismiss">Dismiss</button>
         </div>
       </div>
+      ${LIMITED_LOCAL_RPC_DEV_MODE ? `
+      <div class="local-dev-api-notice" role="note">
+        <div class="local-dev-api-notice-copy">
+          <strong>Local API mode:</strong> some RPC-backed panels are off by default in web dev because their local routes are unavailable. They still remain in Add Panel if you want to test them manually.
+        </div>
+      </div>
+      ` : ''}
       <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
       <nav class="mobile-menu" id="mobileMenu">
         <div class="mobile-menu-header">
@@ -752,7 +761,6 @@ export class PanelLayoutManager implements AppModule {
       if (this.ctx.entityDetailPanel) {
         this.ctx.countryBriefPage?.hide();
         this.ctx.entityDetailPanel.show('predictionMarket', {
-          id: market.slug || '',
           title: market.title,
           slug: market.slug || '',
           category: 'geopolitics',
@@ -775,6 +783,12 @@ export class PanelLayoutManager implements AppModule {
     this.ctx.panels['intel'] = intelPanel;
 
     const cryptoPanel = new CryptoPanel();
+    cryptoPanel.setOnCoinClick((coin) => {
+      if (this.ctx.entityDetailPanel) {
+        this.ctx.countryBriefPage?.hide();
+        this.ctx.entityDetailPanel.show('crypto', coin);
+      }
+    });
     this.ctx.panels['crypto'] = cryptoPanel;
 
     const middleeastPanel = new NewsPanel('middleeast', t('panels.middleeast'));
@@ -1072,6 +1086,7 @@ export class PanelLayoutManager implements AppModule {
       this.ctx.panels['insider-trading'] = new InsiderTradingPanel();
       this.ctx.panels['social-sentiment'] = new SocialSentimentPanel();
       this.ctx.panels['options-chain'] = new OptionsChainPanel();
+      this.ctx.panels['portfolio-tracker'] = new PortfolioPanel();
     }
 
     if (this.ctx.isDesktopApp) {

@@ -2,6 +2,7 @@ import type { ClusteredEvent, RelatedAsset, AssetType, RelatedAssetContext } fro
 import { tokenizeForMatch, matchKeyword } from '@/utils/keyword-match';
 import { t } from '@/services/i18n';
 import { haversineKm } from '@/utils/geo';
+import { getCountryCentroid, isCoordinateInCountry, nameToCountryCode } from '@/services/country-geometry';
 import {
   INTEL_HOTSPOTS,
   CONFLICT_ZONES,
@@ -28,6 +29,8 @@ interface AssetOrigin {
   lon: number;
   label: string;
 }
+
+type AssetIndexEntry = { id: string; name: string; lat: number; lon: number };
 
 function detectAssetTypes(titles: string[]): AssetType[] {
   const tokenized = titles.map(t => tokenizeForMatch(t));
@@ -73,7 +76,7 @@ function midpoint(points: [number, number][]): { lat: number; lon: number } | nu
   return { lon: mid[0], lat: mid[1] };
 }
 
-function buildAssetIndex(type: AssetType): Array<{ id: string; name: string; lat: number; lon: number } | null> {
+function buildAssetIndex(type: AssetType): Array<AssetIndexEntry | null> {
   switch (type) {
     case 'pipeline':
       return PIPELINES.map(pipeline => {
@@ -93,6 +96,65 @@ function buildAssetIndex(type: AssetType): Array<{ id: string; name: string; lat
       return MILITARY_BASES.map(base => ({ id: base.id, name: base.name, lat: base.lat, lon: base.lon }));
     case 'nuclear':
       return NUCLEAR_FACILITIES.map(site => ({ id: site.id, name: site.name, lat: site.lat, lon: site.lon }));
+    default:
+      return [];
+  }
+}
+
+function isCoordinateInsideCountry(lat: number, lon: number, countryCode: string): boolean {
+  return isCoordinateInCountry(lat, lon, countryCode) === true;
+}
+
+function isMilitaryBaseInCountry(base: typeof MILITARY_BASES[number], countryCode: string): boolean {
+  const hostCode = base.country ? nameToCountryCode(base.country.toLowerCase()) : null;
+  if (hostCode === countryCode) return true;
+  return isCoordinateInsideCountry(base.lat, base.lon, countryCode);
+}
+
+function isCableInCountry(cable: typeof UNDERSEA_CABLES[number], countryCode: string): boolean {
+  if (cable.landingPoints?.some((point) => point.country.toUpperCase() === countryCode)) return true;
+  if (cable.countriesServed?.some((country) => country.country.toUpperCase() === countryCode)) return true;
+  return cable.points.some(([lon, lat]) => isCoordinateInsideCountry(lat, lon, countryCode));
+}
+
+function isPipelineInCountry(pipeline: typeof PIPELINES[number], countryCode: string): boolean {
+  return pipeline.points.some(([lon, lat]) => isCoordinateInsideCountry(lat, lon, countryCode));
+}
+
+function buildCountryAssetIndex(countryCode: string, type: AssetType): AssetIndexEntry[] {
+  switch (type) {
+    case 'pipeline':
+      return PIPELINES
+        .filter((pipeline) => isPipelineInCountry(pipeline, countryCode))
+        .map((pipeline) => {
+          const mid = midpoint(pipeline.points);
+          return mid ? { id: pipeline.id, name: pipeline.name, lat: mid.lat, lon: mid.lon } : null;
+        })
+        .filter((asset): asset is AssetIndexEntry => !!asset);
+    case 'cable':
+      return UNDERSEA_CABLES
+        .filter((cable) => isCableInCountry(cable, countryCode))
+        .map((cable) => {
+          const landingPoint = cable.landingPoints?.find((point) => point.country.toUpperCase() === countryCode);
+          if (landingPoint) {
+            return { id: cable.id, name: cable.name, lat: landingPoint.lat, lon: landingPoint.lon };
+          }
+          const mid = midpoint(cable.points);
+          return mid ? { id: cable.id, name: cable.name, lat: mid.lat, lon: mid.lon } : null;
+        })
+        .filter((asset): asset is AssetIndexEntry => !!asset);
+    case 'datacenter':
+      return AI_DATA_CENTERS
+        .filter((dc) => isCoordinateInsideCountry(dc.lat, dc.lon, countryCode))
+        .map((dc) => ({ id: dc.id, name: dc.name, lat: dc.lat, lon: dc.lon }));
+    case 'base':
+      return MILITARY_BASES
+        .filter((base) => isMilitaryBaseInCountry(base, countryCode))
+        .map((base) => ({ id: base.id, name: base.name, lat: base.lat, lon: base.lon }));
+    case 'nuclear':
+      return NUCLEAR_FACILITIES
+        .filter((site) => isCoordinateInsideCountry(site.lat, site.lon, countryCode))
+        .map((site) => ({ id: site.id, name: site.name, lat: site.lat, lon: site.lon }));
     default:
       return [];
   }
@@ -145,6 +207,23 @@ export function getNearbyInfrastructure(
   lat: number, lon: number, types: AssetType[]
 ): RelatedAsset[] {
   return findNearbyAssets({ lat, lon, label: 'country-centroid' }, types);
+}
+
+export function getCountryInfrastructure(countryCode: string, types: AssetType[]): RelatedAsset[] {
+  const centroid = getCountryCentroid(countryCode);
+
+  return types.flatMap((type) => {
+    const assets = buildCountryAssetIndex(countryCode, type)
+      .map((asset) => ({
+        id: asset.id,
+        name: asset.name,
+        type,
+        distanceKm: centroid ? haversineKm(centroid.lat, centroid.lon, asset.lat, asset.lon) : 0,
+      }))
+      .sort((a, b) => a.distanceKm - b.distanceKm);
+
+    return assets;
+  });
 }
 
 export { MAX_DISTANCE_KM };

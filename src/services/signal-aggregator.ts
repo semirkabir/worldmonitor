@@ -131,8 +131,12 @@ class SignalAggregator {
   ingestFlights(flights: MilitaryFlight[]): void {
     this.clearSignalType('military_flight');
     const countryCounts = new Map<string, number>();
+    let fallbackAssignments = 0;
     for (const f of flights) {
-      const code = this.coordsToCountry(f.lat, f.lon);
+      const code = this.coordsToCountryWithFallback(f.lat, f.lon);
+      if (!getCountryAtCoordinates(f.lat, f.lon)?.code && code !== 'XX') {
+        fallbackAssignments++;
+      }
       const count = countryCounts.get(code) || 0;
       countryCounts.set(code, count + 1);
     }
@@ -149,15 +153,22 @@ class SignalAggregator {
         timestamp: new Date(),
       });
     }
+    if (fallbackAssignments > 0) {
+      console.debug('[SignalAggregator] Flight fallback assignments', { fallbackAssignments });
+    }
     this.pruneOld();
   }
 
   ingestVessels(vessels: MilitaryVessel[]): void {
     this.clearSignalType('military_vessel');
     const regionCounts = new Map<string, { count: number; lat: number; lon: number }>();
+    let fallbackAssignments = 0;
 
     for (const v of vessels) {
-      const code = this.coordsToCountry(v.lat, v.lon);
+      const code = this.coordsToCountryWithFallback(v.lat, v.lon);
+      if (!getCountryAtCoordinates(v.lat, v.lon)?.code && code !== 'XX') {
+        fallbackAssignments++;
+      }
       const existing = regionCounts.get(code);
       if (existing) {
         existing.count++;
@@ -177,6 +188,9 @@ class SignalAggregator {
         title: `${data.count} naval vessels near region`,
         timestamp: new Date(),
       });
+    }
+    if (fallbackAssignments > 0) {
+      console.debug('[SignalAggregator] Vessel fallback assignments', { fallbackAssignments });
     }
     this.pruneOld();
   }

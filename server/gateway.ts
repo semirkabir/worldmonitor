@@ -120,6 +120,7 @@ const RPC_CACHE_TIER: Record<string, CacheTier> = {
 
   '/api/military/v1/list-military-bases': 'static',
   '/api/economic/v1/get-macro-signals': 'medium',
+  '/api/prediction/v1/get-prediction-market-detail': 'medium',
   '/api/prediction/v1/list-prediction-markets': 'medium',
   '/api/supply-chain/v1/get-chokepoint-status': 'medium',
   '/api/news/v1/list-feed-digest': 'slow',

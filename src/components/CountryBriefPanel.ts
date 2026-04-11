@@ -3,6 +3,19 @@ import type { CountryScore } from '@/services/country-instability';
 import type { PredictionMarket } from '@/services/prediction';
 import type { NewsItem } from '@/types';
 
+/**
+ * Shared availability metadata for every overview card.
+ * When `available` is false, `reason` explains why (e.g. "No direct coverage",
+ * "Source not configured", "Insufficient signal data"). `source` names the data
+ * provider and `updatedAt` gives the freshness timestamp.
+ */
+export interface CardAvailability {
+  available: boolean;
+  reason?: string;
+  source?: string;
+  updatedAt?: Date;
+}
+
 export interface CountryIntelData {
   brief: string;
   country: string;
@@ -73,6 +86,8 @@ export interface MacroEconomicCardData {
   year: string;
   trend: 'up' | 'down' | 'flat';
   available: boolean;
+  /** Source-specific unavailability reason shown when `available` is false. */
+  reason?: string;
 }
 
 export interface CountryBriefPanel {
@@ -86,14 +101,16 @@ export interface CountryBriefPanel {
   readonly signal: AbortSignal;
   onClose(cb: () => void): void;
   setShareStoryHandler(handler: (code: string, name: string) => void): void;
-  setExportImageHandler(handler: (code: string, name: string) => void): void;
   updateBrief(data: CountryIntelData): void;
-  updateNews(headlines: NewsItem[]): void;
-  updateMarkets(markets: PredictionMarket[]): void;
+  /** Pass `availability` to surface a reason when no direct country coverage exists. */
+  updateNews(headlines: NewsItem[], availability?: CardAvailability): void;
+  /** Pass `availability` to surface a reason when no direct market coverage exists. */
+  updateMarkets(markets: PredictionMarket[], availability?: CardAvailability): void;
   updateStock(data: StockIndexData): void;
   updateInfrastructure(code: string): void;
   showGeoError?(onRetry: () => void): void;
-  updateScore?(score: CountryScore | null, signals: CountryBriefSignals): void;
+  /** Pass `availability` to surface a specific reason when the CII score is null. */
+  updateScore?(score: CountryScore | null, signals: CountryBriefSignals, ciiAvailability?: CardAvailability): void;
   updateSignalDetails?(details: CountryDeepDiveSignalDetails): void;
   updateMilitaryActivity?(summary: CountryDeepDiveMilitarySummary): void;
   updateEconomicIndicators?(indicators: CountryDeepDiveEconomicIndicator[]): void;

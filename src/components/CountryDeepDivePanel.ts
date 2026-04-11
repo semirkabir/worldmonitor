@@ -3,7 +3,7 @@ import { getSourcePropagandaRisk, getSourceTier } from '@/config/feeds';
 import { getCountryCentroid, ME_STRIKE_BOUNDS } from '@/services/country-geometry';
 import type { CountryScore } from '@/services/country-instability';
 import { t } from '@/services/i18n';
-import { getNearbyInfrastructure } from '@/services/related-assets';
+import { getCountryInfrastructure, getNearbyInfrastructure } from '@/services/related-assets';
 import type { PredictionMarket } from '@/services/prediction';
 import type { AssetType, NewsItem, RelatedAsset } from '@/types';
 import { sanitizeUrl, escapeHtml } from '@/utils/sanitize';
@@ -11,6 +11,7 @@ import { getCSSColor } from '@/utils';
 import { PORTS } from '@/config/ports';
 import { haversineKm } from '@/utils/geo';
 import type {
+  CardAvailability,
   CountryBriefPanel,
   CountryDeepDiveSignalItem,
   CountryDeepDiveSignalDetails,
@@ -53,7 +54,6 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
   private onCloseCallback?: () => void;
   private onStateChangeCallback?: (state: { visible: boolean; maximized: boolean }) => void;
   private onShareStory?: (code: string, name: string) => void;
-  private onExportImage?: (code: string, name: string) => void;
   private map: MapContainer | null;
   private abortController: AbortController = new AbortController();
   private lastFocusedElement: HTMLElement | null = null;
@@ -133,10 +133,6 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
 
   public setShareStoryHandler(handler: (code: string, name: string) => void): void {
     this.onShareStory = handler;
-  }
-
-  public setExportImageHandler(handler: (code: string, name: string) => void): void {
-    this.onExportImage = handler;
   }
 
   public get signal(): AbortSignal {
@@ -251,7 +247,7 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
     this.renderRecentSignals(details.recentHigh);
   }
 
-  public updateNews(headlines: NewsItem[]): void {
+  public updateNews(headlines: NewsItem[], availability?: CardAvailability): void {
     if (!this.newsBody) return;
     this.newsBody.replaceChildren();
 
@@ -267,7 +263,11 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
     this.currentHeadlineCount = items.length;
 
     if (items.length === 0) {
-      this.newsBody.append(this.makeEmpty(t('countryBrief.noNews')));
+      // Prefer the explicit reason over the generic key when the caller signals unavailability
+      const emptyText = (availability && !availability.available && availability.reason)
+        ? availability.reason
+        : t('countryBrief.noNews');
+      this.newsBody.append(this.makeEmpty(emptyText));
       return;
     }
 
@@ -354,15 +354,25 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
       return;
     }
 
-    const assets = getNearbyInfrastructure(centroid.lat, centroid.lon, INFRA_TYPES);
-    if (assets.length === 0) {
+    const inCountryAssets = getCountryInfrastructure(countryCode, INFRA_TYPES);
+    const usingNearbyFallback = inCountryAssets.length === 0;
+    const resolvedAssets = usingNearbyFallback
+      ? getNearbyInfrastructure(centroid.lat, centroid.lon, INFRA_TYPES)
+      : inCountryAssets;
+    if (resolvedAssets.length === 0) {
       this.infrastructureBody.append(this.makeEmpty(t('countryBrief.noInfrastructure')));
       return;
     }
 
+    // Indicate when showing centroid-nearby assets rather than in-country inventory
+    if (usingNearbyFallback) {
+      const nearbyNote = this.el('div', 'cdp-infra-nearby-note', '📍 Nearby infrastructure (no direct country match)');
+      this.infrastructureBody.append(nearbyNote);
+    }
+
     this.infrastructureByType.clear();
     for (const type of INFRA_TYPES) {
-      const matches = assets.filter((asset) => asset.type === type);
+      const matches = resolvedAssets.filter((asset) => asset.type === type);
       this.infrastructureByType.set(type, matches);
     }
 
@@ -432,7 +442,7 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
     this.renderEconomicIndicators();
   }
 
-  public updateScore(score: CountryScore | null, _signals: CountryBriefSignals): void {
+  public updateScore(score: CountryScore | null, signals: CountryBriefSignals, ciiAvailability?: CardAvailability): void {
     if (!this.scoreCard) return;
     // Partial DOM update: score number, level color, trend, component bars only
     const top = this.scoreCard.firstElementChild as HTMLElement | null;
@@ -441,7 +451,12 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
     }
     if (top) {
       const updatedEl = top.querySelector('.cdp-updated');
-      if (updatedEl) updatedEl.textContent = `Updated ${this.shortDate(score?.lastUpdated ?? new Date())}`;
+      const updatedLabel = ciiAvailability?.updatedAt
+        ? `Updated ${this.shortDate(ciiAvailability.updatedAt)}`
+        : score?.lastUpdated
+          ? `Updated ${this.shortDate(score.lastUpdated)}`
+          : `Updated ${this.shortDate(new Date())}`;
+      if (updatedEl) updatedEl.textContent = updatedLabel;
     }
     if (score) {
       const band = this.ciiBand(score.score);
@@ -452,8 +467,15 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
       this.scoreCard.append(scoreRow);
       this.scoreCard.append(this.renderComponentBars(score.components));
     } else {
-      this.scoreCard.append(this.makeEmpty(t('countryBrief.ciiUnavailable')));
+      const reason = ciiAvailability?.reason ?? t('countryBrief.ciiUnavailable');
+      const emptyEl = this.makeEmpty(reason);
+      if (ciiAvailability?.source) {
+        emptyEl.title = `Source: ${ciiAvailability.source}`;
+      }
+      this.scoreCard.append(emptyEl);
     }
+
+    this.renderInitialSignals(signals);
   }
 
   public updateStock(data: StockIndexData): void {
@@ -478,12 +500,15 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
     this.renderEconomicIndicators();
   }
 
-  public updateMarkets(markets: PredictionMarket[]): void {
+  public updateMarkets(markets: PredictionMarket[], availability?: CardAvailability): void {
     if (!this.marketsBody) return;
     this.marketsBody.replaceChildren();
 
     if (markets.length === 0) {
-      this.marketsBody.append(this.makeEmpty(t('countryBrief.noMarkets')));
+      const emptyText = (availability && !availability.available && availability.reason)
+        ? availability.reason
+        : t('countryBrief.noMarkets');
+      this.marketsBody.append(this.makeEmpty(emptyText));
       return;
     }
 
@@ -495,7 +520,6 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
           const panel = (window as any).__entityDetailPanel;
           if (panel) {
             panel.show('predictionMarket', {
-              id: market.slug || '',
               title: market.title,
               slug: market.slug || '',
               category: 'geopolitics',
@@ -619,20 +643,14 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
       }
     });
 
-    const exportButton = this.el('button', 'cdp-action-btn', 'Export') as HTMLButtonElement;
-    exportButton.setAttribute('type', 'button');
-    exportButton.addEventListener('click', () => {
-      if (this.onExportImage && this.currentCode && this.currentName) {
-        this.onExportImage(this.currentCode, this.currentName);
-      }
-    });
-    right.append(shareBtn, maxBtn, storyButton, exportButton);
+    right.append(shareBtn, maxBtn, storyButton);
     header.append(left, right);
 
     const scoreCard = this.el('section', 'cdp-card cdp-score-card');
     this.scoreCard = scoreCard;
     const top = this.el('div', 'cdp-score-top');
     const label = this.el('span', 'cdp-score-label', t('countryBrief.instabilityIndex'));
+    label.setAttribute('title', '40% baseline risk + 60% live signals. Live signals blend unrest (25%), conflict (30%), security (20%), and information (25%), with event floors and regional boosts.');
     const updated = this.el('span', 'cdp-updated', `Updated ${this.shortDate(score?.lastUpdated ?? new Date())}`);
     top.append(label, updated);
     scoreCard.append(top);
@@ -825,8 +843,11 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
         const arrow = this.el('span', `cdp-macro-trend cdp-macro-trend--${card.trend}`, card.trend === 'up' ? '▲' : '▼');
         header.append(arrow);
       }
-      const value = this.el('div', 'cdp-macro-value', card.value);
-      const year = card.year ? this.el('div', 'cdp-macro-year', card.year) : null;
+      const displayValue = card.available
+        ? card.value
+        : (card.reason ?? card.value);
+      const value = this.el('div', 'cdp-macro-value', displayValue);
+      const year = (card.available && card.year) ? this.el('div', 'cdp-macro-year', card.year) : null;
       el.append(header, value);
       if (year) el.append(year);
       grid.append(el);

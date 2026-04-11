@@ -40,22 +40,22 @@ export const INTEL_TOPICS: IntelTopic[] = [
   },
   {
     id: 'ukraine',
-    name: 'Ukraine',
-    query: 'Ukraine OR Zelensky OR "Russian invasion"',
+    name: 'Ukraine-Russia War',
+    query: '(Ukraine OR Zelensky OR "Russian army" OR Kyiv OR Bakhmut OR "Ukrainian military") sourcelang:eng',
     icon: '🇺🇦',
     description: 'Ukraine war and related military activity',
   },
   {
     id: 'iran-war',
-    name: 'Iran War',
-    query: 'Iran OR Israel OR Gaza OR Hezbollah',
+    name: 'Iran-Israel War',
+    query: '(Iran OR "Iran-Israel" OR Gaza OR Hezbollah OR "Israeli military" OR "IDF") sourcelang:eng',
     icon: '🇮🇷',
     description: 'Iran-Israel conflict and Middle East tensions',
   },
   {
     id: 'china-taiwan',
-    name: 'China, Taiwan',
-    query: 'Taiwan OR "Xi Jinping" OR PLA',
+    name: 'China-Taiwan Conflict',
+    query: '(Taiwan OR "Taiwan Strait" OR "Chinese military" OR PLA OR "Taiwan independence") sourcelang:eng',
     icon: '🇨🇳',
     description: 'China-Taiwan tensions and Indo-Pacific security',
   },
@@ -140,7 +140,10 @@ export async function fetchGdeltArticles(
 
   console.log(`[GDELT-Intel] fetchGdeltArticles: query="${query.slice(0,80)}", maxrecords=${maxrecords}, timespan=${timespan}`);
   const articles = await fetchGdeltDirect(query, maxrecords, timespan);
-  articleCache.set(cacheKey, { articles, timestamp: Date.now() });
+  // Only cache successful (non-empty) results so retries can try fresh fetches
+  if (articles.length > 0) {
+    articleCache.set(cacheKey, { articles, timestamp: Date.now() });
+  }
   return articles;
 }
 
@@ -177,7 +180,7 @@ async function fetchGdeltDirect(
     const data = JSON.parse(text);
     const articles: GdeltArticle[] = (data.articles || []).map((a: any) => toGdeltArticleRaw(a));
     console.log(`[GDELT-Intel] Direct result: ${articles.length} articles`);
-    return articles;
+    if (articles.length > 0) return articles;
   } catch (e) {
     console.warn(`[GDELT-Intel] Direct GDELT call failed:`, e);
   }
@@ -192,12 +195,12 @@ async function fetchGdeltDirect(
     const data = JSON.parse(text);
     const articles: GdeltArticle[] = (data.articles || []).map((a: any) => toGdeltArticleRaw(a));
     console.log(`[GDELT-Intel] Proxy result: ${articles.length} articles`);
-    return articles;
+    if (articles.length > 0) return articles;
   } catch (e) {
     console.warn(`[GDELT-Intel] Vite proxy call failed:`, e);
   }
 
-  // Try 3: server RPC
+  // Try 3: server RPC (edge-deployed, different IP from browser)
   try {
     const rpcResp = await client.searchGdeltDocuments({
       query, maxRecords, timespan, toneFilter: '', sort: '',

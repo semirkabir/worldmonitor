@@ -14,13 +14,6 @@ export interface EconomicEvent {
   category: 'central-bank' | 'inflation' | 'employment' | 'gdp' | 'trade' | 'other';
 }
 
-
-const IMPACT_COLORS: Record<EconomicEvent['impact'], string> = {
-  high: 'var(--semantic-critical)',
-  medium: 'var(--semantic-elevated)',
-  low: 'var(--text-dim)',
-};
-
 const CATEGORY_ICONS: Record<EconomicEvent['category'], string> = {
   'central-bank': '🏦',
   'inflation': '📈',
@@ -31,6 +24,8 @@ const CATEGORY_ICONS: Record<EconomicEvent['category'], string> = {
 };
 
 type FilterType = 'all' | 'high' | 'central-bank' | 'today' | 'week';
+
+const FILTER_STORAGE_KEY = 'wm-economic-calendar-filter';
 
 // Build a curated static calendar from known central bank schedules + key data releases
 // This is our seed data that gets refreshed by the server when available
@@ -75,21 +70,42 @@ function buildSeedCalendar(): EconomicEvent[] {
 
 export class EconomicCalendarPanel extends Panel {
   private events: EconomicEvent[] = [];
-  private filter: FilterType = 'all';
+  private filter: FilterType = this.loadFilter();
   private loading = true;
   private static readonly CACHE_KEY = 'wm-econ-calendar-cache';
   private static readonly CACHE_TTL = 30 * 60 * 1000; // 30 min
 
   constructor() {
-    super({ id: 'economic-calendar', title: '📅 Economic Calendar' });
+    super({ id: 'economic-calendar', title: 'Economic Calendar', showCount: true });
     this.content.addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest('.cal-filter-btn') as HTMLElement | null;
       if (btn?.dataset.filter) {
         this.filter = btn.dataset.filter as FilterType;
+        this.saveFilter(this.filter);
         this.renderPanel();
       }
     });
     void this.fetchData();
+  }
+
+  private loadFilter(): FilterType {
+    try {
+      const raw = localStorage.getItem(FILTER_STORAGE_KEY);
+      if (raw === 'all' || raw === 'high' || raw === 'central-bank' || raw === 'today' || raw === 'week') {
+        return raw;
+      }
+    } catch {
+      // Ignore storage failures.
+    }
+    return 'all';
+  }
+
+  private saveFilter(filter: FilterType): void {
+    try {
+      localStorage.setItem(FILTER_STORAGE_KEY, filter);
+    } catch {
+      // Ignore storage failures.
+    }
   }
 
   public async fetchData(): Promise<void> {
@@ -180,6 +196,7 @@ export class EconomicCalendarPanel extends Panel {
 
     const filtered = this.getFilteredEvents();
     const now = new Date();
+    this.setCount(filtered.length);
 
     // Group events by date
     const grouped: Record<string, EconomicEvent[]> = {};
@@ -194,9 +211,13 @@ export class EconomicCalendarPanel extends Panel {
       { id: 'all', label: '14D' },
       { id: 'today', label: 'Today' },
       { id: 'week', label: 'Week' },
-      { id: 'high', label: '🔴 High' },
-      { id: 'central-bank', label: '🏦 CB' },
+       { id: 'high', label: 'High Impact' },
+       { id: 'central-bank', label: 'Central Banks' },
     ];
+
+    const todayCount = filtered.filter((ev) => new Date(ev.date).toDateString() === now.toDateString()).length;
+    const highImpactCount = filtered.filter((ev) => ev.impact === 'high').length;
+    const centralBankCount = filtered.filter((ev) => ev.category === 'central-bank').length;
 
     const filtersHtml = `
       <div class="cal-filters">
@@ -208,16 +229,34 @@ export class EconomicCalendarPanel extends Panel {
       </div>
     `;
 
+    const summaryHtml = `
+      <div class="cal-summary-grid">
+        <div class="cal-summary-card">
+          <div class="cal-summary-label">Today</div>
+          <div class="cal-summary-value">${todayCount}</div>
+        </div>
+        <div class="cal-summary-card">
+          <div class="cal-summary-label">High Impact</div>
+          <div class="cal-summary-value">${highImpactCount}</div>
+        </div>
+        <div class="cal-summary-card">
+          <div class="cal-summary-label">Central Banks</div>
+          <div class="cal-summary-value">${centralBankCount}</div>
+        </div>
+      </div>
+    `;
+
     let eventsHtml = '';
     if (Object.keys(grouped).length === 0) {
-      eventsHtml = '<div class="cal-empty">No events in this time range</div>';
+      eventsHtml = '<div class="cal-empty">No scheduled events in this time range.</div>';
     } else {
       for (const [dateLabel, evs] of Object.entries(grouped)) {
         const isToday = evs[0] && new Date(evs[0].date).toDateString() === now.toDateString();
         eventsHtml += `
           <div class="cal-date-group">
             <div class="cal-date-header ${isToday ? 'cal-today' : ''}">
-              ${isToday ? '⚡ ' : ''}${escapeHtml(dateLabel)}
+              <span class="cal-date-label">${isToday ? 'Today' : escapeHtml(dateLabel)}</span>
+              <span class="cal-date-count">${evs.length} event${evs.length === 1 ? '' : 's'}</span>
             </div>
             ${evs.map(ev => this.renderEvent(ev)).join('')}
           </div>
@@ -228,6 +267,7 @@ export class EconomicCalendarPanel extends Panel {
     const html = `
       <div class="cal-container">
         ${filtersHtml}
+        ${summaryHtml}
         <div class="cal-events">
           ${eventsHtml}
         </div>
@@ -243,28 +283,40 @@ export class EconomicCalendarPanel extends Panel {
   private renderEvent(ev: EconomicEvent): string {
     const flag = getCountryFlag(ev.countryCode);
     const icon = CATEGORY_ICONS[ev.category];
-    const impactColor = IMPACT_COLORS[ev.impact];
     const time = new Date(ev.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
     const hasData = ev.actual !== null || ev.forecast !== null || ev.previous !== null;
+    const categoryLabel = ev.category === 'central-bank'
+      ? 'Central Bank'
+      : ev.category === 'gdp'
+        ? 'GDP'
+        : ev.category === 'trade'
+          ? 'Trade'
+          : ev.category.charAt(0).toUpperCase() + ev.category.slice(1);
 
     return `
       <div class="cal-event cal-impact-${ev.impact}">
-        <div class="cal-event-impact" style="background:${impactColor}" title="${ev.impact} impact"></div>
+        <div class="cal-event-impact" title="${ev.impact} impact"></div>
         <div class="cal-event-main">
           <div class="cal-event-header">
-            <span class="cal-flag">${flag}</span>
-            <span class="cal-icon">${icon}</span>
-            <span class="cal-event-name">${escapeHtml(ev.event)}</span>
+            <div class="cal-event-heading">
+              <span class="cal-flag">${flag}</span>
+              <span class="cal-icon">${icon}</span>
+              <span class="cal-event-name">${escapeHtml(ev.event)}</span>
+            </div>
+            <span class="cal-impact-pill cal-impact-pill-${ev.impact}">${escapeHtml(ev.impact)}</span>
           </div>
           <div class="cal-event-meta">
             <span class="cal-country">${escapeHtml(ev.country)}</span>
+            <span class="cal-meta-sep">•</span>
+            <span class="cal-category">${escapeHtml(categoryLabel)}</span>
+            <span class="cal-meta-sep">•</span>
             <span class="cal-time">${escapeHtml(time)}</span>
           </div>
           ${hasData ? `
             <div class="cal-event-data">
-              ${ev.actual !== null ? `<span class="cal-actual">A: <strong>${escapeHtml(ev.actual)}</strong></span>` : ''}
-              ${ev.forecast !== null ? `<span class="cal-forecast">F: ${escapeHtml(ev.forecast)}</span>` : ''}
-              ${ev.previous !== null ? `<span class="cal-prev">P: ${escapeHtml(ev.previous)}</span>` : ''}
+              ${ev.actual !== null ? `<span class="cal-data-chip cal-actual"><span class="cal-data-label">Actual</span><strong>${escapeHtml(ev.actual)}</strong></span>` : ''}
+              ${ev.forecast !== null ? `<span class="cal-data-chip cal-forecast"><span class="cal-data-label">Forecast</span>${escapeHtml(ev.forecast)}</span>` : ''}
+              ${ev.previous !== null ? `<span class="cal-data-chip cal-prev"><span class="cal-data-label">Previous</span>${escapeHtml(ev.previous)}</span>` : ''}
             </div>
           ` : ''}
         </div>

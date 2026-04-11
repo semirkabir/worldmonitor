@@ -1,6 +1,7 @@
 import { getRecentSignals, type CorrelationSignal } from '@/services/correlation';
 import { getRecentAlerts, type UnifiedAlert } from '@/services/cross-module-integration';
-import { getAlertSettings, updateAlertSettings } from '@/services/breaking-news-alerts';
+import { getAlertSettings, updateAlertSettings, type BreakingAlert } from '@/services/breaking-news-alerts';
+import { signalAggregator, type GeoSignal } from '@/services/signal-aggregator';
 import { t } from '@/services/i18n';
 import { getSignalContext } from '@/utils/analysis-constants';
 import { escapeHtml } from '@/utils/sanitize';
@@ -15,6 +16,26 @@ const ALERT_HOURS = 6;
 const STORAGE_KEY = 'worldmonitor-intel-findings';
 const POPUP_STORAGE_KEY = 'wm-alert-popup-enabled';
 const SOUND_KEY = 'wm-intel-notif-sound';
+const ACTIVITY_STORAGE_KEY = 'wm-intel-activity-enabled';
+const FILTER_STORAGE_KEY = 'wm-intel-filter';
+
+type AlertFilter = 'all' | 'instability' | 'military' | 'market' | 'civil';
+
+const FILTER_LABELS: Record<AlertFilter, string> = {
+  all: 'All',
+  instability: 'Instability',
+  military: 'Military',
+  market: 'Market',
+  civil: 'Civil',
+};
+
+const FILTER_TYPE_MAP: Record<AlertFilter, string[]> = {
+  all: [],
+  instability: ['cii_spike', 'cascade', 'hotspot_escalation', 'breaking'],
+  military: ['military_flight', 'military_vessel', 'military_surge', 'active_strike', 'geo_convergence', 'ais_disruption'],
+  market: ['news_leads_markets', 'prediction_leads_news', 'explained_market_move', 'flow_price_divergence', 'flow_drop', 'sector_cascade', 'keyword_spike', 'velocity_spike', 'temporal_anomaly'],
+  civil: ['protest', 'convergence', 'triangulation', 'internet_outage', 'satellite_fire'],
+};
 
 // Intelligence icon: human head with gear (from Flaticon)
 const INTELLIGENCE_ICON = `<img src="/intelligence-icon.png" width="16" height="16" alt="Intelligence" style="vertical-align:middle;filter:invert(1)" />`;
@@ -75,7 +96,7 @@ function playNotificationSound(sound: NotificationSound): void {
   } catch { /* AudioContext unavailable */ }
 }
 
-type FindingSource = 'signal' | 'alert';
+type FindingSource = 'signal' | 'alert' | 'activity';
 
 interface UnifiedFinding {
   id: string;
@@ -86,7 +107,9 @@ interface UnifiedFinding {
   confidence: number;
   priority: 'critical' | 'high' | 'medium' | 'low';
   timestamp: Date;
-  original: CorrelationSignal | UnifiedAlert;
+  original: CorrelationSignal | UnifiedAlert | GeoSignal;
+  lat?: number;
+  lon?: number;
 }
 
 export class IntelligenceFindingsBadge {
@@ -110,6 +133,27 @@ export class IntelligenceFindingsBadge {
   private enabled: boolean;
   private popupEnabled: boolean;
   private notificationSound: NotificationSound;
+  private activityEnabled: boolean;
+  private activeFilter: AlertFilter;
+  private breakingFindings: UnifiedFinding[] = [];
+  private boundOnBreaking = (e: Event) => {
+    const alert = (e as CustomEvent<BreakingAlert>).detail;
+    const id = `breaking-${alert.id}`;
+    if (this.breakingFindings.some(f => f.id === id)) return;
+    this.breakingFindings.unshift({
+      id,
+      source: 'alert',
+      type: 'breaking',
+      title: alert.headline,
+      description: alert.source,
+      confidence: alert.threatLevel === 'critical' ? 95 : 80,
+      priority: alert.threatLevel,
+      timestamp: alert.timestamp,
+      original: {} as UnifiedAlert,
+    });
+    if (this.breakingFindings.length > 30) this.breakingFindings.length = 30;
+    this.update();
+  };
   private contextMenu: HTMLElement | null = null;
   private popupContainer: HTMLElement | null = null;
   private activePopups: HTMLElement[] = [];
@@ -118,6 +162,8 @@ export class IntelligenceFindingsBadge {
     this.enabled = IntelligenceFindingsBadge.getStoredEnabledState();
     this.popupEnabled = localStorage.getItem(POPUP_STORAGE_KEY) === '1';
     this.notificationSound = (localStorage.getItem(SOUND_KEY) as NotificationSound) || 'beep';
+    this.activityEnabled = localStorage.getItem(ACTIVITY_STORAGE_KEY) === '1';
+    this.activeFilter = (localStorage.getItem(FILTER_STORAGE_KEY) as AlertFilter) || 'all';
 
     this.badge = document.createElement('button');
     this.badge.className = 'intel-findings-badge';
@@ -165,6 +211,23 @@ export class IntelligenceFindingsBadge {
         this.renderDropdown();
         return;
       }
+      if (toggleAttr === 'activity') {
+        e.stopPropagation();
+        this.activityEnabled = !this.activityEnabled;
+        if (this.activityEnabled) localStorage.setItem(ACTIVITY_STORAGE_KEY, '1');
+        else localStorage.removeItem(ACTIVITY_STORAGE_KEY);
+        this.update();
+        return;
+      }
+
+      const filterBtn = target.closest('[data-filter]') as HTMLElement | null;
+      if (filterBtn?.dataset.filter) {
+        e.stopPropagation();
+        this.activeFilter = (filterBtn.dataset.filter as AlertFilter) || 'all';
+        localStorage.setItem(FILTER_STORAGE_KEY, this.activeFilter);
+        this.renderDropdown();
+        return;
+      }
 
       // Handle "more findings" click - show all in modal
       if (target.closest('.findings-more')) {
@@ -187,6 +250,11 @@ export class IntelligenceFindingsBadge {
         this.onSignalClick(finding.original as CorrelationSignal);
       } else if (finding.source === 'alert' && this.onAlertClick) {
         this.onAlertClick(finding.original as UnifiedAlert);
+      } else if (finding.source === 'activity') {
+        const sig = finding.original as GeoSignal;
+        if (sig.lat && sig.lon) {
+          document.dispatchEvent(new CustomEvent('wm:map-fly-to', { detail: { lat: sig.lat, lon: sig.lon } }));
+        }
       }
       this.closeDropdown();
     });
@@ -294,6 +362,7 @@ export class IntelligenceFindingsBadge {
 
   private startRefresh(): void {
     document.addEventListener('wm:intelligence-updated', this.boundUpdate);
+    document.addEventListener('wm:breaking-news', this.boundOnBreaking);
     this.refreshInterval = setInterval(this.boundUpdate, REFRESH_INTERVAL_MS);
   }
 
@@ -367,14 +436,53 @@ export class IntelligenceFindingsBadge {
       original: a,
     }));
 
+    const activityFindings: UnifiedFinding[] = this.activityEnabled
+      ? this.buildActivityFindings()
+      : [];
+
     // Merge and sort by timestamp (newest first), then by priority
-    return [...signalFindings, ...alertFindings].sort((a, b) => {
+    return [...signalFindings, ...alertFindings, ...activityFindings, ...this.breakingFindings].sort((a, b) => {
       const timeDiff = b.timestamp.getTime() - a.timestamp.getTime();
       if (Math.abs(timeDiff) < SORT_TIME_TOLERANCE_MS) {
         return this.priorityScore(b.priority) - this.priorityScore(a.priority);
       }
       return timeDiff;
     });
+  }
+
+  private buildActivityFindings(): UnifiedFinding[] {
+    const summary = signalAggregator.getSummary();
+    const seen = new Set<string>();
+    const findings: UnifiedFinding[] = [];
+
+    for (const cluster of summary.topCountries) {
+      for (const sig of cluster.signals) {
+        const id = `activity-${sig.type}-${sig.country}-${sig.timestamp.getTime()}`;
+        if (seen.has(id)) continue;
+        seen.add(id);
+
+        findings.push({
+          id,
+          source: 'activity',
+          type: sig.type,
+          title: sig.title,
+          description: sig.countryName,
+          confidence: sig.severity === 'high' ? 75 : sig.severity === 'medium' ? 50 : 30,
+          priority: sig.severity === 'high' ? 'high' : sig.severity === 'medium' ? 'medium' : 'low',
+          timestamp: sig.timestamp,
+          original: sig,
+          lat: sig.lat || undefined,
+          lon: sig.lon || undefined,
+        });
+      }
+    }
+    return findings;
+  }
+
+  private applyFilter(findings: UnifiedFinding[]): UnifiedFinding[] {
+    if (this.activeFilter === 'all') return findings;
+    const allowed = FILTER_TYPE_MAP[this.activeFilter];
+    return findings.filter(f => allowed.includes(f.type));
   }
 
   private priorityToConfidence(priority: string): number {
@@ -527,6 +635,16 @@ export class IntelligenceFindingsBadge {
           </span>
           <span class="popup-toggle-switch${breakingSettings.enabled ? ' on' : ''}"><span class="popup-toggle-knob"></span></span>
         </div>
+        <div class="popup-toggle-row" data-toggle="activity">
+          <span class="popup-toggle-main">
+            <span class="popup-toggle-icon" aria-hidden="true">📡</span>
+            <span class="popup-toggle-text">
+              <span class="popup-toggle-label">Activity signals</span>
+              <span class="popup-toggle-subtext">Include live military, protest &amp; disruption signals</span>
+            </span>
+          </span>
+          <span class="popup-toggle-switch${this.activityEnabled ? ' on' : ''}"><span class="popup-toggle-knob"></span></span>
+        </div>
       </div>`;
   }
 
@@ -563,7 +681,9 @@ export class IntelligenceFindingsBadge {
       statusText = t('components.intelligenceFindings.highPriority', { count: String(highCount) });
     }
 
-    const findingsHtml = this.findings.slice(0, MAX_VISIBLE_FINDINGS).map(finding => {
+    const filtered = this.applyFilter(this.findings);
+
+    const findingsHtml = filtered.slice(0, MAX_VISIBLE_FINDINGS).map(finding => {
       const timeAgo = this.formatTimeAgo(finding.timestamp);
       const icon = this.getTypeIcon(finding.type);
       const priorityClass = finding.priority;
@@ -592,17 +712,30 @@ export class IntelligenceFindingsBadge {
       `;
     }).join('');
 
-    const moreCount = this.findings.length - MAX_VISIBLE_FINDINGS;
+    const moreCount = filtered.length - MAX_VISIBLE_FINDINGS;
+
+    const filterTabsHtml = `
+      <div class="findings-filter-row" role="tablist">
+        ${(Object.keys(FILTER_LABELS) as AlertFilter[]).map(f => `
+          <button class="findings-filter-btn${this.activeFilter === f ? ' active' : ''}" data-filter="${f}" role="tab" aria-selected="${this.activeFilter === f}">
+            ${escapeHtml(FILTER_LABELS[f])}
+          </button>
+        `).join('')}
+      </div>
+    `;
+
     this.dropdown.innerHTML = `
       <div class="findings-header">
         <span class="header-title">${t('components.intelligenceFindings.title')}</span>
         <span class="findings-badge ${statusClass}">${statusText}</span>
       </div>
       ${toggleHtml}
+      ${filterTabsHtml}
       <div class="findings-content">
         <div class="findings-list">
           ${findingsHtml}
         </div>
+        ${filtered.length === 0 ? `<div class="findings-empty"><span class="empty-icon">🔍</span><span class="empty-text">No ${this.activeFilter === 'all' ? '' : FILTER_LABELS[this.activeFilter].toLowerCase() + ' '}findings</span></div>` : ''}
         ${moreCount > 0 ? `<div class="findings-more">${t('components.intelligenceFindings.more', { count: String(moreCount) })}</div>` : ''}
       </div>
     `;
@@ -647,12 +780,25 @@ export class IntelligenceFindingsBadge {
       cii_spike: '🔴',
       cascade: '⚡',
       composite: '🔗',
+      // Breaking news
+      breaking: '🚨',
+      // Activity signals (GeoSignal types)
+      military_flight: '✈️',
+      military_vessel: '🚢',
+      protest: '📢',
+      internet_outage: '🌐',
+      ais_disruption: '📡',
+      satellite_fire: '🔥',
+      temporal_anomaly: '📊',
+      active_strike: '💥',
+      supplemental: '🧩',
     };
     return icons[type] || '📌';
   }
 
   private getFindingToneClass(finding: UnifiedFinding): string {
     const toneMap: Record<string, string> = {
+      breaking: 'tone-breaking',
       breaking_surge: 'tone-breaking',
       hotspot_escalation: 'tone-breaking',
       cii_spike: 'tone-risk',
@@ -671,15 +817,26 @@ export class IntelligenceFindingsBadge {
       geo_convergence: 'tone-geo',
       composite: 'tone-geo',
     };
-    return toneMap[finding.type] || (finding.source === 'alert' ? 'tone-risk' : 'tone-signal');
+    return toneMap[finding.type] || (finding.source === 'alert' ? 'tone-risk' : finding.source === 'activity' ? 'tone-geo' : 'tone-signal');
   }
 
   private getFindingEyebrow(finding: UnifiedFinding): string {
     const labelMap: Record<string, string> = {
+      breaking: 'Breaking News',
       breaking_surge: 'Breaking Surge',
       hotspot_escalation: 'Hotspot Escalation',
       cii_spike: 'Instability Spike',
       cascade: 'Cascade Alert',
+      // Activity signal eyebrows
+      military_flight: 'Activity · Military',
+      military_vessel: 'Activity · Naval',
+      protest: 'Activity · Civil Unrest',
+      internet_outage: 'Activity · Connectivity',
+      ais_disruption: 'Activity · Maritime',
+      satellite_fire: 'Activity · Fire Detection',
+      temporal_anomaly: 'Activity · Anomaly',
+      active_strike: 'Activity · Strike',
+      supplemental: 'Activity',
       sector_cascade: 'Sector Cascade',
       silent_divergence: 'Silent Divergence',
       flow_price_divergence: 'Flow Divergence',
@@ -830,6 +987,7 @@ export class IntelligenceFindingsBadge {
       cancelAnimationFrame(this.pendingUpdateFrame);
     }
     document.removeEventListener('wm:intelligence-updated', this.boundUpdate);
+    document.removeEventListener('wm:breaking-news', this.boundOnBreaking);
     document.removeEventListener('click', this.boundCloseDropdown);
     this.activePopups.forEach((popup) => popup.remove());
     this.activePopups = [];

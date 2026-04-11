@@ -81,8 +81,11 @@ export class PredictionPanel extends Panel {
     }
 
     const orderedMarkets = [...data].sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0));
+    const marketLookup = new Map<string, PredictionMarket>();
     const grouped = new Map<string, PredictionMarket[]>();
     for (const market of orderedMarkets) {
+      const key = market.slug || market.url || market.title;
+      if (key) marketLookup.set(key, market);
       const theme = this.getTheme(market.title);
       const bucket = grouped.get(theme) ?? [];
       bucket.push(market);
@@ -92,7 +95,7 @@ export class PredictionPanel extends Panel {
     const html = [...grouped.entries()]
       .map(([theme, markets]) => {
         const items = markets.map((p) => {
-        const yesPercent = Math.round(p.yesPrice);
+        const yesPercent = Math.max(0, Math.min(100, Math.round(p.yesPrice)));
         const noPercent = 100 - yesPercent;
         const volumeStr = this.formatVolume(p.volume);
 
@@ -111,24 +114,26 @@ export class PredictionPanel extends Panel {
           ? `<div class="prediction-meta">${volumeStr ? `<span class="prediction-volume">${t('components.predictions.vol')}: ${volumeStr}</span>` : ''}${expiryHtml}</div>`
           : '';
 
+        const itemKey = p.slug || p.url || p.title;
+
         return `
-      <div class="prediction-item" data-slug="${p.slug || ''}" style="cursor: pointer;">
-        <div class="prediction-theme-pill">${escapeHtml(theme)}</div>
+      <div class="prediction-item" data-market-key="${escapeHtml(itemKey)}" style="cursor: pointer;">
         ${titleHtml}
         ${metaHtml}
+        <div class="prediction-odds-row">
+          <span class="prediction-odds prediction-odds-yes">${t('components.predictions.yes')} ${yesPercent}%</span>
+          <span class="prediction-odds prediction-odds-no">${t('components.predictions.no')} ${noPercent}%</span>
+        </div>
         <div class="prediction-bar">
-          <div class="prediction-yes" style="width: ${yesPercent}%">
-            <span class="prediction-label">${t('components.predictions.yes')} ${yesPercent}%</span>
-          </div>
-          <div class="prediction-no" style="width: ${noPercent}%">
-            <span class="prediction-label">${t('components.predictions.no')} ${noPercent}%</span>
-          </div>
+          <div class="prediction-yes" style="width: ${yesPercent}%"></div>
+          <div class="prediction-no" style="width: ${noPercent}%"></div>
         </div>
       </div>
     `;
       }).join('');
 
-        return `<div class="prediction-group"><div class="prediction-group-title">${escapeHtml(theme)}</div>${items}</div>`;
+        const themeClass = theme.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        return `<div class="prediction-group prediction-group-${themeClass}"><div class="prediction-group-title">${escapeHtml(theme)}</div>${items}</div>`;
       })
       .join('');
 
@@ -136,9 +141,10 @@ export class PredictionPanel extends Panel {
 
     // Attach click listeners
     const items = this.element.querySelectorAll('.prediction-item');
-    items.forEach((item: Element, index: number) => {
+    items.forEach((item: Element) => {
       item.addEventListener('click', () => {
-        const market = orderedMarkets[index];
+        const key = item.getAttribute('data-market-key') || '';
+        const market = marketLookup.get(key);
         if (market && this.onMarketClick) {
           this.onMarketClick(market);
         }

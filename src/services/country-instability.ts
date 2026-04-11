@@ -72,6 +72,35 @@ let isLearningComplete = false;
 let hasCachedScoresAvailable = false;
 let intelligenceSignalsLoaded = false;
 const temporalAnomaliesByType = new Map<string, TemporalAnomaly[]>();
+type CoreIntelligenceSource = 'protests' | 'military' | 'outages';
+const CORE_INTELLIGENCE_SOURCES: CoreIntelligenceSource[] = ['protests', 'military', 'outages'];
+const settledCoreIntelligenceSources = new Set<CoreIntelligenceSource>();
+
+export function markCoreIntelligenceSourceSettled(
+  source: CoreIntelligenceSource,
+  meta?: { ok?: boolean; itemCount?: number },
+): void {
+  settledCoreIntelligenceSources.add(source);
+  const pendingSources = CORE_INTELLIGENCE_SOURCES.filter((item) => !settledCoreIntelligenceSources.has(item));
+
+  console.debug('[CII] Core source settled', {
+    source,
+    ok: meta?.ok ?? true,
+    itemCount: meta?.itemCount ?? null,
+    pendingSources,
+  });
+
+  if (!intelligenceSignalsLoaded && pendingSources.length === 0) {
+    intelligenceSignalsLoaded = true;
+    console.debug('[CII] Switching preferred scores to live calculation', {
+      settledSources: [...settledCoreIntelligenceSources],
+    });
+  }
+}
+
+export function getPendingCoreIntelligenceSources(): CoreIntelligenceSource[] {
+  return CORE_INTELLIGENCE_SOURCES.filter((source) => !settledCoreIntelligenceSources.has(source));
+}
 
 export function setIntelligenceSignalsLoaded(): void {
   intelligenceSignalsLoaded = true;
@@ -217,6 +246,7 @@ export function clearCountryData(): void {
   hotspotActivityMap.clear();
   newsEventIndexMap.clear();
   intelligenceSignalsLoaded = false;
+  settledCoreIntelligenceSources.clear();
 }
 
 export function getCountryData(code: string): CountryData | undefined {
@@ -327,7 +357,8 @@ export function ingestClimateForCII(anomalies: ClimateAnomaly[]): void {
 
 function getCountryFromLocation(lat: number, lon: number): string | null {
   const precise = getCountryAtCoordinates(lat, lon);
-  return precise?.code ?? null;
+  if (precise?.code) return precise.code;
+  return resolveCountryFromBounds(lat, lon, ME_STRIKE_BOUNDS);
 }
 
 const hotspotActivityMap = new Map<string, number>();
@@ -385,6 +416,8 @@ function getHotspotBoost(countryCode: string): number {
 export function ingestMilitaryForCII(flights: MilitaryFlight[], vessels: MilitaryVessel[]): void {
   for (const [, data] of countryDataMap) { data.militaryFlights = []; data.militaryVessels = []; }
   const foreignMilitaryByCountry = new Map<string, { flights: number; vessels: number }>();
+  let fallbackFlightAssignments = 0;
+  let fallbackVesselAssignments = 0;
 
   for (const f of flights) {
     processedCount++;
@@ -397,6 +430,9 @@ export function ingestMilitaryForCII(flights: MilitaryFlight[], vessels: Militar
     }
 
     const locationCode = getCountryFromLocation(f.lat, f.lon);
+    if (!getCountryAtCoordinates(f.lat, f.lon)?.code && locationCode) {
+      fallbackFlightAssignments++;
+    }
     if (locationCode && locationCode !== operatorCode) {
       if (!foreignMilitaryByCountry.has(locationCode)) {
         foreignMilitaryByCountry.set(locationCode, { flights: 0, vessels: 0 });
@@ -417,6 +453,9 @@ export function ingestMilitaryForCII(flights: MilitaryFlight[], vessels: Militar
     }
 
     const locationCode = getCountryFromLocation(v.lat, v.lon);
+    if (!getCountryAtCoordinates(v.lat, v.lon)?.code && locationCode) {
+      fallbackVesselAssignments++;
+    }
     if (locationCode && locationCode !== operatorCode) {
       if (!foreignMilitaryByCountry.has(locationCode)) {
         foreignMilitaryByCountry.set(locationCode, { flights: 0, vessels: 0 });
@@ -435,6 +474,13 @@ export function ingestMilitaryForCII(flights: MilitaryFlight[], vessels: Militar
     for (let i = 0; i < counts.vessels * 2; i++) {
       data.militaryVessels.push({} as MilitaryVessel);
     }
+  }
+
+  if (fallbackFlightAssignments > 0 || fallbackVesselAssignments > 0) {
+    console.debug('[CII] Military country fallback assignments', {
+      fallbackFlightAssignments,
+      fallbackVesselAssignments,
+    });
   }
 }
 

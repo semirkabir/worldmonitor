@@ -68,7 +68,8 @@ import { updateAndCheck, consumeServerAnomalies, fetchLiveAnomalies } from '@/se
 import { fetchAllFires, flattenFires, computeRegionStats, toMapFires } from '@/services/wildfires';
 import { analyzeFlightsForSurge, surgeAlertToSignal, detectForeignMilitaryPresence, foreignPresenceToSignal, type TheaterPostureSummary } from '@/services/military-surge';
 import { fetchCachedTheaterPosture } from '@/services/cached-theater-posture';
-import { ingestProtestsForCII, ingestMilitaryForCII, ingestNewsForCII, ingestOutagesForCII, ingestUcdpForCII, ingestHapiForCII, ingestDisplacementForCII, ingestClimateForCII, ingestStrikesForCII, ingestOrefForCII, ingestAviationForCII, ingestAdvisoriesForCII, ingestGpsJammingForCII, ingestAisDisruptionsForCII, ingestSatelliteFiresForCII, ingestCyberThreatsForCII, ingestTemporalAnomaliesForCII, isInLearningMode, resetHotspotActivity, setIntelligenceSignalsLoaded, hasAnyIntelligenceData, calculateCII } from '@/services/country-instability';
+import { ingestProtestsForCII, ingestMilitaryForCII, ingestNewsForCII, ingestOutagesForCII, ingestUcdpForCII, ingestHapiForCII, ingestDisplacementForCII, ingestClimateForCII, ingestStrikesForCII, ingestOrefForCII, ingestAviationForCII, ingestAdvisoriesForCII, ingestGpsJammingForCII, ingestAisDisruptionsForCII, ingestSatelliteFiresForCII, ingestCyberThreatsForCII, ingestTemporalAnomaliesForCII, hasIntelligenceSignalsLoaded, isInLearningMode, markCoreIntelligenceSourceSettled, resetHotspotActivity, calculateCII } from '@/services/country-instability';
+import { fetchCachedRiskScores, getPersistedLiveCountryScores, savePersistedLiveCountryScores } from '@/services/cached-risk-scores';
 import { fetchGpsInterference } from '@/services/gps-interference';
 import { dataFreshness, type DataSourceId } from '@/services/data-freshness';
 import { createSupplementalAlert } from '@/services/cross-module-integration';
@@ -82,6 +83,7 @@ import { enrichEventsWithExposure } from '@/services/population-exposure';
 import { debounce, getCircuitBreakerCooldownInfo } from '@/utils';
 import { isFeatureAvailable, isFeatureEnabled } from '@/services/runtime-config';
 import { isDesktopRuntime } from '@/services/runtime';
+import { isLocalDevTaskEnabled } from '@/services/local-dev-stability';
 import { getAiFlowSettings } from '@/services/ai-flow-settings';
 import { matchCountryNamesInText } from '@/services/country-geometry';
 import type { PredictionMarket } from '@/services/prediction';
@@ -129,7 +131,6 @@ import { fetchPositiveGeoEvents, geocodePositiveNewsItems, type PositiveGeoEvent
 import type { HappyContentCategory } from '@/services/positive-classifier';
 import { fetchKindnessData } from '@/services/kindness-data';
 import { getPersistentCache, setPersistentCache } from '@/services/persistent-cache';
-import { fetchCachedRiskScores } from '@/services/cached-risk-scores';
 import type { ThreatLevel as ClientThreatLevel } from '@/services/threat-classifier';
 import type { NewsItem as ProtoNewsItem, ThreatLevel as ProtoThreatLevel } from '@/generated/client/worldmonitor/news/v1/service_client';
 
@@ -264,6 +265,9 @@ export class DataLoaderManager implements AppModule {
     (this.ctx.panels['cii'] as CIIPanel)?.refresh(forceLocal);
     this.callbacks.refreshOpenCountryBrief();
     const scores = calculateCII();
+    if (hasIntelligenceSignalsLoaded() && scores.some((score) => score.score > 0)) {
+      savePersistedLiveCountryScores(scores);
+    }
     this.ctx.map?.setCIIScores(scores.map(s => ({ code: s.code, score: s.score, level: s.level })));
     this.ctx.map?.setLayerReady('ciiChoropleth', scores.length > 0);
   }
@@ -384,18 +388,18 @@ export class DataLoaderManager implements AppModule {
 
     // Happy variant only loads news data -- skip all geopolitical/financial/military data
     if (SITE_VARIANT !== 'happy') {
-      tasks.push({ name: 'markets', task: runGuarded('markets', () => this.loadMarkets()) });
+      if (isLocalDevTaskEnabled('markets')) tasks.push({ name: 'markets', task: runGuarded('markets', () => this.loadMarkets()) });
       tasks.push({ name: 'predictions', task: runGuarded('predictions', () => this.loadPredictions()) });
-      tasks.push({ name: 'pizzint', task: runGuarded('pizzint', () => this.loadPizzInt()) });
-      tasks.push({ name: 'fred', task: runGuarded('fred', () => this.loadFredData()) });
-      tasks.push({ name: 'oil', task: runGuarded('oil', () => this.loadOilAnalytics()) });
-      tasks.push({ name: 'spending', task: runGuarded('spending', () => this.loadGovernmentSpending()) });
-      tasks.push({ name: 'bis', task: runGuarded('bis', () => this.loadBisData()) });
+      if (isLocalDevTaskEnabled('pizzint')) tasks.push({ name: 'pizzint', task: runGuarded('pizzint', () => this.loadPizzInt()) });
+      if (isLocalDevTaskEnabled('fred')) tasks.push({ name: 'fred', task: runGuarded('fred', () => this.loadFredData()) });
+      if (isLocalDevTaskEnabled('oil')) tasks.push({ name: 'oil', task: runGuarded('oil', () => this.loadOilAnalytics()) });
+      if (isLocalDevTaskEnabled('spending')) tasks.push({ name: 'spending', task: runGuarded('spending', () => this.loadGovernmentSpending()) });
+      if (isLocalDevTaskEnabled('bis')) tasks.push({ name: 'bis', task: runGuarded('bis', () => this.loadBisData()) });
 
       // Trade policy data (FULL and FINANCE only)
       if (SITE_VARIANT === 'full' || SITE_VARIANT === 'finance') {
-        tasks.push({ name: 'tradePolicy', task: runGuarded('tradePolicy', () => this.loadTradePolicy()) });
-        tasks.push({ name: 'supplyChain', task: runGuarded('supplyChain', () => this.loadSupplyChain()) });
+        if (isLocalDevTaskEnabled('tradePolicy')) tasks.push({ name: 'tradePolicy', task: runGuarded('tradePolicy', () => this.loadTradePolicy()) });
+        if (isLocalDevTaskEnabled('supplyChain')) tasks.push({ name: 'supplyChain', task: runGuarded('supplyChain', () => this.loadSupplyChain()) });
       }
 
       tasks.push({ name: 'sanctions', task: runGuarded('sanctions', () => this.loadSanctions()) });
@@ -433,30 +437,41 @@ export class DataLoaderManager implements AppModule {
     }
 
     // Global giving activity data (all variants)
-    tasks.push({
-      name: 'giving',
-      task: runGuarded('giving', async () => {
-        const givingResult = await fetchGivingSummary();
-        if (!givingResult.ok) {
-          dataFreshness.recordError('giving', 'Giving data unavailable (retaining prior state)');
-          return;
-        }
-        const data = givingResult.data;
-        this.callPanel('giving', 'setData', data);
-        if (data.platforms.length > 0) dataFreshness.recordUpdate('giving', data.platforms.length);
-      }),
-    });
+    if (isLocalDevTaskEnabled('giving')) {
+      tasks.push({
+        name: 'giving',
+        task: runGuarded('giving', async () => {
+          const givingResult = await fetchGivingSummary();
+          if (!givingResult.ok) {
+            dataFreshness.recordError('giving', 'Giving data unavailable (retaining prior state)');
+            return;
+          }
+          const data = givingResult.data;
+          this.callPanel('giving', 'setData', data);
+          if (data.platforms.length > 0) dataFreshness.recordUpdate('giving', data.platforms.length);
+        }),
+      });
+    }
 
     if (SITE_VARIANT === 'full') {
       try {
+        let hasStartupCiiRender = false;
+        const persistedLiveScores = getPersistedLiveCountryScores().filter((score) => score.score > 0);
+        if (persistedLiveScores.length > 0) {
+          (this.ctx.panels['cii'] as CIIPanel)?.renderScores(persistedLiveScores);
+          this.ctx.map?.setCIIScores(persistedLiveScores.map((s) => ({ code: s.code, score: s.score, level: s.level })));
+          this.ctx.map?.setLayerReady('ciiChoropleth', true);
+          hasStartupCiiRender = true;
+          console.debug('[CII] Rendered persisted live local scores on startup', { count: persistedLiveScores.length });
+        }
         const cached = await fetchCachedRiskScores().catch(() => null);
-        if (cached && cached.cii.length > 0) {
+        if (!hasStartupCiiRender && cached && cached.cii.length > 0) {
           (this.ctx.panels['cii'] as CIIPanel)?.renderFromCached(cached);
           this.ctx.map?.setCIIScores(cached.cii.map(s => ({ code: s.code, score: s.score, level: s.level })));
           this.ctx.map?.setLayerReady('ciiChoropleth', true);
         }
       } catch { /* non-fatal */ }
-      tasks.push({ name: 'intelligence', task: runGuarded('intelligence', () => this.loadIntelligenceSignals()) });
+      if (isLocalDevTaskEnabled('intelligence')) tasks.push({ name: 'intelligence', task: runGuarded('intelligence', () => this.loadIntelligenceSignals()) });
     }
 
     if (SITE_VARIANT === 'full') tasks.push({ name: 'firms', task: runGuarded('firms', () => this.loadFirmsData()) });
@@ -467,7 +482,7 @@ export class DataLoaderManager implements AppModule {
     if (SITE_VARIANT !== 'happy' && this.ctx.mapLayers.cables) tasks.push({ name: 'cableHealth', task: runGuarded('cableHealth', () => this.loadCableHealth()) });
     if (SITE_VARIANT !== 'happy' && this.ctx.mapLayers.flights) tasks.push({ name: 'flights', task: runGuarded('flights', () => this.loadFlightDelays()) });
     if (SITE_VARIANT !== 'happy' && CYBER_LAYER_ENABLED && this.ctx.mapLayers.cyberThreats) tasks.push({ name: 'cyberThreats', task: runGuarded('cyberThreats', () => this.loadCyberThreats()) });
-    if (SITE_VARIANT !== 'happy' && (this.ctx.mapLayers.techEvents || SITE_VARIANT === 'tech')) tasks.push({ name: 'techEvents', task: runGuarded('techEvents', () => this.loadTechEvents()) });
+    if (isLocalDevTaskEnabled('techEvents') && SITE_VARIANT !== 'happy' && (this.ctx.mapLayers.techEvents || SITE_VARIANT === 'tech')) tasks.push({ name: 'techEvents', task: runGuarded('techEvents', () => this.loadTechEvents()) });
 
     if (SITE_VARIANT === 'tech') {
       tasks.push({ name: 'techReadiness', task: runGuarded('techReadiness', () => (this.ctx.panels['tech-readiness'] as TechReadinessPanel)?.refresh()) });
@@ -516,7 +531,7 @@ export class DataLoaderManager implements AppModule {
       ingestTemporalAnomaliesForCII(bootstrapTemporal.anomalies);
       this.refreshCiiAndBrief();
     } else {
-      this.refreshTemporalBaseline().catch(() => {});
+      if (isLocalDevTaskEnabled('temporalBaseline')) this.refreshTemporalBaseline().catch(() => {});
     }
   }
 
@@ -1185,6 +1200,8 @@ export class DataLoaderManager implements AppModule {
       ingestEarthquakes(earthquakeResult.value);
       this.ctx.statusPanel?.updateApi('USGS', { status: 'ok' });
       dataFreshness.recordUpdate('usgs', earthquakeResult.value.length);
+      // Refresh open panel so earthquake counts/timeline reflect new data
+      this.refreshCiiAndBrief();
     } else {
       this.ctx.intelligenceCache.earthquakes = [];
       this.ctx.map?.setEarthquakes([]);
@@ -1281,11 +1298,15 @@ export class DataLoaderManager implements AppModule {
     const hydratedUcdp = getHydratedData('ucdpEvents') as import('@/generated/client/worldmonitor/conflict/v1/service_client').ListUcdpEventsResponse | undefined;
 
     tasks.push((async () => {
+      let ok = false;
+      let itemCount = 0;
       try {
         const outages = await fetchInternetOutages();
         this.ctx.intelligenceCache.outages = outages;
         ingestOutagesForCII(outages);
         signalAggregator.ingestOutages(outages);
+        ok = true;
+        itemCount = outages.length;
         dataFreshness.recordUpdate('outages', outages.length);
         if (this.ctx.mapLayers.outages) {
           this.ctx.map?.setOutages(outages);
@@ -1295,16 +1316,22 @@ export class DataLoaderManager implements AppModule {
       } catch (error) {
         console.error('[Intelligence] Outages fetch failed:', error);
         dataFreshness.recordError('outages', String(error));
+      } finally {
+        markCoreIntelligenceSourceSettled('outages', { ok, itemCount });
       }
     })());
 
     const protestsTask = (async (): Promise<SocialUnrestEvent[]> => {
+      let ok = false;
+      let itemCount = 0;
       try {
         const protestData = await fetchProtestEvents();
         this.ctx.intelligenceCache.protests = protestData;
         ingestProtests(protestData.events);
         ingestProtestsForCII(protestData.events);
         signalAggregator.ingestProtests(protestData.events);
+        ok = true;
+        itemCount = protestData.events.length;
         const protestCount = protestData.sources.acled + protestData.sources.gdelt;
         if (protestCount > 0) dataFreshness.recordUpdate('acled', protestCount);
         if (protestData.sources.gdelt > 0) dataFreshness.recordUpdate('gdelt', protestData.sources.gdelt);
@@ -1324,6 +1351,8 @@ export class DataLoaderManager implements AppModule {
         console.error('[Intelligence] Protests fetch failed:', error);
         dataFreshness.recordError('acled', String(error));
         return [];
+      } finally {
+        markCoreIntelligenceSourceSettled('protests', { ok, itemCount });
       }
     })();
     tasks.push(protestsTask.then(() => undefined));
@@ -1355,6 +1384,8 @@ export class DataLoaderManager implements AppModule {
     })());
 
     tasks.push((async () => {
+      let ok = false;
+      let itemCount = 0;
       try {
         if (isMilitaryVesselTrackingConfigured()) {
           initMilitaryVesselStream();
@@ -1377,6 +1408,8 @@ export class DataLoaderManager implements AppModule {
         ingestMilitaryForCII(flightData.flights, vesselData.vessels);
         signalAggregator.ingestFlights(flightData.flights);
         signalAggregator.ingestVessels(vesselData.vessels);
+        ok = true;
+        itemCount = flightData.flights.length + vesselData.vessels.length;
         dataFreshness.recordUpdate('opensky', flightData.flights.length);
         updateAndCheck([
           { type: 'military_flights', region: 'global', count: flightData.flights.length },
@@ -1415,6 +1448,8 @@ export class DataLoaderManager implements AppModule {
       } catch (error) {
         console.error('[Intelligence] Military fetch failed:', error);
         dataFreshness.recordError('opensky', String(error));
+      } finally {
+        markCoreIntelligenceSourceSettled('military', { ok, itemCount });
       }
     })());
 
@@ -1564,9 +1599,6 @@ export class DataLoaderManager implements AppModule {
       dataFreshness.recordError('worldpop', String(error));
     }
 
-    if (hasAnyIntelligenceData()) {
-      setIntelligenceSignalsLoaded();
-    }
     this.refreshCiiAndBrief(true);
     console.log('[Intelligence] All signals loaded for CII calculation');
   }
@@ -2619,6 +2651,8 @@ export class DataLoaderManager implements AppModule {
         this.callPanel('security-advisories', 'setData', result.advisories);
         this.ctx.intelligenceCache.advisories = result.advisories;
         ingestAdvisoriesForCII(result.advisories);
+        // Refresh open panel so travel advisory counts and signals stay current
+        this.refreshCiiAndBrief();
       }
     } catch (error) {
       console.error('[App] Security advisories fetch failed:', error);

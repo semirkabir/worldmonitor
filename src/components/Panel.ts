@@ -276,6 +276,9 @@ export class Panel {
       const tooltip = h('div', { className: 'panel-info-tooltip' });
       tooltip.appendChild(safeHtml(options.infoTooltip));
 
+      const showTooltip = () => tooltip.classList.add('visible');
+      const hideTooltip = () => tooltip.classList.remove('visible');
+
       infoBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         tooltip.classList.toggle('visible');
@@ -286,6 +289,13 @@ export class Panel {
 
       const infoWrapper = document.createElement('div');
       infoWrapper.className = 'panel-info-wrapper';
+      infoWrapper.addEventListener('mouseenter', showTooltip);
+      infoWrapper.addEventListener('mouseleave', hideTooltip);
+      infoWrapper.addEventListener('focusin', showTooltip);
+      infoWrapper.addEventListener('focusout', (e) => {
+        if (infoWrapper.contains(e.relatedTarget as Node | null)) return;
+        hideTooltip();
+      });
       infoWrapper.appendChild(infoBtn);
       infoWrapper.appendChild(tooltip);
       headerLeft.appendChild(infoWrapper);

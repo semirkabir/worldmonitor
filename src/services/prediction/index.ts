@@ -1,4 +1,7 @@
-import { PredictionServiceClient } from '@/generated/client/worldmonitor/prediction/v1/service_client';
+import {
+  PredictionServiceClient,
+  type GetPredictionMarketDetailResponse,
+} from '@/generated/client/worldmonitor/prediction/v1/service_client';
 import { createCircuitBreaker } from '@/utils';
 import { SITE_VARIANT } from '@/config';
 import { isDesktopRuntime } from '@/services/runtime';
@@ -37,6 +40,19 @@ interface PolymarketMarket {
   closed?: boolean;
   slug?: string;
   endDate?: string;
+   description?: string;
+   resolution_source?: string;
+   liquidity?: number | string;
+   liquidityNum?: number;
+   eventSlug?: string;
+   event_slug?: string;
+   eventId?: string | number;
+   event_id?: string | number;
+   conditionId?: string;
+   condition_id?: string;
+   clobTokenIds?: string[] | string;
+   id?: string | number;
+   tags?: Array<{ label?: string; slug?: string }>;
 }
 
 interface PolymarketEvent {
@@ -67,6 +83,162 @@ const breaker = createCircuitBreaker<PredictionMarket[]>({ name: 'Polymarket', c
 
 // Sebuf client for strategy 4
 const client = new PredictionServiceClient('', { fetch: (...args) => globalThis.fetch(...args) });
+
+export type PredictionMarketDetailResponse = GetPredictionMarketDetailResponse;
+
+export async function getPredictionMarketDetail(
+  slug: string,
+  options?: { bookDepth?: number; tradeLimit?: number; refresh?: boolean; signal?: AbortSignal },
+): Promise<PredictionMarketDetailResponse | null> {
+  const trimmed = slug.trim();
+  if (!trimmed) return null;
+  try {
+    const response = await client.getPredictionMarketDetail({
+      slug: trimmed,
+      bookDepth: options?.bookDepth ?? 10,
+      tradeLimit: options?.tradeLimit ?? 20,
+      refresh: options?.refresh ?? false,
+    }, { signal: options?.signal });
+    if (response?.market) return response;
+  } catch (error) {
+    console.warn(`[Polymarket] getPredictionMarketDetail(${trimmed}) failed:`, error);
+  }
+  return buildPredictionMarketDetailFallback(trimmed, options);
+}
+
+function parseNumber(value: unknown, fallback = 0): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+}
+
+function normalizeTokenIds(raw?: string[] | string): string[] {
+  if (Array.isArray(raw)) return raw.filter((value): value is string => typeof value === 'string' && value.length > 0);
+  if (typeof raw !== 'string') return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string' && value.length > 0) : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseEpochMillis(value: unknown): number {
+  const parsed = parseNumber(value);
+  if (!parsed) return 0;
+  return parsed < 1_000_000_000_000 ? parsed * 1000 : parsed;
+}
+
+async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T | null> {
+  try {
+    const response = await fetch(url, { headers: { Accept: 'application/json' }, signal });
+    if (!response.ok) return null;
+    return response.json() as Promise<T>;
+  } catch {
+    return null;
+  }
+}
+
+async function buildPredictionMarketDetailFallback(
+  slug: string,
+  options?: { bookDepth?: number; tradeLimit?: number; refresh?: boolean; signal?: AbortSignal },
+): Promise<PredictionMarketDetailResponse | null> {
+  const marketRows = await polyFetch('markets', { slug });
+  if (!marketRows.ok) return null;
+  const data: PolymarketMarket[] = await marketRows.json();
+  const market = data[0];
+  if (!market) return null;
+
+  const tokenIds = normalizeTokenIds(market.clobTokenIds);
+  const tokenId = tokenIds[0] || '';
+  const conditionId = market.conditionId || market.condition_id || '';
+  const marketId = String(market.id || '');
+  const bookDepth = Math.max(1, Math.min(25, options?.bookDepth ?? 10));
+  const tradeLimit = Math.max(1, Math.min(100, options?.tradeLimit ?? 20));
+  const prices = market.outcomePrices ? JSON.parse(market.outcomePrices) as string[] : [];
+  const yesPrice = prices[0] != null ? parseFloat(prices[0]) : 0.5;
+  const noPrice = Math.max(0, Math.min(1, 1 - yesPrice));
+
+  const [bookData, midpointData, bestAskData, bestBidData, spreadData, historyData, lastTradeData, tradesData, holdersData, commentsData] = await Promise.all([
+    tokenId ? fetchJson<{ bids?: Array<{ price?: string | number; size?: string | number }>; asks?: Array<{ price?: string | number; size?: string | number }>; tick_size?: string; min_order_size?: string; hash?: string; timestamp?: string | number; }>(`https://clob.polymarket.com/book?token_id=${encodeURIComponent(tokenId)}`, options?.signal) : Promise.resolve(null),
+    tokenId ? fetchJson<{ mid?: string | number }>(`https://clob.polymarket.com/midpoint?token_id=${encodeURIComponent(tokenId)}`, options?.signal) : Promise.resolve(null),
+    tokenId ? fetchJson<{ price?: string | number }>(`https://clob.polymarket.com/price?token_id=${encodeURIComponent(tokenId)}&side=BUY`, options?.signal) : Promise.resolve(null),
+    tokenId ? fetchJson<{ price?: string | number }>(`https://clob.polymarket.com/price?token_id=${encodeURIComponent(tokenId)}&side=SELL`, options?.signal) : Promise.resolve(null),
+    tokenId ? fetchJson<{ spread?: string | number }>(`https://clob.polymarket.com/spread?token_id=${encodeURIComponent(tokenId)}`, options?.signal) : Promise.resolve(null),
+    tokenId ? fetchJson<{ history?: Array<{ t?: number; p?: number }> }>(`https://clob.polymarket.com/prices-history?market=${encodeURIComponent(tokenId)}&interval=1d&fidelity=60`, options?.signal) : Promise.resolve(null),
+    tokenId ? fetchJson<{ price?: string | number; side?: string }>(`https://clob.polymarket.com/last-trade-price?token_id=${encodeURIComponent(tokenId)}`, options?.signal) : Promise.resolve(null),
+    conditionId ? fetchJson<Array<{ side?: string; size?: number; price?: number; timestamp?: number }>>(`https://data-api.polymarket.com/trades?market=${encodeURIComponent(conditionId)}&limit=${tradeLimit}&offset=0&takerOnly=true`, options?.signal) : Promise.resolve(null),
+    conditionId ? fetchJson<Array<{ holders?: Array<{ proxyWallet?: string; amount?: number; outcomeIndex?: number; name?: string; pseudonym?: string; profileImage?: string }> }>>(`https://data-api.polymarket.com/holders?market=${encodeURIComponent(conditionId)}&limit=5`, options?.signal) : Promise.resolve(null),
+    marketId ? fetchJson<Array<{ body?: string; createdAt?: string; reactionCount?: number; userAddress?: string; profile?: { name?: string; pseudonym?: string; profileImage?: string } }>>(`${GAMMA_API}/comments?parent_entity_type=market&parent_entity_id=${encodeURIComponent(marketId)}&limit=10&order=createdAt&ascending=false`, options?.signal) : Promise.resolve(null),
+  ]);
+
+  return {
+    market: {
+      slug: market.slug || slug,
+      title: market.question,
+      url: buildMarketUrl(market.eventSlug || market.event_slug, market.slug) || `https://polymarket.com/market/${slug}`,
+      category: market.tags?.[0]?.label || market.tags?.[0]?.slug || '',
+      eventId: String(market.eventId || market.event_id || ''),
+      eventSlug: market.eventSlug || market.event_slug || '',
+      marketId,
+      conditionId,
+      tokenIds,
+      closed: Boolean(market.closed),
+      closesAt: market.endDate ? Date.parse(market.endDate) : 0,
+      description: market.description || '',
+      resolutionSource: market.resolution_source || '',
+      volume: market.volumeNum ?? (market.volume ? parseFloat(market.volume) : 0),
+      liquidity: parseNumber(market.liquidityNum ?? market.liquidity),
+    },
+    pricing: {
+      yesPrice,
+      noPrice,
+      midpoint: parseNumber(midpointData?.mid, yesPrice),
+      bestBid: parseNumber(bestBidData?.price),
+      bestAsk: parseNumber(bestAskData?.price),
+      spread: parseNumber(spreadData?.spread),
+      lastTradePrice: parseNumber(lastTradeData?.price, yesPrice),
+      lastTradeSide: lastTradeData?.side || '',
+    },
+    orderBook: {
+      bids: (bookData?.bids || []).slice(0, bookDepth).map((row) => ({ price: parseNumber(row.price), size: parseNumber(row.size) })),
+      asks: (bookData?.asks || []).slice(0, bookDepth).map((row) => ({ price: parseNumber(row.price), size: parseNumber(row.size) })),
+      tickSize: bookData?.tick_size || '',
+      minOrderSize: bookData?.min_order_size || '',
+      hash: bookData?.hash || '',
+      updatedAt: parseEpochMillis(bookData?.timestamp),
+    },
+    recentTrades: (tradesData || []).slice(0, tradeLimit).map((trade) => ({
+      price: parseNumber(trade.price),
+      size: parseNumber(trade.size),
+      side: trade.side || '',
+      timestamp: parseEpochMillis(trade.timestamp),
+    })),
+    history: (historyData?.history || []).filter((point): point is { t: number; p: number } => Number.isFinite(point?.t) && Number.isFinite(point?.p)).map((point) => ({
+      timestamp: parseEpochMillis(point.t),
+      price: point.p,
+    })),
+    holders: (holdersData?.[0]?.holders || []).map((holder) => ({
+      address: holder.proxyWallet || '',
+      label: holder.name || holder.pseudonym || `${holder.proxyWallet?.slice(0, 6) ?? ''}…${holder.proxyWallet?.slice(-4) ?? ''}`,
+      profileImage: holder.profileImage || '',
+      shares: parseNumber(holder.amount),
+      value: parseNumber(holder.amount) * (holder.outcomeIndex === 0 ? yesPrice : noPrice),
+      side: holder.outcomeIndex === 0 ? 'yes' : 'no',
+    })),
+    comments: (commentsData || []).filter((comment) => Boolean(comment.body)).map((comment) => ({
+      author: comment.profile?.name || comment.profile?.pseudonym || 'Anonymous',
+      text: comment.body || '',
+      profileImage: comment.profile?.profileImage || '',
+      userAddress: comment.userAddress || '',
+      likes: comment.reactionCount || 0,
+      createdAt: comment.createdAt ? Date.parse(comment.createdAt) : 0,
+    })),
+  };
+}
 
 // Track whether direct browser->Polymarket fetch works
 // Cloudflare blocks server-side TLS but browsers pass JA3 fingerprint checks
@@ -169,7 +341,7 @@ async function polyFetch(endpoint: 'events' | 'markets', params: Record<string, 
         question: m.title,
         outcomePrices: JSON.stringify([String(m.yesPrice), String(1 - m.yesPrice)]),
         volumeNum: m.volume,
-        slug: m.id,
+        slug: extractMarketSlug(m.url) || m.id,
         endDate: m.closesAt ? new Date(m.closesAt).toISOString() : undefined,
       }));
       return new Response(JSON.stringify(endpoint === 'events'
@@ -223,8 +395,22 @@ function parseMarketPrice(market: PolymarketMarket): number {
 }
 
 function buildMarketUrl(eventSlug?: string, marketSlug?: string): string | undefined {
-  if (eventSlug) return `https://polymarket.com/event/${eventSlug}`;
+  if (eventSlug && marketSlug) return `https://polymarket.com/event/${eventSlug}/${marketSlug}`;
   if (marketSlug) return `https://polymarket.com/market/${marketSlug}`;
+  if (eventSlug) return `https://polymarket.com/event/${eventSlug}`;
+  return undefined;
+}
+
+function extractMarketSlug(value?: string): string | undefined {
+  if (!value) return undefined;
+  try {
+    const url = new URL(value, 'https://polymarket.com');
+    const parts = url.pathname.split('/').filter(Boolean);
+    if (parts[0] === 'market' && parts[1]) return parts[1];
+    if (parts[0] === 'event' && parts[2]) return parts[2];
+  } catch {
+    return value;
+  }
   return undefined;
 }
 
@@ -297,6 +483,18 @@ interface BootstrapPredictionData {
   fetchedAt: number;
 }
 
+function normalizePredictionMarket(market: PredictionMarket): PredictionMarket {
+  const slug = market.slug || extractMarketSlug(market.url);
+  const url = slug
+    ? (market.url?.includes('/event/') || market.url?.includes('/market/') ? market.url : buildMarketUrl(undefined, slug))
+    : market.url;
+  return {
+    ...market,
+    slug,
+    url,
+  };
+}
+
 export async function fetchPredictions(): Promise<PredictionMarket[]> {
   return breaker.execute(async () => {
     // Strategy 1: Bootstrap hydration (zero network cost — data arrived with page load)
@@ -304,7 +502,7 @@ export async function fetchPredictions(): Promise<PredictionMarket[]> {
     if (hydrated && hydrated.fetchedAt && Date.now() - hydrated.fetchedAt < 20 * 60 * 1000) {
       const variant = SITE_VARIANT === 'tech' ? hydrated.tech : hydrated.geopolitical;
       if (variant && variant.length > 0) {
-        return variant.slice(0, 15);
+        return variant.map(normalizePredictionMarket).slice(0, 15);
       }
     }
 
@@ -326,7 +524,7 @@ export async function fetchPredictions(): Promise<PredictionMarket[]> {
             volume: m.volume,
             url: m.url,
             endDate: m.closesAt ? new Date(m.closesAt).toISOString() : undefined,
-            slug: m.id,
+            slug: extractMarketSlug(m.url) || m.id,
           }))
           .slice(0, 15);
       }
@@ -365,7 +563,7 @@ export async function fetchPredictions(): Promise<PredictionMarket[]> {
             title: topMarket.question || event.title,
             yesPrice: parseMarketPrice(topMarket),
             volume: eventVolume,
-            url: buildMarketUrl(event.slug),
+            url: buildMarketUrl(event.slug, topMarket.slug),
             endDate: parseEndDate(topMarket.endDate ?? event.endDate),
             slug: topMarket.slug,
           });
@@ -533,7 +731,7 @@ export async function fetchCountryMarkets(country: string): Promise<PredictionMa
             title: topMarket.question || event.title,
             yesPrice: parseMarketPrice(topMarket),
             volume: event.volume ?? 0,
-            url: buildMarketUrl(event.slug),
+            url: buildMarketUrl(event.slug, topMarket.slug),
             endDate: parseEndDate(topMarket.endDate ?? event.endDate),
             slug: topMarket.slug,
           });
@@ -599,7 +797,7 @@ export async function searchPredictions(query: string): Promise<PredictionMarket
           volume: m.volume,
           url: m.url,
           endDate: closesAt,
-          slug: m.id,
+          slug: extractMarketSlug(m.url) || m.id,
         });
       }
       cursor = resp.pagination?.nextCursor ?? '';
@@ -653,7 +851,7 @@ export async function searchPredictions(query: string): Promise<PredictionMarket
             title: market.question || event.title,
             yesPrice: parseMarketPrice(market),
             volume: market.volumeNum ?? (market.volume ? parseFloat(market.volume) : event.volume ?? 0),
-            url: market.slug ? buildMarketUrl(market.slug) : buildMarketUrl(event.slug),
+            url: market.slug ? buildMarketUrl(event.slug, market.slug) : buildMarketUrl(event.slug),
             endDate: parseEndDate(market.endDate ?? event.endDate),
             slug: market.slug,
           });
