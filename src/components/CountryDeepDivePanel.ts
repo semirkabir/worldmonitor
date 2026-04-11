@@ -3,7 +3,7 @@ import { getSourcePropagandaRisk, getSourceTier } from '@/config/feeds';
 import { getCountryCentroid, ME_STRIKE_BOUNDS } from '@/services/country-geometry';
 import type { CountryScore } from '@/services/country-instability';
 import { t } from '@/services/i18n';
-import { getNearbyInfrastructure } from '@/services/related-assets';
+import { getCountryInfrastructure, getNearbyInfrastructure } from '@/services/related-assets';
 import type { PredictionMarket } from '@/services/prediction';
 import type { AssetType, NewsItem, RelatedAsset } from '@/types';
 import { sanitizeUrl, escapeHtml } from '@/utils/sanitize';
@@ -53,7 +53,6 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
   private onCloseCallback?: () => void;
   private onStateChangeCallback?: (state: { visible: boolean; maximized: boolean }) => void;
   private onShareStory?: (code: string, name: string) => void;
-  private onExportImage?: (code: string, name: string) => void;
   private map: MapContainer | null;
   private abortController: AbortController = new AbortController();
   private lastFocusedElement: HTMLElement | null = null;
@@ -133,10 +132,6 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
 
   public setShareStoryHandler(handler: (code: string, name: string) => void): void {
     this.onShareStory = handler;
-  }
-
-  public setExportImageHandler(handler: (code: string, name: string) => void): void {
-    this.onExportImage = handler;
   }
 
   public get signal(): AbortSignal {
@@ -354,15 +349,18 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
       return;
     }
 
-    const assets = getNearbyInfrastructure(centroid.lat, centroid.lon, INFRA_TYPES);
-    if (assets.length === 0) {
+    const assets = getCountryInfrastructure(countryCode, INFRA_TYPES);
+    const resolvedAssets = assets.length > 0
+      ? assets
+      : getNearbyInfrastructure(centroid.lat, centroid.lon, INFRA_TYPES);
+    if (resolvedAssets.length === 0) {
       this.infrastructureBody.append(this.makeEmpty(t('countryBrief.noInfrastructure')));
       return;
     }
 
     this.infrastructureByType.clear();
     for (const type of INFRA_TYPES) {
-      const matches = assets.filter((asset) => asset.type === type);
+      const matches = resolvedAssets.filter((asset) => asset.type === type);
       this.infrastructureByType.set(type, matches);
     }
 
@@ -620,14 +618,7 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
       }
     });
 
-    const exportButton = this.el('button', 'cdp-action-btn', 'Export') as HTMLButtonElement;
-    exportButton.setAttribute('type', 'button');
-    exportButton.addEventListener('click', () => {
-      if (this.onExportImage && this.currentCode && this.currentName) {
-        this.onExportImage(this.currentCode, this.currentName);
-      }
-    });
-    right.append(shareBtn, maxBtn, storyButton, exportButton);
+    right.append(shareBtn, maxBtn, storyButton);
     header.append(left, right);
 
     const scoreCard = this.el('section', 'cdp-card cdp-score-card');

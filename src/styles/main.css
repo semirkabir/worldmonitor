@@ -3636,12 +3636,13 @@ body.panel-resize-active iframe {
 .live-volume-popover {
   position: absolute;
   top: calc(100% + 6px);
-  right: 0;
+  right: -6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 116px;
-  padding: 10px 12px;
+  min-width: 0;
+  min-height: 132px;
+  padding: 12px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--surface) 92%, black 8%);
@@ -3661,9 +3662,11 @@ body.panel-resize-active iframe {
 }
 
 .live-volume-slider {
-  width: 100%;
-  min-width: 92px;
+  width: 18px;
+  height: 104px;
   accent-color: var(--green);
+  writing-mode: vertical-lr;
+  direction: rtl;
 }
 
 .live-news-fullscreen {

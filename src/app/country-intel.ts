@@ -25,7 +25,6 @@ import { supplementalBus } from '@/services/supplemental-signal-bus';
 import { dataFreshness } from '@/services/data-freshness';
 import { fetchCountryMarkets } from '@/services/prediction';
 import { collectStoryData } from '@/services/story-data';
-import { renderStoryToCanvas } from '@/services/story-renderer';
 import { openStoryModal } from '@/components/StoryModal';
 import { MarketServiceClient } from '@/generated/client/worldmonitor/market/v1/service_client';
 import { BETA_MODE } from '@/config/beta';
@@ -36,7 +35,7 @@ import { t, getCurrentLanguage } from '@/services/i18n';
 import { trackCountrySelected, trackCountryBriefOpened } from '@/services/analytics';
 import type { StrategicPosturePanel } from '@/components/StrategicPosturePanel';
 import type { NewsItem } from '@/types';
-import { getNearbyInfrastructure } from '@/services/related-assets';
+import { getCountryInfrastructure, getNearbyInfrastructure } from '@/services/related-assets';
 import type { CIIPanel } from '@/components';
 
 type IntlDisplayNamesCtor = new (
@@ -79,30 +78,6 @@ export class CountryIntelManager implements AppModule {
       this.ctx.countryBriefPage?.hide();
       this.openCountryStory(code, name);
     });
-    this.ctx.countryBriefPage.setExportImageHandler(async (code, name) => {
-      try {
-        const signals = this.getCountrySignals(code, name);
-        const cluster = signalAggregator.getCountryClusters().find(c => c.country === code);
-        const regional = signalAggregator.getRegionalConvergence().filter(r => r.countries.includes(code));
-        const convergence = cluster ? {
-          score: cluster.convergenceScore,
-          signalTypes: [...cluster.signalTypes],
-          regionalDescriptions: regional.map(r => r.description),
-        } : null;
-        const posturePanel = this.ctx.panels['strategic-posture'] as StrategicPosturePanel | undefined;
-        const postures = posturePanel?.getPostures() || [];
-        const data = collectStoryData(code, name, this.ctx.latestClusters, postures, this.ctx.latestPredictions, signals, convergence);
-        const canvas = await renderStoryToCanvas(data);
-        const dataUrl = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = `country-brief-${code.toLowerCase()}-${Date.now()}.png`;
-        a.click();
-      } catch (err) {
-        console.error('[CountryBrief] Image export failed:', err);
-      }
-    });
-
     this.ctx.map.onCountryClicked(async (countryClick) => {
       // Close entity detail panel when opening country brief
       this.ctx.entityDetailPanel?.hide();
@@ -739,21 +714,26 @@ export class CountryIntelManager implements AppModule {
     const foreignVessels = vesselsInCountry.filter((vessel) => !this.sameCountry(code, country, vessel.operatorCountry)).length;
 
     const centroid = getCountryCentroid(code, CountryIntelManager.COUNTRY_BOUNDS);
-    const nearbyBases = centroid
-      ? getNearbyInfrastructure(centroid.lat, centroid.lon, ['base']).slice(0, 3).map((base) => ({
-        id: base.id,
-        name: base.name,
-        distanceKm: base.distanceKm,
-        country: MILITARY_BASES.find((entry) => entry.id === base.id)?.country,
-      }))
-      : [];
+    const localBases = getCountryInfrastructure(code, ['base']);
+    const hostedForeignBases = MILITARY_BASES.filter((base) =>
+      !!base.country && nameToCountryCode(base.country.toLowerCase()) === code
+    );
+    const nearbyBases = (localBases.length > 0
+      ? localBases
+      : (centroid ? getNearbyInfrastructure(centroid.lat, centroid.lon, ['base']) : [])
+    ).slice(0, 3).map((base) => ({
+      id: base.id,
+      name: base.name,
+      distanceKm: base.distanceKm,
+      country: MILITARY_BASES.find((entry) => entry.id === base.id)?.country,
+    }));
 
     return {
       ownFlights,
       foreignFlights,
       nearbyVessels: vesselsInCountry.length,
       nearestBases: nearbyBases,
-      foreignPresence: foreignFlights > 0 || foreignVessels > 0,
+      foreignPresence: foreignFlights > 0 || foreignVessels > 0 || hostedForeignBases.length > 0,
     };
   }
 
