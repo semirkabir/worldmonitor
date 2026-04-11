@@ -2,6 +2,7 @@ import type { PanelConfig, MapLayers } from '@/types';
 import type { DataSourceId } from '@/services/data-freshness';
 import { SITE_VARIANT } from './variant';
 import { isDesktopRuntime } from '@/services/runtime';
+import { applyLocalDevPanelStability } from '@/services/local-dev-stability';
 
 const _desktop = isDesktopRuntime();
 
@@ -401,7 +402,7 @@ const MOBILE_LAYERS_BY_VARIANT: Record<string, MapLayers> = {
   commodity: COMMODITY_MOBILE_MAP_LAYERS, conflicts: CONFLICTS_MOBILE_MAP_LAYERS,
 };
 
-export const DEFAULT_PANELS              = PANELS_BY_VARIANT[SITE_VARIANT]        ?? FULL_PANELS;
+export const DEFAULT_PANELS              = applyLocalDevPanelStability(PANELS_BY_VARIANT[SITE_VARIANT] ?? FULL_PANELS);
 export const DEFAULT_MAP_LAYERS          = LAYERS_BY_VARIANT[SITE_VARIANT]        ?? FULL_MAP_LAYERS;
 export const MOBILE_DEFAULT_MAP_LAYERS   = MOBILE_LAYERS_BY_VARIANT[SITE_VARIANT] ?? FULL_MOBILE_MAP_LAYERS;
 

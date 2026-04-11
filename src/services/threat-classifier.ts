@@ -377,20 +377,24 @@ export function classifyByKeyword(title: string, variant = 'full'): ThreatClassi
 import {
   IntelligenceServiceClient,
   ApiError,
-  type ClassifyEventResponse,
 } from '@/generated/client/worldmonitor/intelligence/v1/service_client';
+import { isIntelligenceRpcAvailable } from '@/services/local-dev-stability';
 
-const classifyClient = new IntelligenceServiceClient('', { fetch: (...args) => globalThis.fetch(...args) });
+const classifyClient = new IntelligenceServiceClient('', { fetch: (...args) => globalThis.fetch(...args) }) as IntelligenceServiceClient & {
+  classifyEvent?: (req: Record<string, string>) => Promise<{ classification?: { subcategory?: string; category?: string; confidence?: number } }>;
+};
 
 const VALID_LEVELS: Record<string, ThreatLevel> = {
   critical: 'critical', high: 'high', medium: 'medium', low: 'low', info: 'info',
 };
 
-function toThreat(resp: ClassifyEventResponse): ThreatClassification | null {
+function toThreat(resp: { classification?: { subcategory?: string; category?: string; confidence?: number } }): ThreatClassification | null {
   const c = resp.classification;
   if (!c) return null;
   // Raw level preserved in subcategory by the handler
-  const level = VALID_LEVELS[c.subcategory] ?? VALID_LEVELS[c.category] ?? null;
+  const subcategory = typeof c.subcategory === 'string' ? c.subcategory : '';
+  const category = typeof c.category === 'string' ? c.category : '';
+  const level = VALID_LEVELS[subcategory] ?? VALID_LEVELS[category] ?? null;
   if (!level) return null;
   return {
     level,
@@ -448,6 +452,10 @@ function flushBatch(): void {
         await waitForGap();
 
         try {
+          if (!classifyClient.classifyEvent) {
+            job.resolve(null);
+            continue;
+          }
           const resp = await classifyClient.classifyEvent({
             title: job.title, description: '', source: '', country: '',
           });
@@ -499,6 +507,10 @@ export function classifyWithAI(
   variant: string
 ): Promise<ThreatClassification | null> {
   return new Promise((resolve) => {
+    if (!isIntelligenceRpcAvailable()) {
+      resolve(null);
+      return;
+    }
     if (batchQueue.length >= MAX_QUEUE_LENGTH) {
       console.warn(`[Classify] Queue full (${MAX_QUEUE_LENGTH}), dropping classification for: ${title.slice(0, 60)}`);
       resolve(null);

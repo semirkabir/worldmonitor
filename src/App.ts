@@ -34,6 +34,7 @@ import { computeDefaultDisabledSources, getLocaleBoostedSources, getTotalFeedCou
 import { getVariantAllowedLayerKeys } from '@/config/map-layer-definitions';
 import type { MapVariant } from '@/config/map-layer-definitions';
 import { fetchBootstrapData } from '@/services/bootstrap';
+import { enforceLocalDevPanelStability, isLocalDevTaskEnabled } from '@/services/local-dev-stability';
 import { DesktopUpdater } from '@/app/desktop-updater';
 import { CountryIntelManager } from '@/app/country-intel';
 import { EntityIntelManager } from '@/app/entity-intel';
@@ -134,6 +135,7 @@ export class App {
         getVariantStorageKey(STORAGE_KEYS.panels, SITE_VARIANT),
         DEFAULT_PANELS
       );
+      enforceLocalDevPanelStability(panelSettings);
       // Merge in any new panels that didn't exist when settings were saved
       for (const [key, config] of Object.entries(DEFAULT_PANELS)) {
         if (!(key in panelSettings)) {
@@ -705,16 +707,16 @@ export class App {
 
       // Happy variant only refreshes news -- skip all geopolitical/financial/military refreshes
       if (SITE_VARIANT !== 'happy') {
-        this.refreshScheduler.registerAll([
-          { name: 'markets', fn: () => this.dataLoader.loadMarkets(), intervalMs: intervals.markets },
+        const refreshes = [
+          ...(isLocalDevTaskEnabled('markets') ? [{ name: 'markets', fn: () => this.dataLoader.loadMarkets(), intervalMs: intervals.markets }] : []),
           { name: 'predictions', fn: () => this.dataLoader.loadPredictions(), intervalMs: intervals.predictions },
-          { name: 'pizzint', fn: () => this.dataLoader.loadPizzInt(), intervalMs: intervals.pizzint },
+          ...(isLocalDevTaskEnabled('pizzint') ? [{ name: 'pizzint', fn: () => this.dataLoader.loadPizzInt(), intervalMs: intervals.pizzint }] : []),
           { name: 'natural', fn: () => this.dataLoader.loadNatural(), intervalMs: intervals.natural, condition: () => this.state.mapLayers.natural },
           { name: 'weather', fn: () => this.dataLoader.loadWeatherAlerts(), intervalMs: intervals.weather, condition: () => this.state.mapLayers.weather },
-          { name: 'fred', fn: () => this.dataLoader.loadFredData(), intervalMs: intervals.fred },
-          { name: 'oil', fn: () => this.dataLoader.loadOilAnalytics(), intervalMs: intervals.oil },
-          { name: 'spending', fn: () => this.dataLoader.loadGovernmentSpending(), intervalMs: intervals.spending },
-          { name: 'bis', fn: () => this.dataLoader.loadBisData(), intervalMs: intervals.bis },
+          ...(isLocalDevTaskEnabled('fred') ? [{ name: 'fred', fn: () => this.dataLoader.loadFredData(), intervalMs: intervals.fred }] : []),
+          ...(isLocalDevTaskEnabled('oil') ? [{ name: 'oil', fn: () => this.dataLoader.loadOilAnalytics(), intervalMs: intervals.oil }] : []),
+          ...(isLocalDevTaskEnabled('spending') ? [{ name: 'spending', fn: () => this.dataLoader.loadGovernmentSpending(), intervalMs: intervals.spending }] : []),
+          ...(isLocalDevTaskEnabled('bis') ? [{ name: 'bis', fn: () => this.dataLoader.loadBisData(), intervalMs: intervals.bis }] : []),
           { name: 'firms', fn: () => this.dataLoader.loadFirmsData(), intervalMs: intervals.firms },
           { name: 'ais', fn: () => this.dataLoader.loadAisSignals(), intervalMs: intervals.ais, condition: () => this.state.mapLayers.ais },
           { name: 'cables', fn: () => this.dataLoader.loadCableActivity(), intervalMs: intervals.cables, condition: () => this.state.mapLayers.cables },
@@ -726,19 +728,20 @@ export class App {
               return this.dataLoader.loadCyberThreats();
             }, intervalMs: intervals.cyberThreats, condition: () => CYBER_LAYER_ENABLED && this.state.mapLayers.cyberThreats
           },
-        ]);
+        ];
+        this.refreshScheduler.registerAll(refreshes);
       }
 
       // Server-side temporal anomalies (news + satellite_fires)
-      if (SITE_VARIANT !== 'happy') {
+      if (SITE_VARIANT !== 'happy' && isLocalDevTaskEnabled('temporalBaseline')) {
         this.refreshScheduler.scheduleRefresh('temporalBaseline', () => this.dataLoader.refreshTemporalBaseline(), isLoggedIn() ? 600_000 : 60 * 60 * 1000);
       }
 
       // WTO trade policy data
       if (SITE_VARIANT === 'full' || SITE_VARIANT === 'finance') {
         const tradeInterval = isLoggedIn() ? 10 * 60 * 1000 : 30 * 60 * 1000;
-        this.refreshScheduler.scheduleRefresh('tradePolicy', () => this.dataLoader.loadTradePolicy(), tradeInterval);
-        this.refreshScheduler.scheduleRefresh('supplyChain', () => this.dataLoader.loadSupplyChain(), tradeInterval);
+        if (isLocalDevTaskEnabled('tradePolicy')) this.refreshScheduler.scheduleRefresh('tradePolicy', () => this.dataLoader.loadTradePolicy(), tradeInterval);
+        if (isLocalDevTaskEnabled('supplyChain')) this.refreshScheduler.scheduleRefresh('supplyChain', () => this.dataLoader.loadSupplyChain(), tradeInterval);
       }
 
       // Telegram Intel
@@ -750,7 +753,7 @@ export class App {
       );
 
       // Intelligence signals for CII
-      if (SITE_VARIANT === 'full') {
+      if (SITE_VARIANT === 'full' && isLocalDevTaskEnabled('intelligence')) {
         this.refreshScheduler.scheduleRefresh('intelligence', () => {
           const { military, iranEvents } = this.state.intelligenceCache;
           this.state.intelligenceCache = {};

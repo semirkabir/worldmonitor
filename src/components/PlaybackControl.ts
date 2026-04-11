@@ -2,6 +2,9 @@ import { getSnapshotTimestamps, getSnapshotAt, type DashboardSnapshot } from '@/
 import { t } from '@/services/i18n';
 import { checkFeatureAccess } from '@/services/auth-modal';
 
+const PLAYBACK_PANEL_CLOSE_DELAY_MS = 320;
+const PLAYBACK_PANEL_OFFSET_PX = 4;
+
 export class PlaybackControl {
   private element: HTMLElement;
   private toggleButton: HTMLButtonElement;
@@ -119,7 +122,7 @@ export class PlaybackControl {
 
   private scheduleClose(): void {
     this.cancelClose();
-    this.closeTimer = setTimeout(() => this.closePanel(), 140);
+    this.closeTimer = setTimeout(() => this.closePanel(), PLAYBACK_PANEL_CLOSE_DELAY_MS);
   }
 
   private async openPanel(): Promise<void> {
@@ -151,9 +154,9 @@ export class PlaybackControl {
     let left = rect.right - panelWidth;
     left = Math.min(left, window.innerWidth - panelWidth - viewportPadding);
     left = Math.max(viewportPadding, left);
-    let top = rect.bottom + 8;
+    let top = rect.bottom + PLAYBACK_PANEL_OFFSET_PX;
     if (top + panelHeight > window.innerHeight - viewportPadding) {
-      top = Math.max(viewportPadding, rect.top - panelHeight - 8);
+      top = Math.max(viewportPadding, rect.top - panelHeight - PLAYBACK_PANEL_OFFSET_PX);
     }
     this.panel.style.left = `${left}px`;
     this.panel.style.top = `${top}px`;

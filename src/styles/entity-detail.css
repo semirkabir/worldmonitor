@@ -894,6 +894,280 @@
   border-color: color-mix(in srgb, var(--accent-blue, #60a5fa) 40%, transparent);
 }
 
+.edp-prediction-tabs-shell {
+  gap: 12px;
+}
+
+.edp-prediction-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.edp-prediction-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  background: color-mix(in srgb, var(--surface) 88%, black 12%);
+  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.edp-prediction-tab.is-active {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent-blue, #60a5fa) 36%, transparent);
+  background: color-mix(in srgb, var(--accent-blue, #60a5fa) 12%, transparent);
+}
+
+.edp-prediction-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  min-height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 65%, black 35%);
+  color: var(--text-faint);
+  font-size: 10px;
+  letter-spacing: 0;
+}
+
+.edp-prediction-tab-panels {
+  display: grid;
+}
+
+.edp-prediction-summary-strip,
+.edp-prediction-detail-meta,
+.edp-prediction-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.edp-prediction-metric {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  background: color-mix(in srgb, var(--surface) 90%, black 10%);
+}
+
+.edp-prediction-metric.is-buy {
+  border-color: rgba(34, 197, 94, 0.16);
+}
+
+.edp-prediction-metric.is-sell {
+  border-color: rgba(239, 68, 68, 0.16);
+}
+
+.edp-prediction-metric-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.edp-prediction-metric-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.edp-prediction-book {
+  display: grid;
+  gap: 10px;
+}
+
+.edp-prediction-description {
+  gap: 0;
+}
+
+.edp-prediction-book-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.edp-prediction-book-side {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  background: color-mix(in srgb, var(--surface) 86%, black 14%);
+}
+
+.edp-prediction-book-side.is-bids {
+  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.08);
+}
+
+.edp-prediction-book-side.is-asks {
+  box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.08);
+}
+
+.edp-prediction-book-spread {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.edp-prediction-book-header,
+.edp-prediction-book-row {
+  display: grid;
+  grid-template-columns: 44px minmax(58px, 0.8fr) minmax(58px, 0.9fr) minmax(58px, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.edp-prediction-book-header {
+  padding: 0 4px 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+}
+
+.edp-prediction-book-row {
+  padding: 7px 8px;
+  border-radius: 10px;
+}
+
+.edp-prediction-book-row.is-bid {
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.12), rgba(34, 197, 94, 0.03));
+}
+
+.edp-prediction-book-row.is-ask {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.03));
+}
+
+.edp-prediction-book-col {
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.edp-prediction-book-price {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.edp-prediction-book-side-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.edp-prediction-table,
+.edp-prediction-comment-list,
+.edp-prediction-detail-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.edp-prediction-table-header,
+.edp-prediction-table-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(66px, 0.7fr) minmax(66px, 0.7fr) minmax(66px, 0.7fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.edp-prediction-table-header {
+  padding: 0 10px 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+}
+
+.edp-prediction-table-row {
+  padding: 10px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 90%, black 10%);
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+}
+
+.edp-prediction-table-row.is-buy {
+  border-left: 2px solid rgba(34, 197, 94, 0.5);
+}
+
+.edp-prediction-table-row.is-sell {
+  border-left: 2px solid rgba(239, 68, 68, 0.5);
+}
+
+.edp-prediction-table-cell {
+  min-width: 0;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.edp-prediction-table-header .edp-prediction-table-cell {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.edp-prediction-table-row .edp-prediction-table-cell:not(:first-child),
+.edp-prediction-book-col:not(:first-child) {
+  text-align: right;
+}
+
+.edp-prediction-comment {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  background: color-mix(in srgb, var(--surface) 90%, black 10%);
+}
+
+.edp-prediction-comment-head,
+.edp-prediction-comment-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.edp-prediction-comment-author {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.edp-prediction-comment-meta,
+.edp-prediction-comment-likes,
+.edp-prediction-comment-handle {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+@media (max-width: 640px) {
+  .edp-prediction-summary-strip,
+  .edp-prediction-detail-meta,
+  .edp-prediction-flow-grid,
+  .edp-prediction-book-spread {
+    grid-template-columns: 1fr;
+  }
+
+  .edp-prediction-table-header,
+  .edp-prediction-table-row {
+    grid-template-columns: minmax(0, 1fr) repeat(3, minmax(54px, 0.6fr));
+    gap: 8px;
+  }
+}
+
 @media (max-width: 640px) {
   .edp-prediction-hero-top {
     grid-template-columns: 1fr;

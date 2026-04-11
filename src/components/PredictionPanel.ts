@@ -81,8 +81,11 @@ export class PredictionPanel extends Panel {
     }
 
     const orderedMarkets = [...data].sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0));
+    const marketLookup = new Map<string, PredictionMarket>();
     const grouped = new Map<string, PredictionMarket[]>();
     for (const market of orderedMarkets) {
+      const key = market.slug || market.url || market.title;
+      if (key) marketLookup.set(key, market);
       const theme = this.getTheme(market.title);
       const bucket = grouped.get(theme) ?? [];
       bucket.push(market);
@@ -111,8 +114,10 @@ export class PredictionPanel extends Panel {
           ? `<div class="prediction-meta">${volumeStr ? `<span class="prediction-volume">${t('components.predictions.vol')}: ${volumeStr}</span>` : ''}${expiryHtml}</div>`
           : '';
 
+        const itemKey = p.slug || p.url || p.title;
+
         return `
-      <div class="prediction-item" data-slug="${p.slug || ''}" style="cursor: pointer;">
+      <div class="prediction-item" data-market-key="${escapeHtml(itemKey)}" style="cursor: pointer;">
         ${titleHtml}
         ${metaHtml}
         <div class="prediction-odds-row">
@@ -136,9 +141,10 @@ export class PredictionPanel extends Panel {
 
     // Attach click listeners
     const items = this.element.querySelectorAll('.prediction-item');
-    items.forEach((item: Element, index: number) => {
+    items.forEach((item: Element) => {
       item.addEventListener('click', () => {
-        const market = orderedMarkets[index];
+        const key = item.getAttribute('data-market-key') || '';
+        const market = marketLookup.get(key);
         if (market && this.onMarketClick) {
           this.onMarketClick(market);
         }

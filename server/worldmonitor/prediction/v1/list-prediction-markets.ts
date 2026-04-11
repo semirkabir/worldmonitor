@@ -74,11 +74,11 @@ function mapEvent(event: GammaEvent, category: string): PredictionMarket {
   const closesAtMs = endDateStr ? Date.parse(endDateStr) : 0;
 
   return {
-    id: event.id || '',
+    id: topMarket?.slug || event.slug || event.id || '',
     title: topMarket?.question || event.title,
     yesPrice: topMarket ? parseYesPrice(topMarket) : 0.5,
     volume: event.volume ?? 0,
-    url: `https://polymarket.com/event/${event.slug}`,
+    url: topMarket?.slug ? `https://polymarket.com/event/${event.slug}/${topMarket.slug}` : `https://polymarket.com/event/${event.slug}`,
     closesAt: Number.isFinite(closesAtMs) ? closesAtMs : 0,
     category: category || '',
   };

@@ -9,7 +9,17 @@ import { getThemePreference, setThemePreference, getFontPreference, setFontPrefe
 import { escapeHtml } from '@/utils/sanitize';
 import { trackLanguageChange } from '@/services/analytics';
 import { exportSettings, importSettings, type ImportResult } from '@/utils/settings-persistence';
-import { getCursorPreference, setCursorPreference, type CursorPreference } from '@/utils/forced-cursor';
+import {
+  CURSOR_THEME_OPTIONS,
+  checkCursorThemeAvailability,
+  getCursorPreviewUrl,
+  getCursorPreference,
+  getCursorTheme,
+  setCursorPreference,
+  setCursorTheme,
+  type CursorPreference,
+  type CursorTheme,
+} from '@/utils/forced-cursor';
 
 const DESKTOP_RELEASES_URL = 'https://github.com/koala73/worldmonitor/releases';
 
@@ -194,6 +204,7 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
   </div>`;
 
   const currentCursorPref = getCursorPreference();
+  const currentCursorTheme = getCursorTheme();
   html += `<div class="ai-flow-toggle-row">
     <div class="ai-flow-toggle-label-wrap">
       <div class="ai-flow-toggle-label">Cursor mode</div>
@@ -201,9 +212,22 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
     </div>
   </div>`;
   html += `<div class="us-cursor-preview-grid">
-    ${renderCursorPreviewCard('auto', 'Default', 'Use the browser / webview cursor stack', 'Standard CSS cursor mode', currentCursorPref)}
-    ${renderCursorPreviewCard('forced', 'Custom overlay', 'Hide the OS cursor inside the app and draw the cursor manually', 'Best when the browser keeps showing the system cursor', currentCursorPref)}
+    ${renderCursorPreviewCard('auto', 'Default', 'Use the browser / webview cursor stack', 'Standard CSS cursor mode', currentCursorPref, currentCursorTheme)}
+    ${renderCursorPreviewCard('forced', 'Custom overlay', 'Hide the OS cursor inside the app and draw the cursor manually', 'Best when the browser keeps showing the system cursor', currentCursorPref, currentCursorTheme)}
   </div>`;
+  html += `<div class="us-cursor-theme-wrap"${currentCursorPref === 'forced' ? '' : ' hidden'}>
+    <div class="ai-flow-toggle-row">
+    <div class="ai-flow-toggle-label-wrap">
+      <div class="ai-flow-toggle-label">Cursor theme</div>
+      <div class="ai-flow-toggle-desc">Choose which custom overlay cursor set the app should use.</div>
+    </div>
+  </div>`;
+  html += `<select class="unified-settings-select" id="us-cursor-theme">`;
+  for (const opt of CURSOR_THEME_OPTIONS) {
+    html += `<option value="${opt.value}"${opt.value === currentCursorTheme ? ' selected' : ''}>${escapeHtml(opt.label)}</option>`;
+  }
+  html += `</select>`;
+  html += `<div class="ai-flow-toggle-desc" id="us-cursor-theme-status"></div></div>`;
 
   // Map theme (unified — all providers in one grouped dropdown)
   const currentUnifiedTheme = getUnifiedTheme();
@@ -436,6 +460,14 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
           markDirty();
           return;
         }
+        if (target.id === 'us-cursor-theme') {
+          const value = target.value as CursorTheme;
+          setCursorTheme(value);
+          syncCursorThemePreview(container, value);
+          void syncCursorThemeStatus(container, value);
+          markDirty();
+          return;
+        }
         if (target.id === 'us-map-theme') {
           setUnifiedTheme(target.value);
           window.dispatchEvent(new CustomEvent('map-theme-changed'));
@@ -500,6 +532,7 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
           const value = cursorCard.dataset.cursorPreference as CursorPreference;
           setCursorPreference(value);
           syncCursorPreviewState(container, value);
+          syncCursorThemeVisibility(container, value);
           markDirty();
           return;
         }
@@ -545,6 +578,9 @@ export function renderPreferences(host: PreferencesHost): PreferencesResult {
       }, { signal });
 
       if (!host.isDesktopApp) updateAiStatus(container);
+      syncCursorThemePreview(container, currentCursorTheme);
+      syncCursorThemeVisibility(container, currentCursorPref);
+      void syncCursorThemeStatus(container, currentCursorTheme);
       syncCursorPreviewState(container, currentCursorPref);
       syncInsightSeverityControl(container, getInsightSeverityPreference());
 
@@ -566,11 +602,17 @@ function renderFontPreviewCard(value: FontPreference, title: string, subtitle: s
   `;
 }
 
-function renderCursorPreviewCard(value: CursorPreference, title: string, subtitle: string, sample: string, current: CursorPreference): string {
+function renderCursorPreviewCard(
+  value: CursorPreference,
+  title: string,
+  subtitle: string,
+  sample: string,
+  current: CursorPreference,
+  theme: CursorTheme,
+): string {
   const active = current === value ? ' active' : '';
-  const icon = value === 'forced'
-    ? '/cursors/13-Move.cur.png?v=20260410a'
-    : '/cursors/1-Normal-Select.cur.png?v=20260410a';
+  const cursorKind = value === 'forced' ? 'move' : 'default';
+  const icon = getCursorPreviewUrl(cursorKind, theme);
   const badge = value === 'forced' ? 'CUSTOM' : 'DEFAULT';
   return `
     <button type="button" class="us-cursor-preview-card${active}" data-cursor-preference="${value}">
@@ -579,7 +621,7 @@ function renderCursorPreviewCard(value: CursorPreference, title: string, subtitl
         <span class="us-font-preview-subtitle">${escapeHtml(subtitle)}</span>
       </div>
       <div class="us-cursor-preview-sample">
-        <img src="${icon}" alt="" class="us-cursor-preview-image" />
+        <img src="${icon}" alt="" class="us-cursor-preview-image" data-cursor-kind="${cursorKind}" />
         <div class="us-cursor-preview-copy">
           <span class="us-cursor-preview-badge">${escapeHtml(badge)}</span>
           <span class="us-cursor-preview-text">${escapeHtml(sample)}</span>
@@ -599,6 +641,36 @@ function syncCursorPreviewState(container: HTMLElement, value: CursorPreference)
   container.querySelectorAll<HTMLElement>('.us-cursor-preview-card').forEach((card) => {
     card.classList.toggle('active', card.dataset.cursorPreference === value);
   });
+}
+
+function syncCursorThemeVisibility(container: HTMLElement, value: CursorPreference): void {
+  const wrap = container.querySelector<HTMLElement>('.us-cursor-theme-wrap');
+  if (!wrap) return;
+  wrap.toggleAttribute('hidden', value !== 'forced');
+}
+
+function syncCursorThemePreview(container: HTMLElement, theme: CursorTheme): void {
+  container.querySelectorAll<HTMLImageElement>('.us-cursor-preview-image[data-cursor-kind]').forEach((img) => {
+    const kind = img.dataset.cursorKind as 'default' | 'move' | undefined;
+    if (!kind) return;
+    img.src = getCursorPreviewUrl(kind, kind === 'default' ? 'classic' : theme);
+  });
+}
+
+async function syncCursorThemeStatus(container: HTMLElement, value: CursorTheme): Promise<void> {
+  const statusEl = container.querySelector<HTMLElement>('#us-cursor-theme-status');
+  if (!statusEl) return;
+  const option = CURSOR_THEME_OPTIONS.find((item) => item.value === value) ?? CURSOR_THEME_OPTIONS[0]!;
+  if (value === 'classic') {
+    statusEl.textContent = option.description;
+    return;
+  }
+  statusEl.textContent = `Checking ${option.label}…`;
+  const available = await checkCursorThemeAvailability(value);
+  if (container.querySelector<HTMLSelectElement>('#us-cursor-theme')?.value !== value) return;
+  statusEl.textContent = available
+    ? option.description
+    : `${option.label} is missing from this build. Expected /public/cursors/${value}/1-Normal-Select.cur.png.`;
 }
 
 function syncInsightSeverityControl(container: HTMLElement, value: InsightSeverityPreference): void {

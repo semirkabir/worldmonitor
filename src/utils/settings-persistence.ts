@@ -26,6 +26,8 @@ const SETTINGS_KEY_PREFIXES = [
   'worldmonitor-panel-order',
   'worldmonitor-runtime-feature-toggles',
   'wm-breaking-alerts-v1',
+  'wm-cursor-preference',
+  'wm-cursor-theme',
   'wm-globe-render-scale',
   'wm-live-streams-always-on',
   'wm-map-theme:',

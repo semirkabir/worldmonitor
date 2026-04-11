@@ -17,8 +17,10 @@ type YouTubePlayer = {
   pauseVideo(): void;
   loadVideoById(videoId: string): void;
   cueVideoById(videoId: string): void;
+  setVolume?(volume: number): void;
   setPlaybackQuality?(quality: string): void;
   getIframe?(): HTMLIFrameElement;
+  isMuted?(): boolean;
   getVolume?(): number;
   destroy(): void;
 };
@@ -349,6 +351,8 @@ export class LiveNewsPanel extends Panel {
   private isMuted = true;
   private isPlaying = true;
   private wasPlayingBeforeIdle = true;
+  private volumeControl: HTMLDivElement | null = null;
+  private volumeSlider: HTMLInputElement | null = null;
   private muteBtn: HTMLButtonElement | null = null;
   private fullscreenBtn: HTMLButtonElement | null = null;
   private isFullscreen = false;
@@ -380,6 +384,8 @@ export class LiveNewsPanel extends Panel {
   private boundMessageHandler!: (e: MessageEvent) => void;
   private muteSyncInterval: ReturnType<typeof setInterval> | null = null;
   private static readonly MUTE_SYNC_POLL_MS = 500;
+  private volumePercent = 70;
+  private lastAudibleVolumePercent = 70;
 
   // Bot-check detection: if player doesn't become ready within this timeout,
   // YouTube is likely showing "Sign in to confirm you're not a bot".
@@ -527,6 +533,14 @@ export class LiveNewsPanel extends Panel {
           this.isMuted = muted;
           this.updateMuteIcon();
         }
+      } else if (msg.type === 'yt-volume-state') {
+        const volume = Math.max(0, Math.min(100, Math.round(Number(msg.volume ?? 0))));
+        if (Number.isFinite(volume) && volume > 0) {
+          this.volumePercent = volume;
+          this.lastAudibleVolumePercent = volume;
+          this.isMuted = false;
+          this.updateMuteIcon();
+        }
       }
     };
     window.addEventListener('message', this.boundMessageHandler);
@@ -633,10 +647,17 @@ export class LiveNewsPanel extends Panel {
   private syncMuteStateFromPlayer(): void {
     if (this.useDesktopEmbedProxy || !this.player || !this.isPlayerReady) return;
     const p = this.player as { getVolume?(): number; isMuted?(): boolean };
+    const volume = typeof p.getVolume === 'function'
+      ? Math.max(0, Math.min(100, Math.round(p.getVolume())))
+      : this.volumePercent;
     const muted = typeof p.isMuted === 'function'
       ? p.isMuted()
-      : (p.getVolume?.() === 0);
-    if (typeof muted === 'boolean' && muted !== this.isMuted) {
+      : (volume === 0);
+    if (volume > 0) {
+      this.volumePercent = volume;
+      this.lastAudibleVolumePercent = volume;
+    }
+    if (typeof muted === 'boolean') {
       this.isMuted = muted;
       this.updateMuteIcon();
     }
@@ -720,17 +741,56 @@ export class LiveNewsPanel extends Panel {
   }
 
   private createMuteButton(): void {
+    this.volumeControl = document.createElement('div');
+    this.volumeControl.className = 'live-volume-control';
+
     this.muteBtn = document.createElement('button');
     this.muteBtn.className = 'live-mute-btn';
-    this.muteBtn.title = 'Toggle sound';
+    this.muteBtn.type = 'button';
+    this.muteBtn.title = 'Toggle mute';
     this.updateMuteIcon();
     this.muteBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.toggleMute();
     });
+    this.muteBtn.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.adjustVolume(e.deltaY > 0 ? -10 : 10);
+    }, { passive: false });
+    this.muteBtn.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.setVolumePercent(0);
+    });
+    this.volumeControl.appendChild(this.muteBtn);
+
+    const popover = document.createElement('div');
+    popover.className = 'live-volume-popover';
+
+    this.volumeSlider = document.createElement('input');
+    this.volumeSlider.type = 'range';
+    this.volumeSlider.className = 'live-volume-slider';
+    this.volumeSlider.min = '0';
+    this.volumeSlider.max = '100';
+    this.volumeSlider.step = '1';
+    this.volumeSlider.value = String(this.getEffectiveVolumePercent());
+    this.volumeSlider.setAttribute('aria-label', 'Volume');
+    this.volumeSlider.addEventListener('input', (e) => {
+      const target = e.currentTarget as HTMLInputElement;
+      this.setVolumePercent(Number(target.value));
+    });
+    this.volumeSlider.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.adjustVolume(e.deltaY > 0 ? -5 : 5);
+    }, { passive: false });
+
+    popover.appendChild(this.volumeSlider);
+    this.volumeControl.appendChild(popover);
 
     const header = this.element.querySelector('.panel-header');
-    header?.appendChild(this.muteBtn);
+    header?.appendChild(this.volumeControl);
 
     this.createFullscreenButton();
   }
@@ -767,16 +827,47 @@ export class LiveNewsPanel extends Panel {
 
   private updateMuteIcon(): void {
     if (!this.muteBtn) return;
-    this.muteBtn.innerHTML = this.isMuted
-      ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>'
-      : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
-    this.muteBtn.classList.toggle('unmuted', !this.isMuted);
+    const effectiveVolume = this.getEffectiveVolumePercent();
+    if (effectiveVolume <= 0) {
+      this.muteBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+    } else if (effectiveVolume < 60) {
+      this.muteBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
+    } else {
+      this.muteBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+    }
+    this.muteBtn.classList.toggle('unmuted', effectiveVolume > 0);
+    this.muteBtn.title = effectiveVolume > 0 ? `Volume ${effectiveVolume}%` : 'Volume muted';
+    if (this.volumeSlider) this.volumeSlider.value = String(effectiveVolume);
+  }
+
+  private getEffectiveVolumePercent(): number {
+    return this.isMuted ? 0 : this.volumePercent;
+  }
+
+  private setVolumePercent(next: number): void {
+    const clamped = Math.max(0, Math.min(100, Math.round(next)));
+    if (clamped <= 0) {
+      this.isMuted = true;
+    } else {
+      this.isMuted = false;
+      this.volumePercent = clamped;
+      this.lastAudibleVolumePercent = clamped;
+    }
+    this.updateMuteIcon();
+    this.syncPlayerState();
+  }
+
+  private adjustVolume(delta: number): void {
+    const base = this.getEffectiveVolumePercent() > 0 ? this.getEffectiveVolumePercent() : this.lastAudibleVolumePercent;
+    this.setVolumePercent(base + delta);
   }
 
   private toggleMute(): void {
-    this.isMuted = !this.isMuted;
-    this.updateMuteIcon();
-    this.syncPlayerState();
+    if (this.getEffectiveVolumePercent() > 0) {
+      this.setVolumePercent(0);
+      return;
+    }
+    this.setVolumePercent(this.lastAudibleVolumePercent || 70);
   }
 
   private getChannelDisplayName(channel: LiveChannel): string {
@@ -1081,8 +1172,12 @@ export class LiveNewsPanel extends Panel {
   }
 
   private syncDesktopEmbedState(): void {
+    this.postToEmbed({
+      type: 'setVolume',
+      volume: this.getEffectiveVolumePercent() > 0 ? this.volumePercent : this.lastAudibleVolumePercent,
+    });
     this.postToEmbed({ type: this.isPlaying ? 'play' : 'pause' });
-    this.postToEmbed({ type: this.isMuted ? 'mute' : 'unmute' });
+    this.postToEmbed({ type: this.getEffectiveVolumePercent() > 0 ? 'unmute' : 'mute' });
   }
 
   private renderDesktopEmbed(force = false): void {
@@ -1125,7 +1220,7 @@ export class LiveNewsPanel extends Panel {
     const params = new URLSearchParams({
       videoId,
       autoplay: this.isPlaying ? '1' : '0',
-      mute: this.isMuted ? '1' : '0',
+      mute: this.getEffectiveVolumePercent() > 0 ? '0' : '1',
     });
     if (quality !== 'auto') params.set('vq', quality);
     const embedUrl = `http://localhost:${getLocalApiPort()}/api/youtube-embed?${params.toString()}`;
@@ -1164,7 +1259,8 @@ export class LiveNewsPanel extends Panel {
     video.className = 'live-news-native-video';
     video.src = hlsUrl;
     video.autoplay = this.isPlaying;
-    video.muted = this.isMuted;
+    video.muted = this.getEffectiveVolumePercent() <= 0;
+    video.volume = Math.max(0, Math.min(1, this.volumePercent / 100));
     video.playsInline = true;
     video.controls = true;
     video.setAttribute('referrerpolicy', 'no-referrer');
@@ -1188,11 +1284,14 @@ export class LiveNewsPanel extends Panel {
 
     video.addEventListener('volumechange', () => {
       if (!this.nativeVideoElement) return;
-      const muted = this.nativeVideoElement.muted || this.nativeVideoElement.volume === 0;
-      if (muted !== this.isMuted) {
-        this.isMuted = muted;
-        this.updateMuteIcon();
+      const volume = Math.round(this.nativeVideoElement.volume * 100);
+      const muted = this.nativeVideoElement.muted || volume === 0;
+      if (volume > 0) {
+        this.volumePercent = volume;
+        this.lastAudibleVolumePercent = volume;
       }
+      this.isMuted = muted;
+      this.updateMuteIcon();
     });
 
     video.addEventListener('pause', () => {
@@ -1218,7 +1317,7 @@ export class LiveNewsPanel extends Panel {
 
     // WKWebView blocks autoplay without user gesture. Force muted play, then restore.
     if (this.isPlaying) {
-      const wantUnmute = !this.isMuted;
+      const wantUnmute = this.getEffectiveVolumePercent() > 0;
       video.muted = true;
       video.play()?.then(() => {
         if (wantUnmute && this.nativeVideoElement === video) {
@@ -1230,7 +1329,8 @@ export class LiveNewsPanel extends Panel {
 
   private syncNativeVideoState(): void {
     if (!this.nativeVideoElement) return;
-    this.nativeVideoElement.muted = this.isMuted;
+    this.nativeVideoElement.volume = Math.max(0, Math.min(1, this.volumePercent / 100));
+    this.nativeVideoElement.muted = this.getEffectiveVolumePercent() <= 0;
     if (this.isPlaying) {
       this.nativeVideoElement.play()?.catch(() => {});
     } else {
@@ -1318,7 +1418,7 @@ export class LiveNewsPanel extends Panel {
       videoId: this.activeChannel.videoId,
       playerVars: {
         autoplay: this.isPlaying ? 1 : 0,
-        mute: this.isMuted ? 1 : 0,
+        mute: this.getEffectiveVolumePercent() > 0 ? 0 : 1,
         rel: 0,
         playsinline: 1,
         enablejsapi: 1,
@@ -1509,11 +1609,9 @@ export class LiveNewsPanel extends Panel {
       }
     }
 
-    if (this.isMuted) {
-      this.player.mute?.();
-    } else {
-      this.player.unMute?.();
-    }
+    this.player.setVolume?.(this.getEffectiveVolumePercent() > 0 ? this.volumePercent : this.lastAudibleVolumePercent);
+    if (this.getEffectiveVolumePercent() > 0) this.player.unMute?.();
+    else this.player.mute?.();
 
     if (this.isPlaying) {
       if (isNewVideo) {
@@ -1525,7 +1623,7 @@ export class LiveNewsPanel extends Panel {
             this.player.mute?.();
             this.player.playVideo?.();
             // Restore mute state after play starts
-            if (!this.isMuted) {
+            if (this.getEffectiveVolumePercent() > 0) {
               setTimeout(() => { this.player?.unMute?.(); }, 500);
             }
           }

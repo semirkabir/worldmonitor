@@ -56,6 +56,7 @@
   background: var(--surface);
   color: var(--text-dim);
   border-radius: 6px;
+  font-family: var(--font-mono);
   font-size: 14px;
   width: 32px;
   height: 32px;
@@ -120,7 +121,7 @@
 
 .country-deep-dive .panel-close {
   position: absolute;
-  top: 12px;
+  top: 20px;
   right: 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -128,6 +129,10 @@
   height: 32px;
   background: var(--surface);
   color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1;
   cursor: pointer;
   z-index: 4;
 }
@@ -150,7 +155,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
-  padding-right: 46px;
+  padding-right: 36px;
 }
 
 .cdp-header-left {
@@ -192,7 +197,11 @@
   background: var(--surface);
   color: var(--text-dim);
   border-radius: 6px;
+  font-family: var(--font-mono);
   font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   padding: 0 8px;
   height: 32px;
   cursor: pointer;

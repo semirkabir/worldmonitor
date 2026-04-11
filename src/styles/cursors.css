@@ -10,8 +10,23 @@
  */
 
 /* ── Default arrow ─────────────────────────────────────────── */
+:root {
+  --wm-cursor-default: url('/cursors/1-Normal-Select.cur.png?v=20260410a') 0 0, url('/cursors/1-Normal-Select.cur?v=20260410a'), default;
+  --wm-cursor-pointer: url('/cursors/15-Link-Select.cur?v=20260410a') 5 0, url('/cursors/15-Link-Select.cur.png?v=20260410a') 5 0, pointer;
+  --wm-cursor-text: url('/cursors/6-Text-Select.cur.png?v=20260410a') 13 12, url('/cursors/6-Text-Select.cur?v=20260410a'), text;
+  --wm-cursor-help: url('/cursors/2-Help-Select.cur.png?v=20260410a') 0 0, url('/cursors/2-Help-Select.cur?v=20260410a'), help;
+  --wm-cursor-unavailable: url('/cursors/8-Unavailable.ani?v=20260410a'), not-allowed;
+  --wm-cursor-busy: url('/cursors/4-Busy.ani?v=20260410a'), wait;
+  --wm-cursor-resize-v: url('/cursors/9-Vertical-Resize.cur.png?v=20260410a') 15 15, url('/cursors/9-Vertical-Resize.cur?v=20260410a'), ns-resize;
+  --wm-cursor-resize-h: url('/cursors/10-Horizontal-Resize.cur.png?v=20260410a') 15 15, url('/cursors/10-Horizontal-Resize.cur?v=20260410a'), ew-resize;
+  --wm-cursor-resize-nwse: url('/cursors/11-Diagonal-Resize-1.cur.png?v=20260410a') 15 15, url('/cursors/11-Diagonal-Resize-1.cur?v=20260410a'), nwse-resize;
+  --wm-cursor-resize-nesw: url('/cursors/12-Diagonal-Resize-2.cur.png?v=20260410a') 15 15, url('/cursors/12-Diagonal-Resize-2.cur?v=20260410a'), nesw-resize;
+  --wm-cursor-move: url('/cursors/13-Move.cur.png?v=20260410a') 15 15, url('/cursors/13-Move.cur?v=20260410a'), grab;
+  --wm-cursor-grabbing: url('/cursors/13-Move.cur.png?v=20260410a') 15 15, url('/cursors/13-Move.cur?v=20260410a'), grabbing;
+}
+
 html {
-  cursor: url('/cursors/1-Normal-Select.cur.png?v=20260410a') 0 0, url('/cursors/1-Normal-Select.cur?v=20260410a'), default;
+  cursor: var(--wm-cursor-default);
 }
 
 /* ── Pointer (links, buttons, all interactive controls) ────── */
@@ -64,7 +79,18 @@ input[type="submit"],
 input[type="reset"],
 input[type="checkbox"],
 input[type="radio"] {
-  cursor: url('/cursors/15-Link-Select.cur.png?v=20260410a') 5 0, url('/cursors/15-Link-Select.cur?v=20260410a'), pointer;
+  cursor: var(--wm-cursor-pointer) !important;
+}
+
+/* ── Help affordances ───────────────────────────────────────── */
+.panel-info-btn,
+.panel-info-btn:hover,
+.panel-info-btn:focus,
+.panel-info-wrapper:hover .panel-info-btn,
+.layer-help-btn,
+.layer-help-btn:hover,
+.layer-help-btn:focus {
+  cursor: var(--wm-cursor-help) !important;
 }
 
 /* ── Text / caret ──────────────────────────────────────────── */
@@ -80,7 +106,7 @@ input:not([type]),
 textarea,
 [contenteditable="true"],
 [contenteditable=""] {
-  cursor: url('/cursors/6-Text-Select.cur.png?v=20260410a') 13 12, url('/cursors/6-Text-Select.cur?v=20260410a'), text;
+  cursor: var(--wm-cursor-text);
 }
 
 /* ── Not-allowed / disabled ────────────────────────────────── */
@@ -90,14 +116,14 @@ textarea,
 button[disabled],
 input[disabled],
 select[disabled] {
-  cursor: url('/cursors/8-Unavailable.ani?v=20260410a'), not-allowed;
+  cursor: var(--wm-cursor-unavailable);
 }
 
 /* ── Resize handles ────────────────────────────────────────── */
-.resize-v { cursor: url('/cursors/9-Vertical-Resize.cur.png?v=20260410a') 15 15, url('/cursors/9-Vertical-Resize.cur?v=20260410a'), ns-resize; }
-.resize-h { cursor: url('/cursors/10-Horizontal-Resize.cur.png?v=20260410a') 15 15, url('/cursors/10-Horizontal-Resize.cur?v=20260410a'), ew-resize; }
-.resize-nwse { cursor: url('/cursors/11-Diagonal-Resize-1.cur.png?v=20260410a') 15 15, url('/cursors/11-Diagonal-Resize-1.cur?v=20260410a'), nwse-resize; }
-.resize-nesw { cursor: url('/cursors/12-Diagonal-Resize-2.cur.png?v=20260410a') 15 15, url('/cursors/12-Diagonal-Resize-2.cur?v=20260410a'), nesw-resize; }
+.resize-v { cursor: var(--wm-cursor-resize-v); }
+.resize-h { cursor: var(--wm-cursor-resize-h); }
+.resize-nwse { cursor: var(--wm-cursor-resize-nwse); }
+.resize-nesw { cursor: var(--wm-cursor-resize-nesw); }
 
 /* ── Default app surfaces ──────────────────────────────────── */
 .main-content,
@@ -105,7 +131,7 @@ select[disabled] {
 .bottom-grid,
 .panel,
 .panel-content {
-  cursor: url('/cursors/1-Normal-Select.cur.png?v=20260410a') 0 0, url('/cursors/1-Normal-Select.cur?v=20260410a'), default;
+  cursor: var(--wm-cursor-default);
 }
 
 /* ── Drag / move affordances ───────────────────────────────── */
@@ -119,7 +145,7 @@ select[disabled] {
 .maplibregl-canvas-container.maplibregl-interactive,
 .maplibregl-canvas-container.maplibregl-interactive canvas,
 #deckgl-overlay canvas {
-  cursor: url('/cursors/13-Move.cur.png?v=20260410a') 15 15, url('/cursors/13-Move.cur?v=20260410a'), grab !important;
+  cursor: var(--wm-cursor-move) !important;
 }
 
 .panel-header:active,
@@ -132,7 +158,7 @@ select[disabled] {
 .maplibregl-canvas-container.maplibregl-interactive:active,
 .maplibregl-canvas-container.maplibregl-interactive:active canvas,
 #deckgl-overlay canvas:active {
-  cursor: url('/cursors/13-Move.cur.png?v=20260410a') 15 15, url('/cursors/13-Move.cur.png?v=20260410a') 15 15, url('/cursors/13-Move.cur?v=20260410a'), grabbing !important;
+  cursor: var(--wm-cursor-grabbing) !important;
 }
 
 /* ── Explicit panel and map resize handles ─────────────────── */
@@ -142,18 +168,18 @@ select[disabled] {
 body.panel-resize-active .map-resize-handle,
 body.panel-resize-active .bottom-grid-resize-handle,
 body.panel-resize-active .panel-resize-handle {
-  cursor: url('/cursors/9-Vertical-Resize.cur.png?v=20260410a') 15 15, url('/cursors/9-Vertical-Resize.cur?v=20260410a'), ns-resize !important;
+  cursor: var(--wm-cursor-resize-v) !important;
 }
 
 .panel-col-resize-handle,
 body.panel-resize-active .panel-col-resize-handle,
 .main-content.layout-side .map-resize-handle {
-  cursor: url('/cursors/10-Horizontal-Resize.cur.png?v=20260410a') 15 15, url('/cursors/10-Horizontal-Resize.cur?v=20260410a'), ew-resize !important;
+  cursor: var(--wm-cursor-resize-h) !important;
 }
 
 .corner-resize-handle,
 .main-content.layout-side .corner-resize-handle {
-  cursor: url('/cursors/11-Diagonal-Resize-1.cur.png?v=20260410a') 15 15, url('/cursors/11-Diagonal-Resize-1.cur?v=20260410a'), nwse-resize !important;
+  cursor: var(--wm-cursor-resize-nwse) !important;
 }
 
 /* ── Restore map grab cursor ───────────────────────────────── */
@@ -162,19 +188,37 @@ body.panel-resize-active .panel-col-resize-handle,
    where our .btn / [role] selectors might match maplibre control buttons. */
 .maplibregl-canvas-container.maplibregl-interactive,
 .maplibregl-canvas-container.maplibregl-interactive canvas {
-  cursor: url('/cursors/13-Move.cur.png?v=20260410a') 15 15, url('/cursors/13-Move.cur?v=20260410a'), grab !important;
+  cursor: var(--wm-cursor-move) !important;
 }
 .maplibregl-canvas-container.maplibregl-interactive:active,
 .maplibregl-canvas-container.maplibregl-interactive:active canvas {
-  cursor: url('/cursors/13-Move.cur.png?v=20260410a') 15 15, url('/cursors/13-Move.cur?v=20260410a'), grabbing !important;
+  cursor: var(--wm-cursor-grabbing) !important;
 }
 
+html.forced-cursor-enabled,
+html.forced-cursor-enabled *,
 body.forced-cursor-enabled,
 body.forced-cursor-enabled * {
   cursor: none !important;
 }
 
 /* High-specificity map selectors need explicit overrides — they beat the wildcard above */
+html.forced-cursor-enabled .map-container,
+html.forced-cursor-enabled .map-container canvas,
+html.forced-cursor-enabled .map-container > div,
+html.forced-cursor-enabled .maplibregl-canvas-container.maplibregl-interactive,
+html.forced-cursor-enabled .maplibregl-canvas-container.maplibregl-interactive canvas,
+html.forced-cursor-enabled .maplibregl-canvas-container.maplibregl-interactive:active,
+html.forced-cursor-enabled .maplibregl-canvas-container.maplibregl-interactive:active canvas,
+html.forced-cursor-enabled #deckgl-overlay,
+html.forced-cursor-enabled #deckgl-overlay *,
+html.forced-cursor-enabled #deckgl-overlay canvas,
+html.forced-cursor-enabled #deckgl-overlay canvas:active,
+html.forced-cursor-enabled .globe-mode,
+html.forced-cursor-enabled .globe-mode *,
+html.forced-cursor-enabled .globe-mode canvas,
+html.forced-cursor-enabled .globe-mode [data-marker-id],
+html.forced-cursor-enabled .globe-mode [data-marker-id] *,
 body.forced-cursor-enabled .map-container,
 body.forced-cursor-enabled .map-container canvas,
 body.forced-cursor-enabled .map-container > div,
@@ -182,9 +226,26 @@ body.forced-cursor-enabled .maplibregl-canvas-container.maplibregl-interactive,
 body.forced-cursor-enabled .maplibregl-canvas-container.maplibregl-interactive canvas,
 body.forced-cursor-enabled .maplibregl-canvas-container.maplibregl-interactive:active,
 body.forced-cursor-enabled .maplibregl-canvas-container.maplibregl-interactive:active canvas,
+body.forced-cursor-enabled #deckgl-overlay,
+body.forced-cursor-enabled #deckgl-overlay *,
 body.forced-cursor-enabled #deckgl-overlay canvas,
-body.forced-cursor-enabled #deckgl-overlay canvas:active {
+body.forced-cursor-enabled #deckgl-overlay canvas:active,
+body.forced-cursor-enabled .globe-mode,
+body.forced-cursor-enabled .globe-mode *,
+body.forced-cursor-enabled .globe-mode canvas,
+body.forced-cursor-enabled .globe-mode [data-marker-id],
+body.forced-cursor-enabled .globe-mode [data-marker-id] * {
   cursor: none !important;
+}
+
+html.forced-cursor-enabled .live-news-player iframe,
+html.forced-cursor-enabled .live-news-embed-frame,
+html.forced-cursor-enabled .webcam-iframe,
+body.forced-cursor-enabled .live-news-player iframe,
+body.forced-cursor-enabled .live-news-embed-frame,
+body.forced-cursor-enabled .webcam-iframe {
+  cursor: none !important;
+  pointer-events: none !important;
 }
 
 .forced-cursor-overlay {

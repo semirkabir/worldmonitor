@@ -1,3 +1,5 @@
+import { getCursorCheckUrl, getCursorPreviewUrl } from '@/utils/forced-cursor';
+
 type CursorDiagnosticState = {
   enabled: boolean;
   cleanup: (() => void) | null;
@@ -11,11 +13,11 @@ const state: CursorDiagnosticState = {
 };
 
 const CURSOR_ASSETS = [
-  '/cursors/1-Normal-Select.cur?v=20260410a',
-  '/cursors/13-Move.cur?v=20260410a',
-  '/cursors/15-Link-Select.cur?v=20260410a',
-  '/cursors/9-Vertical-Resize.cur?v=20260410a',
-  '/cursors/10-Horizontal-Resize.cur?v=20260410a',
+  getCursorCheckUrl,
+  () => getCursorPreviewUrl('move'),
+  () => getCursorPreviewUrl('pointer'),
+  () => getCursorPreviewUrl('resize-v'),
+  () => getCursorPreviewUrl('resize-h'),
 ];
 
 function describeElement(el: Element | null): string {
@@ -62,7 +64,8 @@ function getStylesheetCursorRuleCount(): number {
 }
 
 async function checkCursorAssets(): Promise<void> {
-  const results = await Promise.all(CURSOR_ASSETS.map(async (asset) => {
+  const results = await Promise.all(CURSOR_ASSETS.map(async (resolveAsset) => {
+    const asset = resolveAsset();
     try {
       const response = await fetch(asset, { cache: 'no-store' });
       return { asset, ok: response.ok, status: response.status, type: response.headers.get('content-type') };

@@ -6,9 +6,6 @@
 import { detectMLCapabilities, type MLCapabilities } from './ml-capabilities';
 import { ML_THRESHOLDS, MODEL_CONFIGS } from '@/config/ml-config';
 
-// Import worker using Vite's worker syntax
-import MLWorkerClass from '@/workers/ml.worker?worker';
-
 interface PendingRequest<T> {
   resolve: (value: T) => void;
   reject: (error: Error) => void;
@@ -95,7 +92,7 @@ class MLWorkerManager {
       }, MLWorkerManager.READY_TIMEOUT_MS);
 
       try {
-        this.worker = new MLWorkerClass();
+        this.worker = new Worker(new URL('../workers/ml.worker.ts', import.meta.url), { type: 'module' });
       } catch (error) {
         console.error('[MLWorker] Failed to create worker:', error);
         this.cleanup();

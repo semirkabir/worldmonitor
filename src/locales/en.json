@@ -207,8 +207,8 @@
     "techMap": "Global Tech",
     "techHubs": "Hot Tech Hubs",
     "status": "System Status",
-    "insights": "AI Insights",
-    "strategicPosture": "AI Strategic Posture",
+    "insights": "AI Market Insights",
+    "strategicPosture": "Strategic Posture",
     "cii": "Country Instability",
     "strategicRisk": "Strategic Risk Overview",
     "intel": "Intel Feed",
@@ -236,7 +236,7 @@
     "ai": "AI/ML",
     "layoffs": "Layoffs Tracker",
     "monitors": "My Monitors",
-    "satelliteFires": "Fires",
+    "satelliteFires": "Fires & Operational Risk",
     "macroSignals": "Market Radar",
     "etfFlows": "BTC ETF Tracker",
     "stablecoins": "Stablecoins",
@@ -270,7 +270,7 @@
     "gccInvestments": "GCC Investments",
     "geoHubs": "Geopolitical Hubs",
     "liveWebcams": "Live Webcams",
-    "gulfEconomies": "Gulf Economies",
+    "gulfEconomies": "Gulf & OPEC Economies",
     "gulfIndices": "Gulf Indices",
     "gulfCurrencies": "Gulf Currencies",
     "gulfOil": "Gulf Oil",
@@ -308,13 +308,8 @@
     "miningCompanies": "Major Miners",
     "commodityNews": "Commodity News",
     "commodityRegulation": "Mining Policy & ESG",
-    "gulfEconomies": "Gulf & OPEC Economies",
-    "satelliteFires": "Fires & Operational Risk",
     "airlineIntel": "Airline Intelligence",
-    "liveWebcams": "Live Webcams",
-    "strategicPosture": "Strategic Posture",
-    "sanctions": "Sanctions Tracker",
-    "insights": "AI Market Insights"
+    "sanctions": "Sanctions Tracker"
   },
   "commands": {
     "prefixes": {
@@ -1536,12 +1531,6 @@
       "failedToLoad": "Failed to load article",
       "openOriginal": "Open original"
     },
-    "articleViewer": {
-      "back": "Back to news",
-      "cached": "Cached",
-      "failedToLoad": "Failed to load article",
-      "openOriginal": "Open original"
-    },
     "export": {
       "exportData": "Export Data"
     },
@@ -1689,12 +1678,6 @@
       "showMethodologyInfo": "Show methodology info",
       "dragToResize": "Drag to resize (double-click to reset)",
       "openSettings": "Open Settings"
-    },
-    "articleViewer": {
-      "back": "Back to news",
-      "cached": "Cached",
-      "failedToLoad": "Failed to load article",
-      "openOriginal": "Open original"
     },
     "languageSelector": {
       "selectLanguage": "Select Language",

@@ -46,6 +46,7 @@ import type { DisplacementFlow } from '@/services/displacement';
 import type { ClimateAnomaly } from '@/services/climate';
 import type { GpsJamHex } from '@/services/gps-interference';
 import { getCurrentTheme } from '@/utils';
+import { resolveInlineCursor } from '@/utils/forced-cursor';
 import { MapPopup } from './MapPopup';
 
 // ─── Marker discriminated union ─────────────────────────────────────────────
@@ -799,7 +800,7 @@ export class GlobeMap {
     const el = document.createElement('div');
     // padding expands the bounding-rect hit area (important for small 10px icons like techHQ);
     // globe.gl centers the element at the geographic point so padding keeps the icon centered.
-    el.style.cssText = 'pointer-events:auto !important;cursor:pointer;user-select:none;display:inline-flex;align-items:center;justify-content:center;z-index:1000;position:relative;padding:8px;';
+    el.style.cssText = `pointer-events:auto !important;cursor:${resolveInlineCursor('pointer')};user-select:none;display:inline-flex;align-items:center;justify-content:center;z-index:1000;position:relative;padding:8px;`;
     el.setAttribute('data-marker-id', d.id);
     // flash markers have no tooltip — exclude them from hover detection so they don't
     // block other markers that share a bounding-rect area.

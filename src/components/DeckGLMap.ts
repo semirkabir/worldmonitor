@@ -58,6 +58,7 @@ import { t } from '@/services/i18n';
 import { debounce, rafSchedule, getCurrentTheme } from '@/utils/index';
 import { showLayerWarning } from '@/utils/layer-warning';
 import { localizeMapLabels } from '@/utils/map-locale';
+import { resolveInlineCursor } from '@/utils/forced-cursor';
 import {
   INTEL_HOTSPOTS,
   CONFLICT_ZONES,
@@ -1421,19 +1422,12 @@ export class DeckGLMap {
     }
 
 
-    // Military bases layer — clusters at low zoom, individual markers at high zoom
-    const basesZoom = this.maplibreMap?.getZoom() || 2;
+    // Military bases layer — always render individual markers
     const basesData = this.getBasesData();
-    console.log('[DeckGLMap] bases check: enabled=', mapLayers.bases, 'visible=', this.isLayerVisible('bases'), 'zoom=', basesZoom, 'dataCount=', basesData.length);
+    console.log('[DeckGLMap] bases check: enabled=', mapLayers.bases, 'visible=', this.isLayerVisible('bases'), 'dataCount=', basesData.length);
     if (mapLayers.bases && this.isLayerVisible('bases')) {
-      if (basesZoom >= 5) {
-        layers.push(this.createBasesLayer());
-        console.log('[DeckGLMap] bases individual layer created:', basesData.length, 'bases');
-      } else {
-        const clusterLayers = this.createBasesClusterLayer();
-        layers.push(...clusterLayers);
-        console.log('[DeckGLMap] bases cluster layer created:', clusterLayers.length, 'sub-layers');
-      }
+      layers.push(this.createBasesLayer());
+      console.log('[DeckGLMap] bases individual layer created:', basesData.length, 'bases');
     }
     layers.push(this.createEmptyGhost('bases-layer'));
 
@@ -1888,20 +1882,6 @@ export class DeckGLMap {
     return this.serverBasesLoaded && this.serverBases.length > 0
       ? this.serverBases
       : MILITARY_BASES as MilitaryBaseEnriched[];
-  }
-
-  // @ts-expect-error kept for potential future use
-  private _getBaseColor(type: string, a: number): [number, number, number, number] {
-    switch (type) {
-      case 'us-nato': return [68, 136, 255, a];
-      case 'russia': return [255, 68, 68, a];
-      case 'china': return [255, 136, 68, a];
-      case 'uk': return [68, 170, 255, a];
-      case 'france': return [0, 85, 164, a];
-      case 'india': return [255, 153, 51, a];
-      case 'japan': return [188, 0, 45, a];
-      default: return [136, 136, 136, a];
-    }
   }
 
   private createBasesLayer(): IconLayer {
@@ -3492,12 +3472,13 @@ export class DeckGLMap {
           return { html: `<div class="deckgl-tooltip"><strong>${text(dc?.name || '')}</strong><br/>${text(dc?.owner || '')}</div>` };
         }
         return { html: `<div class="deckgl-tooltip"><strong>${t('components.deckgl.tooltip.dataCentersCount', { count: String(obj.count) })}</strong><br/>${text(obj.country)}</div>` };
-      case 'bases-layer':
-        return { html: `<div class="deckgl-tooltip"><strong>${text(obj.name)}</strong><br/>${text(obj.country)}${obj.kind ? ` · ${text(obj.kind)}` : ''}</div>` };
+      case 'bases-layer': {
+        const flag = countryToFlagEmoji(obj.country || '');
+        const location = [flag, text(obj.country)].filter(Boolean).join(' ');
+        return { html: `<div class="deckgl-tooltip"><strong>${text(obj.name)}</strong><br/>${location}${obj.kind ? ` · ${text(obj.kind)}` : ''}</div>` };
+      }
       case 'bases-cluster-layer':
         return { html: `<div class="deckgl-tooltip"><strong>${obj.count} bases</strong></div>` };
-      case 'bases-cluster-singles-layer':
-        return { html: `<div class="deckgl-tooltip"><strong>${text(obj.baseName || obj.name || 'Military Base')}</strong><br/>${text(obj.baseCountry || obj.country || '')}</div>` };
       case 'bases-cluster-singles-layer':
         return { html: `<div class="deckgl-tooltip"><strong>${text(obj.baseName || obj.name || 'Military Base')}</strong><br/>${text(obj.baseCountry || obj.country || '')}</div>` };
       case 'nuclear-layer':
@@ -4417,6 +4398,30 @@ export class DeckGLMap {
       e.stopPropagation();
       this.showLayerHelp();
     });
+    let helpCloseTimeout: number | null = null;
+    const cancelHelpClose = () => {
+      if (helpCloseTimeout !== null) {
+        window.clearTimeout(helpCloseTimeout);
+        helpCloseTimeout = null;
+      }
+    };
+    const queueHelpClose = () => {
+      cancelHelpClose();
+      helpCloseTimeout = window.setTimeout(() => this.hideLayerHelp(), 120);
+    };
+    layersHelpBtn.addEventListener('mouseenter', () => {
+      cancelHelpClose();
+      this.showLayerHelp();
+      const popup = this.container.querySelector('.layer-help-popup');
+      if (popup && !popup.hasAttribute('data-hover-bound')) {
+        popup.setAttribute('data-hover-bound', 'true');
+        popup.addEventListener('mouseenter', cancelHelpClose);
+        popup.addEventListener('mouseleave', queueHelpClose);
+      }
+    });
+    layersHelpBtn.addEventListener('mouseleave', queueHelpClose);
+    layersHelpBtn.addEventListener('focus', () => this.showLayerHelp());
+    layersHelpBtn.addEventListener('blur', queueHelpClose);
 
     layersRow.appendChild(layersToggleBtn);
     layersRow.appendChild(layersClearBtn);
@@ -4875,7 +4880,6 @@ export class DeckGLMap {
   private showLayerHelp(): void {
     const existing = this.container.querySelector('.layer-help-popup');
     if (existing) {
-      existing.remove();
       return;
     }
 
@@ -5108,6 +5112,10 @@ export class DeckGLMap {
     }, 100);
 
     this.container.appendChild(popup);
+  }
+
+  private hideLayerHelp(): void {
+    this.container.querySelector('.layer-help-popup')?.remove();
   }
 
   private createLegend(): void {
@@ -6347,11 +6355,11 @@ export class DeckGLMap {
         if (name && name !== hoveredName) {
           hoveredName = name;
           map.setFilter('country-hover-fill', ['==', ['get', 'name'], name]);
-          map.getCanvas().style.cursor = 'pointer';
+          map.getCanvas().style.cursor = resolveInlineCursor('pointer');
         } else if (!name && hoveredName) {
           hoveredName = null;
           map.setFilter('country-hover-fill', ['==', ['get', 'name'], '']);
-          map.getCanvas().style.cursor = '';
+          map.getCanvas().style.cursor = resolveInlineCursor('');
         }
       } catch { /* style not done loading during theme switch */ }
     });
@@ -6362,7 +6370,7 @@ export class DeckGLMap {
         try {
           map.setFilter('country-hover-fill', ['==', ['get', 'name'], '']);
         } catch { /* style not done loading */ }
-        map.getCanvas().style.cursor = '';
+        map.getCanvas().style.cursor = resolveInlineCursor('');
       }
     });
 
@@ -6695,7 +6703,7 @@ export class DeckGLMap {
           const items = def.items;
           const onMouseMove = (e: maplibregl.MapLayerMouseEvent) => {
             if (!this.maplibreMap) return;
-            this.maplibreMap.getCanvas().style.cursor = 'pointer';
+            this.maplibreMap.getCanvas().style.cursor = resolveInlineCursor('pointer');
             const feat = e.features?.[0];
             if (!feat) return;
             const idx = feat.properties?._idx as number;
@@ -6709,7 +6717,7 @@ export class DeckGLMap {
             }
           };
           const onMouseLeave = () => {
-            if (this.maplibreMap) this.maplibreMap.getCanvas().style.cursor = '';
+            if (this.maplibreMap) this.maplibreMap.getCanvas().style.cursor = resolveInlineCursor('');
             this.popup.hide();
           };
           this.maplibreMap.on('mousemove', lyrId, onMouseMove);
