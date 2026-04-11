@@ -396,6 +396,8 @@ export interface MacroEconomicCard {
   year: string;
   trend: 'up' | 'down' | 'flat';
   available: boolean;
+  /** Source-specific unavailability reason. */
+  reason?: string;
 }
 
 export async function fetchCountryMacroData(countryCode: string): Promise<MacroEconomicCard[]> {
@@ -433,7 +435,7 @@ export async function fetchCountryMacroData(countryCode: string): Promise<MacroE
       } catch {
         // fall through
       }
-      return { key, label, value: '—', year: '', trend: 'flat' as const, available: false };
+      return { key, label, value: '—', year: '', trend: 'flat' as const, available: false, reason: 'No World Bank data for this country' };
     }),
   );
 
@@ -441,8 +443,8 @@ export async function fetchCountryMacroData(countryCode: string): Promise<MacroE
     if (r.status === 'fulfilled') cards.push(r.value);
   }
 
-  // CDS spreads — not available from World Bank, use placeholder
-  cards.push({ key: 'cdsSpreads', label: 'CDS Spreads', value: '—', year: '', trend: 'flat', available: false });
+  // CDS spreads — not sourced from World Bank or any currently integrated provider
+  cards.push({ key: 'cdsSpreads', label: 'CDS Spreads', value: '—', year: '', trend: 'flat', available: false, reason: 'No CDS data source configured' });
 
   // Sort to match the desired order
   const order = ['debtToGdp', 'cpi', 'gdpGrowth', 'cdsSpreads', 'fxReserves', 'currentAccount'];

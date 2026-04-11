@@ -2,6 +2,7 @@ import type { AppContext, AppModule, CountryBriefSignals } from '@/app/app-conte
 import type { TimelineEvent } from '@/components/CountryTimeline';
 import { CountryTimeline } from '@/components/CountryTimeline';
 import type {
+  CardAvailability,
   CountryDeepDiveEconomicIndicator,
   CountryDeepDiveMilitarySummary,
   CountryDeepDiveSignalDetails,
@@ -18,7 +19,7 @@ import {
   iso3ToIso2Code,
   nameToCountryCode,
 } from '@/services/country-geometry';
-import { getCountryData, TIER1_COUNTRIES, type CountryScore } from '@/services/country-instability';
+import { getCountryData, TIER1_COUNTRIES, hasIntelligenceSignalsLoaded, type CountryScore } from '@/services/country-instability';
 import { getPreferredCountryScore } from '@/services/cached-risk-scores';
 import { signalAggregator } from '@/services/signal-aggregator';
 import { supplementalBus } from '@/services/supplemental-signal-bus';
@@ -152,6 +153,13 @@ export class CountryIntelManager implements AppModule {
         }
       });
     }
+
+    // Surface CII availability reason immediately after skeleton renders
+    const ciiAvailability = this.buildCiiAvailability(code, score);
+    if (!ciiAvailability.available) {
+      this.ctx.countryBriefPage.updateScore?.(score, signals, ciiAvailability);
+    }
+
     this.ctx.countryBriefPage.updateSignalDetails?.(this.buildSignalDetails(code));
     this.ctx.countryBriefPage.updateMilitaryActivity?.(this.buildMilitarySummary(code, country));
     this.ctx.countryBriefPage.updateEconomicIndicators?.(this.buildEconomicIndicators(code, score, null));
@@ -183,29 +191,22 @@ export class CountryIntelManager implements AppModule {
 
     fetchCountryMarkets(country)
       .then((markets) => {
-        if (this.ctx.countryBriefPage?.getCode() === code) this.ctx.countryBriefPage.updateMarkets(markets);
+        if (this.ctx.countryBriefPage?.getCode() !== code) return;
+        const availability: CardAvailability = markets.length > 0
+          ? { available: true, source: 'Prediction Markets', updatedAt: new Date() }
+          : { available: false, reason: 'No active prediction markets for this country.', source: 'Prediction Markets' };
+        this.ctx.countryBriefPage.updateMarkets(markets, availability);
       })
       .catch(() => {
-        if (this.ctx.countryBriefPage?.getCode() === code) this.ctx.countryBriefPage.updateMarkets([]);
+        if (this.ctx.countryBriefPage?.getCode() !== code) return;
+        this.ctx.countryBriefPage.updateMarkets([], {
+          available: false,
+          reason: 'Prediction market source unavailable.',
+          source: 'Prediction Markets',
+        });
       });
 
-    const searchTerms = CountryIntelManager.getCountrySearchTerms(country, code);
-    const otherCountryTerms = CountryIntelManager.getOtherCountryTerms(code);
-    const matchingNews = this.ctx.allNews.filter((n) => {
-      const t = n.title.toLowerCase();
-      return searchTerms.some((term) => t.includes(term));
-    });
-    const filteredNews = matchingNews.filter((n) => {
-      const t = n.title.toLowerCase();
-      const ourPos = CountryIntelManager.firstMentionPosition(t, searchTerms);
-      const otherPos = CountryIntelManager.firstMentionPosition(t, otherCountryTerms);
-      return ourPos !== Infinity && (otherPos === Infinity || ourPos <= otherPos);
-    }).sort((a, b) => {
-      const severityDelta = this.newsSeverityRank(b) - this.newsSeverityRank(a);
-      if (severityDelta !== 0) return severityDelta;
-      return new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime();
-    });
-    this.ctx.countryBriefPage.updateNews(filteredNews.slice(0, 15));
+    this.refreshNewsForPanel(code, country);
 
     this.ctx.countryBriefPage.updateInfrastructure(code);
 
@@ -241,7 +242,8 @@ export class CountryIntelManager implements AppModule {
         }
       }
 
-      const headlines = filteredNews.slice(0, 15).map((n) => n.title);
+      const { items: filteredNewsForBrief } = this.getFilteredNewsForCountry(code, country);
+      const headlines = filteredNewsForBrief.slice(0, 15).map((n) => n.title);
       if (headlines.length) context.headlines = headlines;
       const briefHeadlines = (context.headlines as string[] | undefined) || [];
 
@@ -333,10 +335,13 @@ export class CountryIntelManager implements AppModule {
     const name = TIER1_COUNTRIES[code] ?? CountryIntelManager.resolveCountryName(code);
     const score = getPreferredCountryScore(code);
     const signals = this.getCountrySignals(code, name);
-    page.updateScore?.(score, signals);
+    const ciiAvailability = this.buildCiiAvailability(code, score);
+    page.updateScore?.(score, signals, ciiAvailability.available ? undefined : ciiAvailability);
     page.updateSignalDetails?.(this.buildSignalDetails(code));
     page.updateMilitaryActivity?.(this.buildMilitarySummary(code, name));
     this.mountCountryTimeline(code, name);
+    this.refreshNewsForPanel(code, name);
+    this.refreshEconomicForPanel(code, score);
     console.debug('[CountryBrief] Refreshed open brief', {
       code,
       score: score?.score ?? null,
@@ -428,12 +433,11 @@ export class CountryIntelManager implements AppModule {
     const events: TimelineEvent[] = [];
     const countryLower = country.toLowerCase();
     const hasGeoShape = hasCountryGeometry(code) || !!CountryIntelManager.COUNTRY_BOUNDS[code];
-    const inCountry = (lat: number, lon: number) => hasGeoShape && this.isInCountry(lat, lon, code);
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
     if (this.ctx.intelligenceCache.protests?.events) {
       for (const e of this.ctx.intelligenceCache.protests.events) {
-        if (e.country?.toLowerCase() === countryLower || inCountry(e.lat, e.lon)) {
+        if (this.matchesCountry({ country: e.country, lat: e.lat, lon: e.lon }, code, countryLower, hasGeoShape)) {
           events.push({
             timestamp: new Date(e.time).getTime(),
             lane: 'protest',
@@ -446,7 +450,12 @@ export class CountryIntelManager implements AppModule {
 
     if (this.ctx.intelligenceCache.earthquakes) {
       for (const eq of this.ctx.intelligenceCache.earthquakes) {
-        if (inCountry(eq.location?.latitude ?? 0, eq.location?.longitude ?? 0) || eq.place?.toLowerCase().includes(countryLower)) {
+        const lat = eq.location?.latitude ?? 0;
+        const lon = eq.location?.longitude ?? 0;
+        const match = hasGeoShape
+          ? this.isInCountry(lat, lon, code)
+          : (eq.place?.toLowerCase().includes(countryLower) ?? false);
+        if (match) {
           events.push({
             timestamp: eq.occurredAt,
             lane: 'natural',
@@ -553,7 +562,7 @@ export class CountryIntelManager implements AppModule {
     let protests = 0;
     if (this.ctx.intelligenceCache.protests?.events) {
       protests = this.ctx.intelligenceCache.protests.events.filter((e) =>
-        e.country?.toLowerCase() === countryLower || (hasGeoShape && this.isInCountry(e.lat, e.lon, code))
+        this.matchesCountry({ country: e.country, lat: e.lat, lon: e.lon }, code, countryLower, hasGeoShape)
       ).length;
     }
 
@@ -571,15 +580,17 @@ export class CountryIntelManager implements AppModule {
     let outages = 0;
     if (this.ctx.intelligenceCache.outages) {
       outages = this.ctx.intelligenceCache.outages.filter((o) =>
-        o.country?.toLowerCase() === countryLower || (hasGeoShape && this.isInCountry(o.lat, o.lon, code))
+        this.matchesCountry({ country: o.country, lat: o.lat, lon: o.lon }, code, countryLower, hasGeoShape)
       ).length;
     }
 
     let earthquakes = 0;
     if (this.ctx.intelligenceCache.earthquakes) {
       earthquakes = this.ctx.intelligenceCache.earthquakes.filter((eq) => {
-        if (hasGeoShape) return this.isInCountry(eq.location?.latitude ?? 0, eq.location?.longitude ?? 0, code);
-        return eq.place?.toLowerCase().includes(countryLower);
+        const lat = eq.location?.latitude ?? 0;
+        const lon = eq.location?.longitude ?? 0;
+        if (hasGeoShape) return this.isInCountry(lat, lon, code);
+        return eq.place?.toLowerCase().includes(countryLower) ?? false;
       }).length;
     }
 
@@ -589,7 +600,7 @@ export class CountryIntelManager implements AppModule {
     if (this.ctx.intelligenceCache.flightDelays) {
       aviationDisruptions = this.ctx.intelligenceCache.flightDelays.filter(d =>
         (d.severity === 'major' || d.severity === 'severe' || d.delayType === 'closure') &&
-        (hasGeoShape ? this.isInCountry(d.lat, d.lon, code) : d.country?.toLowerCase() === countryLower)
+        this.matchesCountry({ country: d.country, lat: d.lat, lon: d.lon }, code, countryLower, hasGeoShape)
       ).length;
     }
 
@@ -607,6 +618,7 @@ export class CountryIntelManager implements AppModule {
     let travelAdvisoryMaxLevel: string | null = null;
     const advisoryLevelRank: Record<string, number> = { 'do-not-travel': 4, 'reconsider': 3, 'caution': 2, 'normal': 1, 'info': 0 };
     if (this.ctx.intelligenceCache.advisories) {
+      // Advisories use ISO-2 code directly — no geometry needed
       const countryAdvisories = this.ctx.intelligenceCache.advisories.filter(a => a.country === code);
       travelAdvisories = countryAdvisories.length;
       for (const a of countryAdvisories) {
@@ -620,7 +632,7 @@ export class CountryIntelManager implements AppModule {
     if (this.ctx.cyberThreatsCache) {
       cyberThreats = this.ctx.cyberThreatsCache.filter((threat) => {
         if (threat.country && threat.country.length === 2) return threat.country.toUpperCase() === code;
-        return hasGeoShape && this.isInCountry(threat.lat, threat.lon, code);
+        return this.matchesCountry({ lat: threat.lat, lon: threat.lon }, code, countryLower, hasGeoShape);
       }).length;
     }
 
@@ -647,6 +659,62 @@ export class CountryIntelManager implements AppModule {
       gpsJammingHexes: (ciiData?.gpsJammingHighCount ?? 0) + (ciiData?.gpsJammingMediumCount ?? 0),
       isTier1,
     };
+  }
+
+  /**
+   * Returns news items directly attributed to this country, plus a flag for whether
+   * any direct coverage was found. "Direct" means the country's search terms appear
+   * first (before other countries' terms) in the headline.
+   */
+  getFilteredNewsForCountry(code: string, country: string): { items: NewsItem[]; hasDirectCoverage: boolean } {
+    const searchTerms = CountryIntelManager.getCountrySearchTerms(country, code);
+    if (searchTerms.length === 0) return { items: [], hasDirectCoverage: false };
+
+    const otherCountryTerms = CountryIntelManager.getOtherCountryTerms(code);
+
+    const directItems = this.ctx.allNews
+      .filter((n) => {
+        const titleLower = n.title.toLowerCase();
+        if (!searchTerms.some((term) => titleLower.includes(term))) return false;
+        const ourPos = CountryIntelManager.firstMentionPosition(titleLower, searchTerms);
+        const otherPos = CountryIntelManager.firstMentionPosition(titleLower, otherCountryTerms);
+        // Only count as direct coverage if our terms appear before other countries' terms
+        return ourPos !== Infinity && (otherPos === Infinity || ourPos <= otherPos);
+      })
+      .sort((a, b) => {
+        const severityDelta = this.newsSeverityRank(b) - this.newsSeverityRank(a);
+        if (severityDelta !== 0) return severityDelta;
+        return new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime();
+      });
+
+    return { items: directItems.slice(0, 15), hasDirectCoverage: directItems.length > 0 };
+  }
+
+  /** Push filtered news to the open panel, including availability metadata. */
+  private refreshNewsForPanel(code: string, country: string): void {
+    const page = this.ctx.countryBriefPage;
+    if (!page) return;
+    const { items, hasDirectCoverage } = this.getFilteredNewsForCountry(code, country);
+    const availability: import('@/components/CountryBriefPanel').CardAvailability = hasDirectCoverage
+      ? { available: true, source: 'News feeds', updatedAt: new Date() }
+      : {
+          available: false,
+          reason: 'No direct country-specific coverage found in current feeds.',
+          source: 'News feeds',
+          updatedAt: new Date(),
+        };
+    page.updateNews(items, availability);
+  }
+
+  /** Re-fetch economic indicators for the open panel (used during refresh). */
+  private refreshEconomicForPanel(code: string, score: ReturnType<typeof getPreferredCountryScore>): void {
+    const page = this.ctx.countryBriefPage;
+    if (!page) return;
+    page.updateEconomicIndicators?.(this.buildEconomicIndicators(code, score, null));
+    fetchCountryMacroData(code).then((cards) => {
+      if (page.getCode() !== code) return;
+      page.updateMacroCards?.(cards);
+    });
   }
 
   private newsSeverityRank(item: NewsItem): number {
@@ -735,6 +803,32 @@ export class CountryIntelManager implements AppModule {
       nearestBases: nearbyBases,
       foreignPresence: foreignFlights > 0 || foreignVessels > 0 || hostedForeignBases.length > 0,
     };
+  }
+
+  private buildCiiAvailability(code: string, score: CountryScore | null): CardAvailability {
+    if (score !== null) return { available: true, source: 'CII', updatedAt: score.lastUpdated ? new Date(score.lastUpdated) : new Date() };
+
+    if (!hasIntelligenceSignalsLoaded()) {
+      return { available: false, reason: 'Intelligence feeds still loading…', source: 'CII' };
+    }
+
+    const ciiData = getCountryData(code);
+    const hasDirectSignals = ciiData != null && (
+      (ciiData.conflicts?.length ?? 0) > 0 ||
+      (ciiData.displacementOutflow ?? 0) > 0 ||
+      (ciiData.climateStress ?? 0) > 0
+    );
+    const hasTier1Baseline = !!TIER1_COUNTRIES[code];
+
+    if (!hasDirectSignals && !hasTier1Baseline) {
+      return {
+        available: false,
+        reason: 'No direct signal coverage for this country. Curated baseline unavailable.',
+        source: 'CII',
+      };
+    }
+
+    return { available: false, reason: t('countryBrief.ciiUnavailable'), source: 'CII' };
   }
 
   private buildEconomicIndicators(
@@ -880,6 +974,32 @@ export class CountryIntelManager implements AppModule {
     const b = CountryIntelManager.COUNTRY_BOUNDS[code];
     if (!b) return false;
     return lat >= b.s && lat <= b.n && lon >= b.w && lon <= b.e;
+  }
+
+  /**
+   * Canonical country matcher used for all feed-item attribution.
+   * Checks ISO code, normalized country name, and geometry hit (polygon + bounds).
+   * Use this instead of ad-hoc checks scattered across signal counting and timeline
+   * so every feed applies the same resolution logic.
+   */
+  matchesCountry(
+    item: { country?: string; lat?: number; lon?: number },
+    code: string,
+    countryLower: string,
+    hasGeoShape: boolean,
+  ): boolean {
+    if (item.country) {
+      const raw = item.country.toLowerCase().trim();
+      if (raw === countryLower) return true;
+      // ISO-2 match
+      if (item.country.length === 2 && item.country.toUpperCase() === code) return true;
+      // Name-to-code match
+      if (nameToCountryCode(raw) === code) return true;
+    }
+    if (hasGeoShape && item.lat != null && item.lon != null) {
+      return this.isInCountry(item.lat, item.lon, code);
+    }
+    return false;
   }
 
   static COUNTRY_BOUNDS: Record<string, { n: number; s: number; e: number; w: number }> = {

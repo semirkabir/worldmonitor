@@ -1200,6 +1200,8 @@ export class DataLoaderManager implements AppModule {
       ingestEarthquakes(earthquakeResult.value);
       this.ctx.statusPanel?.updateApi('USGS', { status: 'ok' });
       dataFreshness.recordUpdate('usgs', earthquakeResult.value.length);
+      // Refresh open panel so earthquake counts/timeline reflect new data
+      this.refreshCiiAndBrief();
     } else {
       this.ctx.intelligenceCache.earthquakes = [];
       this.ctx.map?.setEarthquakes([]);
@@ -2649,6 +2651,8 @@ export class DataLoaderManager implements AppModule {
         this.callPanel('security-advisories', 'setData', result.advisories);
         this.ctx.intelligenceCache.advisories = result.advisories;
         ingestAdvisoriesForCII(result.advisories);
+        // Refresh open panel so travel advisory counts and signals stay current
+        this.refreshCiiAndBrief();
       }
     } catch (error) {
       console.error('[App] Security advisories fetch failed:', error);
