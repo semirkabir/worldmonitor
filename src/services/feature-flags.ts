@@ -5,13 +5,10 @@
  * The tier is stored in Convex and Redis (user:{uid}:tier).
  */
 
-import { isLoggedIn, getUserId } from './user-auth';
-import { getIdToken } from './firebase-auth';
+import { isLoggedIn, getCurrentAuthState } from './user-auth';
 
 export type FeatureTier = 'free' | 'pro' | 'business' | 'enterprise';
 export type LegacyTier = FeatureTier | 'logged_in' | 'premium';
-
-const TIER_ORDER: Record<string, number> = { free: 0, logged_in: 1, pro: 1, business: 2, enterprise: 3, premium: 2 };
 
 export interface Feature {
   key: string;
@@ -41,6 +38,11 @@ export async function getUserTier(): Promise<FeatureTier> {
   // For now, default to 'free' until we have the Convex query wired up.
   // TODO: Query Convex or Redis to get the actual stored tier.
   return 'free';
+}
+
+export function hasPaidSubscription(): boolean {
+  const { tier } = getCurrentAuthState();
+  return tier === 'pro' || tier === 'business' || tier === 'enterprise';
 }
 
 export function canAccessFeature(featureKey: string): boolean {

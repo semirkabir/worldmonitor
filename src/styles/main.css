@@ -5244,6 +5244,25 @@ body.playback-mode .status-dot {
   font-weight: bold;
 }
 
+.time-btn.time-btn-pro {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  border-color: rgba(212, 168, 67, 0.72);
+  color: var(--text-dim);
+  box-shadow: inset 0 0 0 1px rgba(212, 168, 67, 0.14);
+}
+
+.time-btn.time-btn-pro::after {
+  content: none;
+}
+
+.time-btn.time-btn-pro:hover {
+  background: #fff;
+  border-color: #d4a843;
+  color: var(--text-dim);
+}
+
 .layer-toggles:not(.deckgl-layer-toggles) {
   position: absolute;
   bottom: 10px;
@@ -16388,6 +16407,19 @@ button.cluster-flight-item:focus-visible {
   border-color: var(--green);
   color: var(--bg);
   font-weight: bold;
+}
+
+.deckgl-time-slider .time-btn.time-btn-pro {
+  background: #fff;
+  border-color: rgba(212, 168, 67, 0.72);
+  color: var(--text-dim);
+  box-shadow: inset 0 0 0 1px rgba(212, 168, 67, 0.14);
+}
+
+.deckgl-time-slider .time-btn.time-btn-pro:hover {
+  background: #fff;
+  border-color: #d4a843;
+  color: var(--text-dim);
 }
 
 /* Layers row — flex row with toggle btn + help btn */

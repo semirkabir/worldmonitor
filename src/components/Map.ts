@@ -59,6 +59,7 @@ import { getAlertsNearLocation } from '@/services/geo-convergence';
 import { getCountryAtCoordinates, getCountryBbox } from '@/services/country-geometry';
 import type { CountryClickPayload } from './DeckGLMap';
 import { t } from '@/services/i18n';
+import { hasPaidSubscription } from '@/services/feature-flags';
 import { LAYER_REGISTRY, resolveLayerAccentColor, resolveLayerIcon, resolveLayerLabel, type MapVariant } from '@/config/map-layer-definitions';
 import { getTrayOpenPreference, setTrayOpenPreference } from '@/app/ui-preferences';
 
@@ -67,6 +68,23 @@ export type MapView = 'global' | 'america' | 'mena' | 'eu' | 'asia' | 'latam' | 
 
 const AIRPORT_MARKER_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M3 19h18v2H3z"/><path d="M6 17V9l6-4 6 4v8h-3v-4h-6v4z"/><rect x="10" y="10" width="4" height="3" rx="0.6"/></svg>';
 const AIRCRAFT_MARKER_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M2 12.2 3.2 10.8l7.6.4 5.2-6.2c.5-.6 1.4-.7 2-.2.5.4.7 1 .5 1.6l-2.1 5 4.4.2 1.4-1.5 1 .8-1 1.5 1 1.5-1 .8-1.4-1.5-4.4.2 2.1 5c.2.6 0 1.3-.5 1.6-.6.4-1.5.3-2-.2l-5.2-6.2-7.6.4z"/></svg>';
+
+function showPaidTimeRangeNotice(): void {
+  document.querySelector('.toast-notification')?.remove();
+  const el = document.createElement('div');
+  el.className = 'toast-notification';
+  el.textContent = 'All time is available for Pro users.';
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('visible'));
+  setTimeout(() => {
+    el.classList.remove('visible');
+    setTimeout(() => el.remove(), 300);
+  }, 3000);
+}
+
+function normalizeTimeRange(range: TimeRange): TimeRange {
+  return range === 'all' && !hasPaidSubscription() ? '7d' : range;
+}
 
 interface MapState {
   zoom: number;
@@ -178,7 +196,7 @@ export class MapComponent {
 
   constructor(container: HTMLElement, initialState: MapState) {
     this.container = container;
-    this.state = initialState;
+    this.state = { ...initialState, timeRange: normalizeTimeRange(initialState.timeRange) };
     this.hotspots = [...INTEL_HOTSPOTS];
 
     this.wrapper = document.createElement('div');
@@ -314,6 +332,7 @@ export class MapComponent {
       { value: '7d', label: '7D' },
       { value: 'all', label: 'ALL' },
     ];
+    const hasPaidAccess = hasPaidSubscription();
 
     slider.innerHTML = `
       <span class="time-slider-label">TIME RANGE</span>
@@ -321,7 +340,7 @@ export class MapComponent {
         ${ranges
         .map(
           (r) =>
-            `<button class="time-btn ${this.state.timeRange === r.value ? 'active' : ''}" data-range="${r.value}">${r.label}</button>`
+            `<button class="time-btn ${this.state.timeRange === r.value ? 'active' : ''} ${r.value === 'all' && !hasPaidAccess ? 'time-btn-pro' : ''}" data-range="${r.value}">${r.label}</button>`
         )
         .join('')}
       </div>
@@ -331,6 +350,10 @@ export class MapComponent {
       const target = e.target as HTMLElement;
       if (target.classList.contains('time-btn')) {
         const range = target.dataset.range as TimeRange;
+        if (range === 'all' && !hasPaidSubscription()) {
+          showPaidTimeRangeNotice();
+          return;
+        }
         this.setTimeRange(range);
         slider.querySelectorAll('.time-btn').forEach((btn) => btn.classList.remove('active'));
         target.classList.add('active');
@@ -350,8 +373,9 @@ export class MapComponent {
   }
 
   public setTimeRange(range: TimeRange): void {
-    this.state.timeRange = range;
-    this.onTimeRangeChange?.(range);
+    const nextRange = normalizeTimeRange(range);
+    this.state.timeRange = nextRange;
+    this.onTimeRangeChange?.(nextRange);
     this.updateTimeSliderButtons();
     this.render();
   }

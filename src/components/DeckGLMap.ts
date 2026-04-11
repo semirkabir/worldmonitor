@@ -112,10 +112,28 @@ import { getCountriesGeoJson, getCountryAtCoordinates, getCountryBbox } from '@/
 import type { FeatureCollection, Geometry } from 'geojson';
 import { getTrayOpenPreference, setTrayOpenPreference } from '@/app/ui-preferences';
 import type { MarketplaceRuntimeLayer } from '@/types/marketplace';
+import { hasPaidSubscription } from '@/services/feature-flags';
 
 export type TimeRange = '1h' | '6h' | '24h' | '48h' | '7d' | 'all';
 export type DeckMapView = 'global' | 'america' | 'mena' | 'eu' | 'asia' | 'latam' | 'africa' | 'oceania';
 type MapInteractionMode = 'flat' | '3d';
+
+function showPaidTimeRangeNotice(): void {
+  document.querySelector('.toast-notification')?.remove();
+  const el = document.createElement('div');
+  el.className = 'toast-notification';
+  el.textContent = 'All time is available for Pro users.';
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('visible'));
+  setTimeout(() => {
+    el.classList.remove('visible');
+    setTimeout(() => el.remove(), 300);
+  }, 3000);
+}
+
+function normalizeTimeRange(range: TimeRange): TimeRange {
+  return range === 'all' && !hasPaidSubscription() ? '7d' : range;
+}
 
 interface CableFlowTrip {
   id: string;
@@ -566,7 +584,7 @@ export class DeckGLMap {
 
   constructor(container: HTMLElement, initialState: DeckMapState) {
     this.container = container;
-    this.state = initialState;
+    this.state = { ...initialState, timeRange: normalizeTimeRange(initialState.timeRange) };
     this.hotspots = [...INTEL_HOTSPOTS];
 
     this.debouncedRebuildLayers = debounce(() => {
@@ -4360,6 +4378,8 @@ export class DeckGLMap {
   private createTimeSlider(): void {
     const slider = document.createElement('div');
     slider.className = 'time-slider deckgl-time-slider';
+    const hasPaidAccess = hasPaidSubscription();
+    const allTimeButton = `<button class="time-btn ${this.state.timeRange === 'all' ? 'active' : ''} ${!hasPaidAccess ? 'time-btn-pro' : ''}" data-range="all">${t('components.deckgl.timeAll')}</button>`;
     slider.innerHTML = `
       <div class="time-options">
         <button class="time-btn ${this.state.timeRange === '1h' ? 'active' : ''}" data-range="1h">1h</button>
@@ -4367,7 +4387,7 @@ export class DeckGLMap {
         <button class="time-btn ${this.state.timeRange === '24h' ? 'active' : ''}" data-range="24h">24h</button>
         <button class="time-btn ${this.state.timeRange === '48h' ? 'active' : ''}" data-range="48h">48h</button>
         <button class="time-btn ${this.state.timeRange === '7d' ? 'active' : ''}" data-range="7d">7d</button>
-        <button class="time-btn ${this.state.timeRange === 'all' ? 'active' : ''}" data-range="all">${t('components.deckgl.timeAll')}</button>
+        ${allTimeButton}
       </div>
     `;
 
@@ -4437,6 +4457,10 @@ export class DeckGLMap {
     slider.querySelectorAll('.time-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const range = (btn as HTMLElement).dataset.range as TimeRange;
+        if (range === 'all' && !hasPaidSubscription()) {
+          showPaidTimeRangeNotice();
+          return;
+        }
         this.setTimeRange(range);
       });
     });
@@ -5345,11 +5369,12 @@ export class DeckGLMap {
   }
 
   public setTimeRange(range: TimeRange): void {
-    this.state.timeRange = range;
+    const nextRange = normalizeTimeRange(range);
+    this.state.timeRange = nextRange;
     this.clearFilterCache();
     if (this.state.layers.protests) this.rebuildProtestSupercluster();
     if (SITE_VARIANT === 'tech' && this.state.layers.techEvents) this.rebuildTechEventSupercluster();
-    this.onTimeRangeChange?.(range);
+    this.onTimeRangeChange?.(nextRange);
     this.updateTimeSliderButtons();
     this.render();
   }
