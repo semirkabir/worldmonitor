@@ -60,6 +60,27 @@ export interface PredictionMarketPanelData {
   comments?: Record<string, MarketComment[]>;
 }
 
+interface GammaMarketDetail {
+  question?: string;
+  outcomes?: string;
+  outcomePrices?: string;
+  volume?: number | string;
+  volumeNum?: number;
+  slug?: string;
+  endDate?: string;
+  closed?: boolean;
+  clobTokenIds?: string[] | string;
+  conditionId?: string;
+  condition_id?: string;
+  id?: number;
+  eventSlug?: string;
+  event_slug?: string;
+  description?: string;
+  resolution_source?: string;
+  liquidityNum?: number;
+  liquidity?: number;
+}
+
 export class PredictionMarketRenderer implements EntityRenderer {
   renderSkeleton(data: unknown, ctx: EntityRenderContext): HTMLElement {
     const m = data as PredictionMarketPanelData;
@@ -210,6 +231,48 @@ export class PredictionMarketRenderer implements EntityRenderer {
       } catch { /* fall through */ }
     }
 
+    if (markets.length === 0 && slug && signal && !signal.aborted) {
+      try {
+        const resp = await fetch(`${GAMMA_API}/markets?slug=${encodeURIComponent(slug)}`, {
+          signal,
+          headers: { 'Accept': 'application/json' },
+        });
+        if (resp.ok) {
+          const marketRows = await resp.json();
+          if (Array.isArray(marketRows) && marketRows.length > 0) {
+            const mk = marketRows[0] as GammaMarketDetail;
+            const prices = parseOutcomePrices(mk.outcomePrices);
+            const yesPrice = prices[0] != null ? Math.round(prices[0] * 100) : 50;
+            const marketSlug = mk.slug || slug;
+            const eventSlug = mk.eventSlug || mk.event_slug || '';
+            totalVolume = readVolume(mk.volumeNum, mk.volume, totalVolume);
+            liquidity = typeof mk.liquidityNum === 'number'
+              ? mk.liquidityNum
+              : typeof mk.liquidity === 'number'
+                ? mk.liquidity
+                : liquidity;
+            description = mk.description || description;
+            resolutionSource = mk.resolution_source || resolutionSource;
+            markets.push({
+              question: mk.question || input.title || 'Prediction Market',
+              yesPrice,
+              noPrice: 100 - yesPrice,
+              volume: totalVolume,
+              slug: marketSlug,
+              url: eventSlug
+                ? `https://polymarket.com/event/${eventSlug}/${marketSlug}`
+                : input.url || `https://polymarket.com/market/${marketSlug}`,
+              closed: mk.closed || false,
+              endDate: mk.endDate || input.endDate,
+              clobTokenIds: normalizeTokenIds(mk.clobTokenIds),
+              conditionId: mk.conditionId || mk.condition_id,
+              marketId: mk.id,
+            });
+          }
+        }
+      } catch { /* fall through */ }
+    }
+
     if (!description) {
       description = input.title || 'Prediction Market';
     }
@@ -258,32 +321,37 @@ export class PredictionMarketRenderer implements EntityRenderer {
       container.append(callout);
     }
 
-    if (leadMarket) {
-      container.append(buildPredictionHero(ctx, data, leadMarket));
-    }
-
     const [overviewCard, overviewBody] = ctx.sectionCard('Overview');
+    if (leadMarket) {
+      overviewBody.append(buildPredictionHero(ctx, data, leadMarket));
+    }
     const factGrid = ctx.el('div', 'edp-fact-grid edp-prediction-overview-grid');
     factGrid.append(
       makeFactCard(ctx, 'Total Volume', formatVolume(data.totalVolume)),
       makeFactCard(ctx, 'Liquidity', formatVolume(data.liquidity || 0)),
-      makeFactCard(ctx, 'Resolution', data.endDate ? formatDate(data.endDate) : 'Open-ended'),
+      makeFactCard(ctx, 'Resolution', formatDate(leadMarket?.endDate || data.endDate || '')),
     );
     overviewBody.append(factGrid);
     if (data.resolutionSource) overviewBody.append(row(ctx, 'Resolution Source', data.resolutionSource));
     container.append(overviewCard);
 
-    const [marketsCard, marketsBody] = ctx.sectionCard(`${data.markets.length} Market${data.markets.length !== 1 ? 's' : ''}`);
-    for (const market of data.markets) {
-      marketsBody.append(buildMarketCard(
-        ctx,
-        market,
-        data.priceHistory?.[market.slug] || [],
-        data.holders?.[market.slug] || [],
-        data.comments?.[market.slug] || [],
-      ));
+    const secondaryMarkets = leadMarket
+      ? data.markets.filter((market) => market.slug !== leadMarket.slug)
+      : data.markets;
+
+    if (secondaryMarkets.length > 0) {
+      const [marketsCard, marketsBody] = ctx.sectionCard(`${secondaryMarkets.length} Related Market${secondaryMarkets.length !== 1 ? 's' : ''}`);
+      for (const market of secondaryMarkets) {
+        marketsBody.append(buildMarketCard(
+          ctx,
+          market,
+          data.priceHistory?.[market.slug] || [],
+          data.holders?.[market.slug] || [],
+          data.comments?.[market.slug] || [],
+        ));
+      }
+      container.append(marketsCard);
     }
-    container.append(marketsCard);
 
     const tradeBtn = ctx.el('a', 'edp-trade-btn edp-prediction-trade-btn') as HTMLAnchorElement;
     tradeBtn.href = data.polymarketUrl;
@@ -296,6 +364,7 @@ export class PredictionMarketRenderer implements EntityRenderer {
 
 function buildPredictionHero(ctx: EntityRenderContext, data: PredictionMarketPanelData, leadMarket: PredictionMarketSubMarket): HTMLElement {
   const hero = ctx.el('section', 'edp-prediction-hero');
+  hero.append(ctx.el('div', 'edp-prediction-market-title', leadMarket.question));
   const top = ctx.el('div', 'edp-prediction-hero-top');
   const score = ctx.el('div', 'edp-prediction-hero-score');
   score.append(
@@ -313,6 +382,39 @@ function buildPredictionHero(ctx: EntityRenderContext, data: PredictionMarketPan
 
   const bar = buildProbabilityBar(ctx, leadMarket.yesPrice, leadMarket.noPrice);
   hero.append(bar);
+
+  const stats = ctx.el('div', 'edp-fact-grid edp-prediction-market-grid');
+  stats.append(
+    makeFactCard(ctx, 'Yes', `${leadMarket.yesPrice}%`),
+    makeFactCard(ctx, 'No', `${leadMarket.noPrice}%`),
+    makeFactCard(ctx, 'Volume', formatVolume(leadMarket.volume || data.totalVolume)),
+  );
+  hero.append(stats);
+
+  if (leadMarket.endDate) hero.append(row(ctx, 'Resolves', formatDate(leadMarket.endDate)));
+  const history = data.priceHistory?.[leadMarket.slug] || [];
+  if (history.length > 1) {
+    const chartWrap = ctx.el('div', 'edp-prediction-chart-wrap');
+    chartWrap.append(createPriceChart(history, leadMarket.yesPrice));
+    hero.append(chartWrap);
+  }
+
+  const holders = data.holders?.[leadMarket.slug] || [];
+  const comments = data.comments?.[leadMarket.slug] || [];
+  const foot = ctx.el('div', 'edp-prediction-market-foot');
+  foot.append(
+    makeMetaChip(ctx, `${holders.length} holder${holders.length === 1 ? '' : 's'}`),
+    makeMetaChip(ctx, `${comments.length} comment${comments.length === 1 ? '' : 's'}`),
+  );
+  if (!leadMarket.closed) {
+    const tradeLink = ctx.el('a', 'edp-prediction-market-link') as HTMLAnchorElement;
+    tradeLink.href = leadMarket.url;
+    tradeLink.target = '_blank';
+    tradeLink.rel = 'noopener noreferrer';
+    tradeLink.textContent = 'Open Market';
+    foot.append(tradeLink);
+  }
+  hero.append(foot);
   return hero;
 }
 
@@ -470,5 +572,39 @@ function formatVolume(v: number): string {
 }
 
 function formatDate(d: string): string {
+  if (!d) return 'Open-ended';
   try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch { return d; }
+}
+
+function parseOutcomePrices(raw?: string): number[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed.map((value) => Number(value)).filter((value) => Number.isFinite(value))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function normalizeTokenIds(raw?: string[] | string): string[] {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw !== 'string') return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function readVolume(primary?: number, fallback?: number | string, defaultValue = 0): number {
+  if (typeof primary === 'number' && Number.isFinite(primary)) return primary;
+  if (typeof fallback === 'number' && Number.isFinite(fallback)) return fallback;
+  if (typeof fallback === 'string') {
+    const parsed = Number(fallback);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return defaultValue;
 }

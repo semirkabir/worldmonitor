@@ -7161,6 +7161,63 @@ body.playback-mode .status-dot {
   opacity: 1;
 }
 
+.prediction-group {
+  margin-bottom: 14px;
+}
+
+.prediction-group:last-child {
+  margin-bottom: 0;
+}
+
+.prediction-group-title {
+  position: relative;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 14%, var(--surface) 86%), color-mix(in srgb, var(--surface) 96%, transparent));
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.prediction-group-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 8px 0 0 8px;
+  background: var(--prediction-group-accent, var(--accent));
+}
+
+.prediction-group-elections {
+  --prediction-group-accent: var(--blue);
+}
+
+.prediction-group-macro {
+  --prediction-group-accent: var(--yellow);
+}
+
+.prediction-group-middle-east {
+  --prediction-group-accent: var(--red);
+}
+
+.prediction-group-russia-ukraine {
+  --prediction-group-accent: var(--orange);
+}
+
+.prediction-group-china-taiwan {
+  --prediction-group-accent: color-mix(in srgb, var(--red) 55%, var(--orange) 45%);
+}
+
+.prediction-group-other {
+  --prediction-group-accent: var(--text-dim);
+}
+
 .prediction-question {
   font-size: 11px;
   color: var(--text);
@@ -7186,6 +7243,27 @@ a.prediction-link:hover {
   margin: 2px 0;
 }
 
+.prediction-odds-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 8px 0 6px;
+}
+
+.prediction-odds {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.prediction-odds-yes {
+  color: var(--green);
+}
+
+.prediction-odds-no {
+  color: var(--red);
+}
+
 .prediction-volume,
 .prediction-expiry {
   font-size: 9px;
@@ -7193,28 +7271,23 @@ a.prediction-link:hover {
 }
 
 .prediction-bar {
-  height: 24px;
-  background: var(--border);
-  border-radius: 3px;
+  height: 10px;
+  background: color-mix(in srgb, var(--surface) 78%, var(--border) 22%);
+  border-radius: 999px;
   overflow: hidden;
   display: flex;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 72%, transparent);
 }
 
 .prediction-yes {
   background: var(--green);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 40px;
+  flex: 0 0 auto;
   transition: width 0.3s ease;
 }
 
 .prediction-no {
   background: var(--red);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 40px;
+  flex: 0 0 auto;
   transition: width 0.3s ease;
 }
 
@@ -9891,6 +9964,241 @@ body.urgency-mode #header {
   overflow-y: auto;
 }
 
+.cal-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.cal-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 8px 4px;
+}
+
+.cal-filter-btn {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 84%, black 16%);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.cal-filter-btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.cal-filter-btn.active {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface) 90%);
+  color: var(--text);
+}
+
+.cal-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 4px 8px 8px;
+}
+
+.cal-summary-card {
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 86%, black 14%);
+}
+
+.cal-summary-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.cal-summary-value {
+  margin-top: 6px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+}
+
+.cal-events {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cal-date-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cal-date-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 90%, black 10%);
+  border: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+}
+
+.cal-date-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.cal-date-count {
+  font-size: 9px;
+  color: var(--text-dim);
+}
+
+.cal-today {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 12%, var(--surface) 88%), color-mix(in srgb, var(--surface) 94%, transparent));
+}
+
+.cal-event {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 86%, black 14%);
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.cal-event:hover {
+  border-color: var(--border-strong);
+  background: color-mix(in srgb, var(--surface-hover) 84%, black 16%);
+  transform: translateX(2px);
+}
+
+.cal-event-impact {
+  width: 3px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: var(--text-faint);
+}
+
+.cal-impact-high .cal-event-impact {
+  background: var(--semantic-critical);
+}
+
+.cal-impact-medium .cal-event-impact {
+  background: var(--semantic-elevated);
+}
+
+.cal-impact-low .cal-event-impact {
+  background: var(--text-faint);
+}
+
+.cal-event-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.cal-event-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cal-event-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cal-flag,
+.cal-icon {
+  flex-shrink: 0;
+}
+
+.cal-event-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.cal-impact-pill {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cal-impact-pill-high {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--semantic-critical);
+}
+
+.cal-impact-pill-medium {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--semantic-elevated);
+}
+
+.cal-impact-pill-low {
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--text-dim);
+}
+
+.cal-event-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+  font-size: 9px;
+  color: var(--text-dim);
+}
+
+.cal-meta-sep {
+  color: var(--text-faint);
+}
+
+.cal-event-data {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.cal-data-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--overlay-subtle) 92%, transparent);
+  font-size: 9px;
+  color: var(--text);
+}
+
+.cal-data-label {
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 /* regulation-tabs: now uses shared .panel-tabs / .panel-tab */
 
 .economic-empty {
@@ -9898,6 +10206,17 @@ body.urgency-mode #header {
   text-align: center;
   color: var(--text-dim);
   font-size: 11px;
+}
+
+@media (max-width: 520px) {
+  .cal-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cal-event-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 /* Government Spending */
