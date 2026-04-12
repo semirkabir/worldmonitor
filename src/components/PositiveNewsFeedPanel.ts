@@ -6,6 +6,7 @@ import { shareHappyCard } from '@/services/happy-share-renderer';
 import { formatTime } from '@/utils';
 import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
 import { t } from '@/services/i18n';
+import { buildArticleLinkAttributes } from '@/services/article-open';
 
 /**
  * PositiveNewsFeedPanel -- scrolling positive news feed with category filter bar
@@ -146,6 +147,12 @@ export class PositiveNewsFeedPanel extends Panel {
    * Share button inside the card body prevents link navigation via delegated handler.
    */
   private renderCard(item: NewsItem, idx: number): string {
+    const articleAttrs = buildArticleLinkAttributes({
+      url: item.link,
+      title: item.title,
+      source: item.source,
+      publishedAt: item.pubDate,
+    });
     const imageHtml = item.imageUrl
       ? `<div class="positive-card-image"><img src="${sanitizeUrl(item.imageUrl)}" alt="" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`
       : '';
@@ -155,7 +162,7 @@ export class PositiveNewsFeedPanel extends Panel {
       ? `<span class="positive-card-category cat-${escapeHtml(item.happyCategory)}">${escapeHtml(categoryLabel)}</span>`
       : '';
 
-    return `<a class="positive-card" href="${sanitizeUrl(item.link)}" target="_blank" rel="noopener" data-category="${escapeHtml(item.happyCategory || '')}">
+    return `<a class="positive-card" href="${sanitizeUrl(item.link)}" target="_blank" rel="noopener" data-category="${escapeHtml(item.happyCategory || '')}" ${articleAttrs}>
   ${imageHtml}
   <div class="positive-card-body">
     <div class="positive-card-meta">

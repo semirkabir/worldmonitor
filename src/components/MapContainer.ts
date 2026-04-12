@@ -404,6 +404,10 @@ export class MapContainer {
     this.deckGLMap?.disableAisLiveTracking();
   }
 
+  public setAisFocusBounds(bounds: [[number, number], [number, number]] | null): void {
+    this.deckGLMap?.setAisFocusBounds(bounds);
+  }
+
   public setCableActivity(advisories: CableAdvisory[], repairShips: RepairShip[]): void {
     this.cachedCableAdvisories = advisories;
     this.cachedRepairShips = repairShips;

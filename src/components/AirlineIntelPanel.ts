@@ -18,6 +18,7 @@ import {
 import { aviationWatchlist } from '@/services/aviation/watchlist';
 import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
 import { Panel } from './Panel';
+import { buildArticleLinkAttributes } from '@/services/article-open';
 
 // ---- Helpers ----
 
@@ -411,11 +412,14 @@ export class AirlineIntelPanel extends Panel {
             this.content.innerHTML = '<div class="no-data">No aviation news.</div>';
             return;
         }
-        const items = this.newsData.map(n => `
+        const items = this.newsData.map(n => {
+      const articleAttrs = buildArticleLinkAttributes({ url: n.url, title: n.title, source: n.sourceName, publishedAt: n.publishedAt });
+      return `
       <div class="news-item" style="padding:8px 0;border-bottom:1px solid var(--border,#2a2a2a)">
-        <a href="${sanitizeUrl(n.url)}" target="_blank" rel="noopener" class="news-link">${escapeHtml(n.title)}</a>
+        <a href="${sanitizeUrl(n.url)}" target="_blank" rel="noopener" class="news-link" ${articleAttrs}>${escapeHtml(n.title)}</a>
         <div class="news-meta" style="font-size:11px;color:var(--text-dim,#888);margin-top:2px">${escapeHtml(n.sourceName)} · ${n.publishedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
         this.content.innerHTML = `<div class="news-list" style="padding:0 4px">${items}</div>`;
     }
 

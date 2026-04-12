@@ -3,7 +3,6 @@ import { t } from '@/services/i18n';
 import type { MarketData, CryptoData } from '@/types';
 import { formatPrice, formatChange, getChangeClass, getHeatmapClass } from '@/utils';
 import { escapeHtml } from '@/utils/sanitize';
-import { miniSparkline } from '@/utils/sparkline';
 import {
   getMarketWatchlistEntries,
   resetMarketWatchlist,
@@ -310,7 +309,6 @@ export class MarketPanel extends Panel {
           <span class="market-symbol">${escapeHtml(stock.display)}</span>
         </div>
         <div class="market-data">
-          ${miniSparkline(stock.sparkline, stock.change)}
         </div>
       `;
 
@@ -377,7 +375,6 @@ export class CommoditiesPanel extends Panel {
           (c) => `
         <div class="commodity-item">
           <div class="commodity-name">${escapeHtml(c.display)}</div>
-          ${miniSparkline(c.sparkline, c.change, 60, 18)}
           <div class="commodity-price">${formatPrice(c.price!)}</div>
           <div class="commodity-change ${getChangeClass(c.change!)}">${formatChange(c.change!)}</div>
         </div>
@@ -434,7 +431,6 @@ export class CryptoPanel extends Panel {
           <span class="market-symbol">${escapeHtml(coin.symbol)}</span>
         </div>
         <div class="market-data">
-          ${miniSparkline(coin.sparkline, coin.change)}
           <span class="market-price">${formatCryptoPrice(coin.price)}</span>
           <span class="market-change ${getChangeClass(coin.change)}">${formatChange(coin.change)}</span>
         </div>

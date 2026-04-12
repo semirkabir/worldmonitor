@@ -5,6 +5,7 @@ import { MONITOR_COLORS } from '@/config';
 import { generateId, formatTime, getCSSColor } from '@/utils';
 import { sanitizeUrl } from '@/utils/sanitize';
 import { h, replaceChildren, clearChildren } from '@/utils/dom-utils';
+import { applyArticleLinkDataset } from '@/services/article-open';
 
 export class MonitorPanel extends Panel {
   private monitors: Monitor[] = [];
@@ -141,19 +142,28 @@ export class MonitorPanel extends Panel {
     replaceChildren(results,
       h('div', { style: 'color: var(--text-dim); font-size: 10px; margin: 12px 0 8px;' }, countText),
       ...unique.slice(0, 10).map((item) =>
-        h('div', {
-          className: 'item',
-          style: `border-left: 2px solid ${item.monitorColor || ''}; padding-left: 8px; margin-left: -8px;`,
-        },
-          h('div', { className: 'item-source' }, item.source),
-          h('a', {
+        (() => {
+          const link = h('a', {
             className: 'item-title',
             href: sanitizeUrl(item.link),
             target: '_blank',
             rel: 'noopener',
-          }, item.title),
-          h('div', { className: 'item-time' }, formatTime(item.pubDate)),
-        ),
+          }, item.title);
+          applyArticleLinkDataset(link, {
+            url: item.link,
+            title: item.title,
+            source: item.source,
+            publishedAt: item.pubDate,
+          });
+          return h('div', {
+            className: 'item',
+            style: `border-left: 2px solid ${item.monitorColor || ''}; padding-left: 8px; margin-left: -8px;`,
+          },
+            h('div', { className: 'item-source' }, item.source),
+            link,
+            h('div', { className: 'item-time' }, formatTime(item.pubDate)),
+          );
+        })(),
       ),
     );
   }

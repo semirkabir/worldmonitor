@@ -59,7 +59,7 @@ export class TradePolicyPanel extends Panel {
       return;
     }
 
-    const hasTariffs = this.tariffsData && this.tariffsData.datapoints?.length > 0;
+    const hasTariffs = this.tariffsData && (this.tariffsData.datapoints?.length ?? 0) > 0;
     const hasFlows = this.flowsData && this.flowsData.flows?.length > 0;
     const hasBarriers = this.barriersData && this.barriersData.barriers?.length > 0;
 

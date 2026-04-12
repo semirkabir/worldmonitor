@@ -4,6 +4,7 @@ import type { NewsItem, MarketData } from '@/types';
 import { escapeHtml } from '@/utils/sanitize';
 import { getCSSColor } from '@/utils';
 import { getSignalContext, type SignalType } from '@/utils/analysis-constants';
+import { buildArticleLinkAttributes } from '@/services/article-open';
 
 const SIGNAL_TYPE_LABELS: Record<string, string> = {
   prediction_leads_news: '🔮',
@@ -578,8 +579,14 @@ export class IntelligenceFindingPanel {
         <div class="ifp-section-title">Related headlines</div>
         ${news.map((item) => {
           const level = item.threat?.level ?? (item.isAlert ? 'high' : 'none');
+          const articleAttrs = buildArticleLinkAttributes({
+            url: item.link,
+            title: item.title,
+            source: item.source,
+            publishedAt: item.pubDate,
+          });
           return `
-            <a class="ifp-news-item" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">
+            <a class="ifp-news-item" href="${escapeHtml(item.link)}" target="_blank" rel="noopener" ${articleAttrs}>
               <span class="ifp-threat-dot ${escapeHtml(level)}"></span>
               <span class="ifp-news-body">
                 <span class="ifp-news-headline">${escapeHtml(item.title)}</span>

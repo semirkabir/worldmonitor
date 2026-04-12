@@ -1,6 +1,7 @@
 import { Panel } from './Panel';
 import type { NewsItem } from '@/types';
 import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
+import { buildArticleLinkAttributes } from '@/services/article-open';
 
 /**
  * BreakthroughsTickerPanel -- Horizontally scrolling ticker of science breakthroughs.
@@ -53,7 +54,7 @@ export class BreakthroughsTickerPanel extends Panel {
     const itemsHtml = items
       .map(
         (item) =>
-          `<a class="ticker-item" href="${sanitizeUrl(item.link)}" target="_blank" rel="noopener">` +
+          `<a class="ticker-item" href="${sanitizeUrl(item.link)}" target="_blank" rel="noopener" ${buildArticleLinkAttributes({ url: item.link, title: item.title, source: item.source, publishedAt: item.pubDate })}>` +
           `<span class="ticker-item-source">${escapeHtml(item.source)}</span>` +
           `<span class="ticker-item-title">${escapeHtml(item.title)}</span>` +
           `</a>`,

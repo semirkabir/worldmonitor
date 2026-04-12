@@ -16,6 +16,7 @@ import { checkFeatureAccess } from '@/services/auth-modal';
 import type { CountryBriefExport } from '@/utils/export';
 import { ME_STRIKE_BOUNDS } from '@/services/country-geometry';
 import { formatBriefRichText } from './country-brief-format';
+import { buildArticleLinkAttributes } from '@/services/article-open';
 
 type BriefAssetType = AssetType | 'port';
 
@@ -571,6 +572,12 @@ export class CountryBriefPage implements CountryBriefPanel {
 
     content.innerHTML = items.map((item, i) => {
       const safeUrl = sanitizeUrl(item.link);
+      const articleAttrs = buildArticleLinkAttributes({
+        url: item.link,
+        title: item.title,
+        source: item.source,
+        publishedAt: item.pubDate,
+      });
       const threatColor = item.threat?.level === 'critical' ? getCSSColor('--threat-critical')
         : item.threat?.level === 'high' ? getCSSColor('--threat-high')
         : item.threat?.level === 'medium' ? getCSSColor('--threat-medium')
@@ -583,7 +590,7 @@ export class CountryBriefPage implements CountryBriefPanel {
           <div class="cb-news-meta">${escapeHtml(item.source)} · ${timeAgo}</div>
         </div>`;
       if (safeUrl) {
-        return `<a href="${safeUrl}" target="_blank" rel="noopener" class="cb-news-card" id="cb-news-${i + 1}">${cardBody}</a>`;
+        return `<a href="${safeUrl}" target="_blank" rel="noopener" class="cb-news-card" id="cb-news-${i + 1}" ${articleAttrs}>${cardBody}</a>`;
       }
       return `<div class="cb-news-card" id="cb-news-${i + 1}">${cardBody}</div>`;
     }).join('');

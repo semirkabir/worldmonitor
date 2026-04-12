@@ -2,7 +2,6 @@ import { Panel } from './Panel';
 import { t } from '@/services/i18n';
 import { escapeHtml } from '@/utils/sanitize';
 import { formatPrice, formatChange, getChangeClass } from '@/utils';
-import { miniSparkline } from '@/utils/sparkline';
 import { MarketServiceClient } from '@/generated/client/worldmonitor/market/v1/service_client';
 import type { ListGulfQuotesResponse, GulfQuote } from '@/generated/client/worldmonitor/market/v1/service_client';
 import { startSmartPollLoop, type SmartPollLoopHandle } from '@/services/runtime';
@@ -19,7 +18,6 @@ function renderSection(title: string, quotes: GulfQuote[]): string {
         <span class="market-symbol">${escapeHtml(q.country || q.symbol)}</span>
       </div>
       <div class="market-data">
-        ${miniSparkline(q.sparkline, q.change)}
         <span class="market-price">${formatPrice(q.price)}</span>
         <span class="market-change ${getChangeClass(q.change)}">${formatChange(q.change)}</span>
       </div>

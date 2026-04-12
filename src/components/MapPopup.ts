@@ -20,8 +20,9 @@ import { fetchHotspotContext, formatArticleDate, extractDomain, type GdeltArticl
 import { getNaturalEventIcon } from '@/services/eonet';
 import { getHotspotEscalation, getEscalationChange24h } from '@/services/hotspot-escalation';
 import { getCableHealthRecord } from '@/services/cable-health';
+import { buildArticleLinkAttributes, isModifiedArticleClick, openArticleFromElement } from '@/services/article-open';
 
-export type PopupType = 'conflict' | 'hotspot' | 'earthquake' | 'weather' | 'base' | 'waterway' | 'apt' | 'cyberThreat' | 'nuclear' | 'economic' | 'irradiator' | 'pipeline' | 'cable' | 'cable-advisory' | 'repair-ship' | 'outage' | 'datacenter' | 'datacenterCluster' | 'ais' | 'aisVessel' | 'protest' | 'protestCluster' | 'flight' | 'aircraft' | 'militaryFlight' | 'militaryVessel' | 'militaryFlightCluster' | 'militaryVesselCluster' | 'natEvent' | 'port' | 'spaceport' | 'mineral' | 'startupHub' | 'cloudRegion' | 'techHQ' | 'accelerator' | 'techEvent' | 'techHQCluster' | 'techEventCluster' | 'techActivity' | 'geoActivity' | 'stockExchange' | 'financialCenter' | 'centralBank' | 'commodityHub' | 'iranEvent' | 'gpsJamming' | 'gulfInvestment' | 'tradeRoute' | 'commodityPort' | 'fire' | 'positiveEvent' | 'kindnessEvent' | 'ucdpEvent' | 'speciesRecovery' | 'renewableInstallation' | 'company' | 'predictionMarket' | 'crypto';
+export type PopupType = 'conflict' | 'hotspot' | 'earthquake' | 'weather' | 'base' | 'waterway' | 'apt' | 'cyberThreat' | 'nuclear' | 'economic' | 'irradiator' | 'pipeline' | 'cable' | 'cable-advisory' | 'repair-ship' | 'outage' | 'datacenter' | 'datacenterCluster' | 'ais' | 'aisVessel' | 'protest' | 'protestCluster' | 'flight' | 'aircraft' | 'militaryFlight' | 'militaryVessel' | 'militaryFlightCluster' | 'militaryVesselCluster' | 'natEvent' | 'port' | 'spaceport' | 'mineral' | 'startupHub' | 'cloudRegion' | 'techHQ' | 'accelerator' | 'techEvent' | 'techHQCluster' | 'techEventCluster' | 'techActivity' | 'geoActivity' | 'stockExchange' | 'financialCenter' | 'centralBank' | 'commodityHub' | 'iranEvent' | 'gpsJamming' | 'gulfInvestment' | 'tradeRoute' | 'commodityPort' | 'fire' | 'positiveEvent' | 'kindnessEvent' | 'ucdpEvent' | 'speciesRecovery' | 'renewableInstallation' | 'company' | 'predictionMarket' | 'crypto' | 'article';
 
 interface TechEventPopupData {
   id: string;
@@ -209,6 +210,13 @@ export class MapPopup {
     this.popup.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
       if (target.closest('.popup-close') || target.closest('.map-popup-sheet-handle')) {
+        this.hide();
+        return;
+      }
+      const articleTarget = target.closest<HTMLElement>('[data-article-url]');
+      if (articleTarget && e instanceof MouseEvent && !isModifiedArticleClick(e) && openArticleFromElement(articleTarget)) {
+        e.preventDefault();
+        e.stopPropagation();
         this.hide();
         return;
       }
@@ -471,6 +479,15 @@ export class MapPopup {
       return `<span class="${className} disabled-link">${labelHtml}</span>`;
     }
     return `<a href="${safeUrl}" target="_blank" rel="noopener" class="${className}">${labelHtml}</a>`;
+  }
+
+  private articleLink(url: string, title: string, source: string | undefined, publishedAt: string | Date | undefined, className: string, labelHtml: string): string {
+    const safeUrl = sanitizeUrl(url);
+    if (!safeUrl) {
+      return `<span class="${className} disabled-link">${labelHtml}</span>`;
+    }
+    const attrs = buildArticleLinkAttributes({ url: safeUrl, title, source, publishedAt });
+    return `<a href="${safeUrl}" target="_blank" rel="noopener" class="${className}" ${attrs}>${labelHtml}</a>`;
   }
   // ───────────────────────────────────────────────────────────────────────────
 
@@ -802,7 +819,7 @@ export class MapPopup {
               ${relatedNews.slice(0, 5).map(n => `
                 <div class="popup-news-item">
                   <span class="news-source">${escapeHtml(n.source)}</span>
-                  ${this.externalLink(n.link, 'news-title', escapeHtml(n.title))}
+                  ${this.articleLink(n.link, n.title, n.source, n.pubDate, 'news-title', escapeHtml(n.title))}
                 </div>
               `).join('')}
             </div>
@@ -856,7 +873,7 @@ export class MapPopup {
     const timeAgo = formatArticleDate(article.date);
 
     return `
-      ${this.externalLink(article.url, 'hotspot-gdelt-article', `
+      ${this.articleLink(article.url, article.title, domain, article.date, 'hotspot-gdelt-article', `
         <div class="article-meta">
           <span>${escapeHtml(domain)}</span>
           <span>${escapeHtml(timeAgo)}</span>

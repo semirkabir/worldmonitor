@@ -451,6 +451,8 @@ export class DeckGLMap {
   private aisDisruptions: AisDisruptionEvent[] = [];
   private aisDensity: AisDensityZone[] = [];
   private aisVessels: Map<string, AisPositionData> = new Map();
+  private aisTrackHistory: Map<string, Array<[number, number]>> = new Map();
+  private aisFocusBounds: [[number, number], [number, number]] | null = null;
   private aisLiveCallback: ((data: AisPositionData[]) => void) | null = null;
   private cableAdvisories: CableAdvisory[] = [];
   private repairShips: RepairShip[] = [];
@@ -1525,6 +1527,9 @@ export class DeckGLMap {
 
     // AIS live vessel positions
     if (mapLayers.ais && this.aisVessels.size > 0) {
+      if (this.aisFocusBounds && this.aisTrackHistory.size > 0) {
+        layers.push(this.createAisVesselTracksLayer());
+      }
       layers.push(this.createAisVesselsLayer());
     }
 
@@ -1921,7 +1926,8 @@ export class DeckGLMap {
     });
   }
 
-  private createBasesClusterLayer(): Layer[] {
+  // @ts-ignore -- TS6133: reserved for future server-side cluster rendering
+  private _createBasesClusterLayer(): Layer[] {
     // Use server clusters if available, otherwise build local fallback clusters
     let clusterData: ServerBaseCluster[];
     if (this.serverBaseClusters.length > 0) {
@@ -2240,7 +2246,8 @@ export class DeckGLMap {
     return layers;
   }
 
-  private createGhostLayer<T>(id: string, data: T[], getPosition: (d: T) => [number, number], opts: { radiusMinPixels?: number } = {}): ScatterplotLayer<T> {
+  // @ts-ignore -- TS6133: generic ghost layer helper reserved for interactive layers
+  private _createGhostLayer<T>(id: string, data: T[], getPosition: (d: T) => [number, number], opts: { radiusMinPixels?: number } = {}): ScatterplotLayer<T> {
     return new ScatterplotLayer<T>({
       id: `${id}-ghost`,
       data,
@@ -2337,7 +2344,8 @@ export class DeckGLMap {
     });
   }
 
-  private createIranEventsLayer(): IconLayer {
+  // @ts-ignore -- TS6133: reserved for deck.gl iran events layer rendering
+  private _createIranEventsLayer(): IconLayer {
     return new IconLayer({
       id: 'iran-events-layer',
       data: this.iranEvents,
@@ -2490,8 +2498,30 @@ export class DeckGLMap {
     });
   }
 
-  private createAisVesselsLayer(): IconLayer<AisPositionData> {
+  private getFilteredAisVessels(): AisPositionData[] {
     const vessels = Array.from(this.aisVessels.values());
+    if (!this.aisFocusBounds) return vessels;
+    const [[minLon, minLat], [maxLon, maxLat]] = this.aisFocusBounds;
+    return vessels.filter((vessel) => vessel.lon >= minLon && vessel.lon <= maxLon && vessel.lat >= minLat && vessel.lat <= maxLat);
+  }
+
+  private createAisVesselTracksLayer(): PathLayer<{ id: string; path: Array<[number, number]> }> {
+    const paths = Array.from(this.aisTrackHistory.entries())
+      .filter(([, path]) => path.length > 1)
+      .map(([id, path]) => ({ id, path }));
+    return new PathLayer({
+      id: 'ais-vessel-tracks-layer',
+      data: paths,
+      getPath: (d) => d.path,
+      getColor: [255, 204, 102, 180] as [number, number, number, number],
+      getWidth: 2,
+      widthMinPixels: 1,
+      pickable: false,
+    });
+  }
+
+  private createAisVesselsLayer(): IconLayer<AisPositionData> {
+    const vessels = this.getFilteredAisVessels();
     return new IconLayer<AisPositionData>({
       id: 'ais-vessels-layer',
       data: vessels,
@@ -5653,6 +5683,16 @@ export class DeckGLMap {
     this.aisLiveCallback = (batch: AisPositionData[]) => {
       for (const vessel of batch) {
         this.aisVessels.set(vessel.mmsi, vessel);
+        if (this.aisFocusBounds) {
+          const [[minLon, minLat], [maxLon, maxLat]] = this.aisFocusBounds;
+          if (vessel.lon >= minLon && vessel.lon <= maxLon && vessel.lat >= minLat && vessel.lat <= maxLat) {
+            const track = this.aisTrackHistory.get(vessel.mmsi) ?? [];
+            const last = track[track.length - 1];
+            if (!last || last[0] !== vessel.lon || last[1] !== vessel.lat) track.push([vessel.lon, vessel.lat]);
+            if (track.length > 48) track.shift();
+            this.aisTrackHistory.set(vessel.mmsi, track);
+          }
+        }
       }
       this.render('ais');
     };
@@ -5664,6 +5704,13 @@ export class DeckGLMap {
     unregisterAisCallback(this.aisLiveCallback);
     this.aisLiveCallback = null;
     this.aisVessels.clear();
+    this.aisTrackHistory.clear();
+    this.render('ais');
+  }
+
+  public setAisFocusBounds(bounds: [[number, number], [number, number]] | null): void {
+    this.aisFocusBounds = bounds;
+    if (!bounds) this.aisTrackHistory.clear();
     this.render('ais');
   }
 

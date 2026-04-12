@@ -4,6 +4,7 @@ import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
 import { t } from '@/services/i18n';
 import { getCSSColor } from '@/utils';
 import { getCountryFlag } from '@/utils/country-flags';
+import { buildArticleLinkAttributes } from '@/services/article-open';
 
 const TYPE_ICONS: Record<string, string> = {
   capital: '🏛️',
@@ -89,7 +90,7 @@ export class GeoHubsPanel extends Panel {
           <div class="hub-score geo">${Math.round(hub.score)}</div>
         </div>
         ${topStory ? `
-          <a class="hub-top-story geo" href="${sanitizeUrl(topStory.link)}" target="_blank" rel="noopener" data-hub-id="${escapeHtml(hub.hubId)}">
+          <a class="hub-top-story geo" href="${sanitizeUrl(topStory.link)}" target="_blank" rel="noopener" data-hub-id="${escapeHtml(hub.hubId)}" ${buildArticleLinkAttributes({ url: topStory.link, title: topStory.title, source: hub.name })}>
             ${escapeHtml(topStory.title.length > 80 ? topStory.title.slice(0, 77) + '...' : topStory.title)}
           </a>
         ` : ''}

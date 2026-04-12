@@ -9,37 +9,6 @@ import { dataFreshness, type FreshnessStatus } from '@/services/data-freshness';
 import { isLoggedIn, getCurrentAuthState, subscribeToAuth } from '@/services/user-auth';
 import { buildPanelEmptyState, buildPanelErrorState, buildPanelLoadingState, type PanelEmptyKind } from './panel-state';
 
-// ─── SVG helpers (no innerHTML) ───────────────────────────────────────────────
-const SVG_NS = 'http://www.w3.org/2000/svg';
-
-function makeSvgEl(tag: string, attrs: Record<string, string>): SVGElement {
-  const el = document.createElementNS(SVG_NS, tag);
-  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
-  return el;
-}
-
-function buildSparklineSvg(data: number[], w = 50, h = 16): SVGSVGElement | null {
-  if (data.length < 2) return null;
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
-  const last = data[data.length - 1] ?? 0;
-  const first = data[0] ?? 0;
-  const color = last >= first ? 'var(--green, #44ff88)' : 'var(--red, #ff4444)';
-  const points = data.map((v, i) => {
-    const x = (i / (data.length - 1)) * w;
-    const y = h - ((v - min) / range) * (h - 2) - 1;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(' ');
-  const svg = makeSvgEl('svg', { width: String(w), height: String(h), viewBox: `0 0 ${w} ${h}` }) as SVGSVGElement;
-  svg.classList.add('mini-sparkline');
-  const poly = makeSvgEl('polyline', {
-    points, fill: 'none', stroke: color,
-    'stroke-width': '1.2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
-  });
-  svg.appendChild(poly);
-  return svg;
-}
 
 export interface PanelOptions {
   id: string;
@@ -239,8 +208,6 @@ export class Panel {
   private retryAttempt = 0;
   private _fetching = false;
   private _locked = false;
-  private sparklineEl: HTMLElement | null = null;
-  private countHistory: number[] = [];
   private copyResetTimer: ReturnType<typeof setTimeout> | null = null;
   private freshnessEl: HTMLElement | null = null;
   private freshnessUnsubscribe: (() => void) | null = null;
@@ -359,11 +326,6 @@ export class Panel {
       this.countEl.className = 'panel-count';
       this.countEl.textContent = '0';
       this.header.appendChild(this.countEl);
-
-      // Sparkline — shows count trend over session (auto-populated by setCount calls)
-      this.sparklineEl = document.createElement('span');
-      this.sparklineEl.className = 'panel-sparkline';
-      this.header.appendChild(this.sparklineEl);
     }
 
     this.content = document.createElement('div');
@@ -947,20 +909,6 @@ export class Panel {
         this.countEl.classList.add('bump');
       }
     }
-    // Track count history for sparkline (rolling 16-point window)
-    if (count > 0) {
-      this.countHistory.push(count);
-      if (this.countHistory.length > 16) this.countHistory.shift();
-      this.renderCountSparkline();
-    }
-  }
-
-  private renderCountSparkline(): void {
-    if (!this.sparklineEl || this.countHistory.length < 3) return;
-    const svg = buildSparklineSvg(this.countHistory);
-    if (!svg) return;
-    while (this.sparklineEl.firstChild) this.sparklineEl.removeChild(this.sparklineEl.firstChild);
-    this.sparklineEl.appendChild(svg);
   }
 
   public setErrorState(hasError: boolean, tooltip?: string): void {

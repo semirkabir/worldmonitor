@@ -614,6 +614,49 @@ function rssProxyPlugin(): Plugin {
   };
 }
 
+function fetchArticlePlugin(): Plugin {
+  return {
+    name: 'fetch-article-proxy',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        if (!req.url?.startsWith('/api/fetch-article')) return next();
+
+        try {
+          const { default: handler } = await import('./api/fetch-article.js');
+          const port = server.config.server.port || 3000;
+          const requestUrl = new URL(req.url, `http://localhost:${port}`);
+
+          const headers = new Headers();
+          for (const [key, value] of Object.entries(req.headers)) {
+            if (typeof value === 'string') {
+              headers.set(key, value);
+            } else if (Array.isArray(value)) {
+              headers.set(key, value.join(', '));
+            }
+          }
+
+          const request = new Request(requestUrl.toString(), {
+            method: req.method,
+            headers,
+          });
+
+          const response = await handler(request);
+          res.statusCode = response.status;
+          response.headers.forEach((value: string, key: string) => {
+            res.setHeader(key, value);
+          });
+          res.end(await response.text());
+        } catch (error) {
+          console.error('[fetch-article-proxy] Error:', error);
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Failed to fetch article' }));
+        }
+      });
+    },
+  };
+}
+
 function weatherProxyPlugin(): Plugin {
   return {
     name: 'weather-proxy',
@@ -820,6 +863,7 @@ export default defineConfig({
     telegramFeedPlugin(),
     aisSnapshotPlugin(),
     rssProxyPlugin(),
+    fetchArticlePlugin(),
     weatherProxyPlugin(),
     planespottersProxyPlugin(),
     usaSpendingProxyPlugin(),

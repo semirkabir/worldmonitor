@@ -3,6 +3,7 @@ import type { MarketQuote, SecFiling } from '@/generated/client/worldmonitor/mar
 import { row } from '../types';
 import type { EntityRenderer, EntityRenderContext } from '../types';
 import { sanitizeUrl } from '@/utils/sanitize';
+import { applyArticleLinkDataset } from '@/services/article-open';
 import {
   fetchCompanyProfile,
   fetchCompanyMetrics,
@@ -199,7 +200,7 @@ export class CompanyRenderer implements EntityRenderer {
       ? (quotesResp.value.quotes.find(q => q.symbol === ticker) ?? quotesResp.value.quotes[0] ?? null)
       : null;
     const filings = filingsResp.status === 'fulfilled' ? filingsResp.value.filings : [];
-    const companyName = filingsResp.status === 'fulfilled' ? filingsResp.value.companyName : name;
+    const companyName = filingsResp.status === 'fulfilled' ? (filingsResp.value.companyName ?? name) : name;
 
     return {
       ticker,
@@ -735,6 +736,12 @@ export class CompanyRenderer implements EntityRenderer {
           headline.href = sanitizeUrl(item.url);
           headline.target = '_blank';
           headline.rel = 'noopener noreferrer';
+          applyArticleLinkDataset(headline, {
+            url: item.url,
+            title: item.headline,
+            source: item.source,
+            publishedAt: new Date(item.datetime * 1000),
+          });
         }
         info.append(headline);
         const meta = ctx.el('div', 'cp-news-meta');
@@ -1064,12 +1071,12 @@ function buildSparkline(ctx: EntityRenderContext, data: number[], positive: bool
 function buildFilingRow(ctx: EntityRenderContext, filing: SecFiling): HTMLElement {
   const r = ctx.el('div', 'edp-sec-filing');
 
-  const typeClass = FILING_TYPE_CLASS[filing.filingType] ?? 'edp-sec-type-badge';
-  r.append(ctx.el('span', typeClass, filing.filingType));
+  const typeClass = FILING_TYPE_CLASS[filing.filingType ?? ''] ?? 'edp-sec-type-badge';
+  r.append(ctx.el('span', typeClass, filing.filingType ?? ''));
 
   const info = ctx.el('div', 'edp-sec-filing-info');
-  info.append(ctx.el('div', 'edp-sec-filing-title', filing.title || filing.filingType));
-  info.append(ctx.el('div', 'edp-sec-filing-meta', fmtDate(filing.filedAt)));
+  info.append(ctx.el('div', 'edp-sec-filing-title', filing.title || filing.filingType || ''));
+  info.append(ctx.el('div', 'edp-sec-filing-meta', fmtDate(filing.filedAt ?? '')));
   r.append(info);
 
   if (filing.url) {

@@ -18,6 +18,7 @@ import { getInsightSeverityPreference, subscribeInsightSeverityPreferenceChange 
 import { getServerInsights, type ServerInsights, type ServerInsightStory } from '@/services/insights-loader';
 import type { ClusteredEvent, FocalPoint, MilitaryFlight } from '@/types';
 import { triggerUrgencyMode } from '@/services/urgency-mode';
+import { buildArticleLinkAttributes } from '@/services/article-open';
 
 export class InsightsPanel extends Panel {
   private lastBriefUpdate = 0;
@@ -907,6 +908,11 @@ export class InsightsPanel extends Panel {
       const topHeadline = fp.topHeadlines[0];
       const headlineText = topHeadline?.title?.slice(0, 60) || '';
       const headlineUrl = sanitizeUrl(topHeadline?.url || '');
+      const articleAttrs = buildArticleLinkAttributes({
+        url: topHeadline?.url || '',
+        title: topHeadline?.title || '',
+        source: fp.displayName,
+      });
 
       return `
         <div class="focal-point ${urgencyClass}">
@@ -918,7 +924,7 @@ export class InsightsPanel extends Panel {
           <div class="focal-point-stats">
             ${fp.newsMentions} news • ${fp.signalCount} signals
           </div>
-          ${headlineText && headlineUrl ? `<a href="${headlineUrl}" target="_blank" rel="noopener" class="focal-point-headline">"${escapeHtml(headlineText)}..."</a>` : ''}
+          ${headlineText && headlineUrl ? `<a href="${headlineUrl}" target="_blank" rel="noopener" class="focal-point-headline" ${articleAttrs}>"${escapeHtml(headlineText)}..."</a>` : ''}
         </div>
       `;
     }).join('');

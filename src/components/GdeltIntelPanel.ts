@@ -11,6 +11,7 @@ import {
   type IntelTopic,
   type TopicIntelligence,
 } from '@/services/gdelt-intel';
+import { applyArticleLinkDataset } from '@/services/article-open';
 
 export class GdeltIntelPanel extends Panel {
   private activeTopic: IntelTopic = getIntelTopics()[0]!;
@@ -117,7 +118,7 @@ export class GdeltIntelPanel extends Panel {
     const timeAgo = formatArticleDate(article.date);
     const toneClass = article.tone ? (article.tone < -2 ? 'tone-negative' : article.tone > 2 ? 'tone-positive' : '') : '';
 
-    return h('a', {
+    const link = h('a', {
       href: sanitizeUrl(article.url),
       target: '_blank',
       rel: 'noopener',
@@ -129,6 +130,13 @@ export class GdeltIntelPanel extends Panel {
       ),
       h('div', { className: 'article-title' }, article.title),
     );
+    applyArticleLinkDataset(link, {
+      url: article.url,
+      title: article.title,
+      source: domain,
+      publishedAt: article.date,
+    });
+    return link;
   }
 
   public async refresh(): Promise<void> {

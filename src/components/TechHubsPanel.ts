@@ -4,6 +4,7 @@ import type { TechHubActivity } from '@/services/tech-activity';
 import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
 import { getCSSColor } from '@/utils';
 import { getCountryFlag } from '@/utils/country-flags';
+import { buildArticleLinkAttributes } from '@/services/article-open';
 
 export class TechHubsPanel extends Panel {
   private activities: TechHubActivity[] = [];
@@ -66,7 +67,7 @@ export class TechHubsPanel extends Panel {
           <div class="hub-score">${Math.round(hub.score)}</div>
         </div>
         ${topStory ? `
-          <a class="hub-top-story" href="${sanitizeUrl(topStory.link)}" target="_blank" rel="noopener" data-hub-id="${escapeHtml(hub.hubId)}">
+          <a class="hub-top-story" href="${sanitizeUrl(topStory.link)}" target="_blank" rel="noopener" data-hub-id="${escapeHtml(hub.hubId)}" ${buildArticleLinkAttributes({ url: topStory.link, title: topStory.title, source: hub.city })}>
             ${escapeHtml(topStory.title.length > 80 ? topStory.title.slice(0, 77) + '...' : topStory.title)}
           </a>
         ` : ''}

@@ -3,6 +3,7 @@ import type { NewsItem } from '@/types';
 import { generateSummary } from '@/services/summarization';
 import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
 import { t } from '@/services/i18n';
+import { buildArticleLinkAttributes } from '@/services/article-open';
 
 /**
  * GoodThingsDigestPanel -- Displays the top 5 positive stories of the day,
@@ -48,12 +49,18 @@ export class GoodThingsDigestPanel extends Panel {
 
     for (let i = 0; i < top5.length; i++) {
       const item = top5[i]!;
+      const articleAttrs = buildArticleLinkAttributes({
+        url: item.link,
+        title: item.title,
+        source: item.source,
+        publishedAt: item.pubDate,
+      });
       const card = document.createElement('div');
       card.className = 'digest-card';
       card.innerHTML = `
         <span class="digest-card-number">${i + 1}</span>
         <div class="digest-card-body">
-          <a class="digest-card-title" href="${sanitizeUrl(item.link)}" target="_blank" rel="noopener">
+          <a class="digest-card-title" href="${sanitizeUrl(item.link)}" target="_blank" rel="noopener" ${articleAttrs}>
             ${escapeHtml(item.title)}
           </a>
           <span class="digest-card-source">${escapeHtml(item.source)}</span>

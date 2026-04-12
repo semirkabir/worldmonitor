@@ -9,6 +9,7 @@ import { analysisWorker, enrichWithVelocityML, getClusterAssetContext, MAX_DISTA
 import { getSourcePropagandaRisk, getSourceTier, getSourceType } from '@/config/feeds';
 import { SITE_VARIANT } from '@/config';
 import { t, getCurrentLanguage } from '@/services/i18n';
+import { buildArticleLinkAttributes } from '@/services/article-open';
 
 /** Threshold for enabling virtual scrolling */
 const VIRTUAL_SCROLL_THRESHOLD = 15;
@@ -519,20 +520,31 @@ export class NewsPanel extends Panel {
 
     const html = sorted
       .map(
-        (item) => `
+        (item) => {
+          const articleAttrs = buildArticleLinkAttributes({
+            url: item.link,
+            title: item.title,
+            source: item.source,
+            publishedAt: item.pubDate,
+          });
+          return `
       <div class="item ${item.isAlert ? 'alert' : ''}" ${item.monitorColor ? `style="--item-accent: ${escapeHtml(item.monitorColor)}"` : ''}>
         <div class="item-source">
           ${escapeHtml(item.source)}
           ${item.lang && item.lang !== getCurrentLanguage() ? `<span class="lang-badge">${item.lang.toUpperCase()}</span>` : ''}
           ${item.isAlert ? '<span class="alert-tag">ALERT</span>' : ''}
         </div>
-        <a class="item-title" href="${sanitizeUrl(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a>
+        <div class="item-title-row">
+          <a class="item-title" href="${sanitizeUrl(item.link)}" target="_blank" rel="noopener" ${articleAttrs}>${escapeHtml(item.title)}</a>
+          ${articleAttrs ? `<button class="item-expand-btn" type="button" aria-label="Open article in right panel" title="Open in right panel" ${articleAttrs}>↗</button>` : ''}
+        </div>
         <div class="item-time">
           ${formatTime(item.pubDate)}
           ${getCurrentLanguage() !== 'en' ? `<button class="item-translate-btn" title="Translate" data-text="${escapeHtml(item.title)}">文</button>` : ''}
         </div>
       </div>
-    `
+    `;
+        }
       )
       .join('');
 
@@ -731,6 +743,13 @@ export class NewsPanel extends Panel {
       isNew ? 'item-new' : '',
     ].filter(Boolean).join(' ');
 
+    const articleAttrs = buildArticleLinkAttributes({
+      url: cluster.primaryLink,
+      title: cluster.primaryTitle,
+      source: cluster.primarySource,
+      publishedAt: cluster.lastUpdated,
+    });
+
     return `
       <div class="${itemClasses}" ${cluster.monitorColor ? `style="--item-accent: ${escapeHtml(cluster.monitorColor)}"` : ''} data-cluster-id="${escapeHtml(cluster.id)}" data-news-id="${escapeHtml(cluster.primaryLink)}">
         <div class="item-source">
@@ -745,7 +764,10 @@ export class NewsPanel extends Panel {
           ${cluster.isAlert ? '<span class="alert-tag">ALERT</span>' : ''}
           ${categoryBadge}
         </div>
-        <a class="item-title" href="${sanitizeUrl(cluster.primaryLink)}" target="_blank" rel="noopener">${linkifyTickers(escapeHtml(cluster.primaryTitle))}</a>
+        <div class="item-title-row">
+          <a class="item-title" href="${sanitizeUrl(cluster.primaryLink)}" target="_blank" rel="noopener" ${articleAttrs}>${linkifyTickers(escapeHtml(cluster.primaryTitle))}</a>
+          ${articleAttrs ? `<button class="item-expand-btn" type="button" aria-label="Open article in right panel" title="Open in right panel" ${articleAttrs}>↗</button>` : ''}
+        </div>
         <div class="cluster-meta">
           <span class="top-sources">${topSourcesHtml}</span>
           <span class="item-time">${formatTime(cluster.lastUpdated)}</span>

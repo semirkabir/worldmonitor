@@ -1,5 +1,6 @@
 import { fetchFlightStatus, fetchAirportOpsSummary, fetchFlightPrices, fetchAviationNews } from '@/services/aviation';
 import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
+import { buildArticleLinkAttributes } from '@/services/article-open';
 
 // ---- Intent types ----
 
@@ -106,7 +107,7 @@ async function executeIntent(intent: Intent): Promise<CommandResult> {
     if (intent.type === 'NEWS_BRIEF') {
         const items = await fetchAviationNews(intent.entities, 24, 5);
         if (!items.length) return { html: '<div class="cmd-empty">No recent aviation news.</div>' };
-        const rows = items.map(n => `<div class="cmd-news-item"><a href="${sanitizeUrl(n.url)}" target="_blank" rel="noopener">${escapeHtml(n.title)}</a></div>`).join('');
+        const rows = items.map(n => `<div class="cmd-news-item"><a href="${sanitizeUrl(n.url)}" target="_blank" rel="noopener" ${buildArticleLinkAttributes({ url: n.url, title: n.title, source: n.sourceName, publishedAt: n.publishedAt })}>${escapeHtml(n.title)}</a></div>`).join('');
         return { html: `<div class="cmd-section"><strong>📰 Aviation News</strong>${rows}</div>` };
     }
 

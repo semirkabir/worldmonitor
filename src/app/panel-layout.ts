@@ -87,6 +87,8 @@ export interface CustomCategory {
 
 const CUSTOM_CATEGORIES_KEY = 'wm-custom-categories-v1';
 const NEWS_REFRESH_SWEEP_EVENT = 'wm:news-refresh-sweep';
+const APP_TIME_RANGE_STORAGE_KEY = 'wm:time-range';
+const APP_TIME_RANGE_EVENT = 'wm:time-range-changed';
 
 function loadCustomCategories(): CustomCategory[] {
   try {
@@ -723,6 +725,8 @@ export class PanelLayoutManager implements AppModule {
 
     this.ctx.map.initEscalationGetters();
     this.ctx.currentTimeRange = this.ctx.map.getTimeRange();
+    try { localStorage.setItem(APP_TIME_RANGE_STORAGE_KEY, this.ctx.currentTimeRange); } catch { /* ignore */ }
+    window.dispatchEvent(new CustomEvent(APP_TIME_RANGE_EVENT, { detail: { range: this.ctx.currentTimeRange } }));
 
     const politicsPanel = new NewsPanel('politics', t('panels.politics'));
     this.attachRelatedAssetHandlers(politicsPanel);
@@ -1270,6 +1274,8 @@ export class PanelLayoutManager implements AppModule {
 
     this.ctx.map.onTimeRangeChanged((range) => {
       this.ctx.currentTimeRange = range;
+      try { localStorage.setItem(APP_TIME_RANGE_STORAGE_KEY, range); } catch { /* ignore */ }
+      window.dispatchEvent(new CustomEvent(APP_TIME_RANGE_EVENT, { detail: { range } }));
       this.applyTimeRangeFilterDebounced();
     });
 

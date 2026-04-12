@@ -3,9 +3,36 @@ import { searchPredictions, type PredictionMarket } from '@/services/prediction'
 import { escapeHtml } from '@/utils/sanitize';
 import { t } from '@/services/i18n';
 
+type PredictionTimeframe = '1h' | '6h' | '24h' | '48h' | '7d' | 'all';
+
+const TIMEFRAME_MS: Record<Exclude<PredictionTimeframe, 'all'>, number> = {
+  '1h': 1 * 60 * 60 * 1000,
+  '6h': 6 * 60 * 60 * 1000,
+  '24h': 24 * 60 * 60 * 1000,
+  '48h': 48 * 60 * 60 * 1000,
+  '7d': 7 * 24 * 60 * 60 * 1000,
+};
+
+const TIMEFRAME_STORAGE_KEY = 'wm:time-range';
+const TIMEFRAME_EVENT = 'wm:time-range-changed';
+
+function loadStoredTimeframe(): PredictionTimeframe {
+  try {
+    const stored = localStorage.getItem(TIMEFRAME_STORAGE_KEY);
+    if (stored === '1h' || stored === '6h' || stored === '24h' || stored === '48h' || stored === '7d' || stored === 'all') return stored;
+  } catch { /* ignore */ }
+  return '7d';
+}
+
+function storeTimeframe(tf: PredictionTimeframe): void {
+  try { localStorage.setItem(TIMEFRAME_STORAGE_KEY, tf); } catch { /* ignore */ }
+}
+
 export class PredictionPanel extends Panel {
   private onMarketClick?: (market: PredictionMarket) => void;
   private allPredictions: PredictionMarket[] = [];
+  private timeframe: PredictionTimeframe = loadStoredTimeframe();
+  private timeframeSelect: HTMLSelectElement | null = null;
   private searchInput: HTMLInputElement | null = null;
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private searchVersion = 0;
@@ -51,6 +78,48 @@ export class PredictionPanel extends Panel {
     } else {
       this.header.appendChild(searchWrap);
     }
+
+    const tfSelect = document.createElement('select');
+    tfSelect.className = 'prediction-timeframe';
+    tfSelect.title = 'Filter by closing time';
+    tfSelect.setAttribute('aria-label', 'Timeframe filter');
+    const tfOptions: { value: PredictionTimeframe; label: string }[] = [
+      { value: '1h', label: '1h' },
+      { value: '6h', label: '6h' },
+      { value: '24h', label: '24h' },
+      { value: '48h', label: '48h' },
+      { value: '7d', label: '7d' },
+      { value: 'all', label: 'All' },
+    ];
+    for (const opt of tfOptions) {
+      const el = document.createElement('option');
+      el.value = opt.value;
+      el.textContent = opt.label;
+      if (opt.value === this.timeframe) el.selected = true;
+      tfSelect.appendChild(el);
+    }
+    tfSelect.addEventListener('change', () => {
+      this.timeframe = tfSelect.value as PredictionTimeframe;
+      storeTimeframe(this.timeframe);
+      window.dispatchEvent(new CustomEvent(TIMEFRAME_EVENT, { detail: { range: this.timeframe } }));
+      this.renderFilteredMarkets();
+    });
+    this.timeframeSelect = tfSelect;
+
+    window.addEventListener(TIMEFRAME_EVENT, ((event: Event) => {
+      const range = (event as CustomEvent<{ range?: PredictionTimeframe }>).detail?.range;
+      if (!range || range === this.timeframe) return;
+      this.timeframe = range;
+      if (this.timeframeSelect) this.timeframeSelect.value = range;
+      this.renderFilteredMarkets();
+    }) as EventListener);
+
+    const headerAnchor = this.header.querySelector('.panel-copy-btn, .panel-remove-btn, .panel-data-badge, .panel-count');
+    if (headerAnchor) {
+      this.header.insertBefore(tfSelect, headerAnchor);
+    } else {
+      this.header.appendChild(tfSelect);
+    }
   }
 
   public setOnMarketClick(cb: (market: PredictionMarket) => void): void {
@@ -71,7 +140,27 @@ export class PredictionPanel extends Panel {
       void this.runSearch(activeQuery);
       return;
     }
-    this.renderMarketList(this.allPredictions, data.length === 0 ? t('common.failedPredictions') : undefined);
+    this.renderFilteredMarkets();
+  }
+
+  private filterByTimeframe(markets: PredictionMarket[]): PredictionMarket[] {
+    if (this.timeframe === 'all') return markets;
+    const cutoff = Date.now() + TIMEFRAME_MS[this.timeframe];
+    return markets.filter(m => {
+      if (!m.endDate) return false;
+      const ms = Date.parse(m.endDate);
+      return Number.isFinite(ms) && ms <= cutoff;
+    });
+  }
+
+  private renderFilteredMarkets(): void {
+    const filtered = this.filterByTimeframe(this.allPredictions);
+    const top15 = [...filtered]
+      .sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0))
+      .slice(0, 15);
+    this.renderMarketList(top15, top15.length === 0 && this.allPredictions.length > 0
+      ? `No markets closing within ${this.timeframe === '1h' ? '1 hour' : this.timeframe === '6h' ? '6 hours' : this.timeframe === '24h' ? '24 hours' : this.timeframe === '48h' ? '48 hours' : this.timeframe === '7d' ? '7 days' : 'all time'}`
+      : undefined);
   }
 
   private renderMarketList(data: PredictionMarket[], emptyMessage?: string): void {
@@ -166,7 +255,7 @@ export class PredictionPanel extends Panel {
     if (!query) {
       this.searchVersion++;
       this.header.classList.remove('prediction-searching');
-      this.renderMarketList(this.allPredictions, this.allPredictions.length === 0 ? t('common.failedPredictions') : undefined);
+      this.renderFilteredMarkets();
       return;
     }
     this.searchDebounceTimer = setTimeout(() => {
@@ -178,12 +267,12 @@ export class PredictionPanel extends Panel {
     const normalized = query.trim();
     if (!normalized) {
       this.header.classList.remove('prediction-searching');
-      this.renderMarketList(this.allPredictions, this.allPredictions.length === 0 ? t('common.failedPredictions') : undefined);
+      this.renderFilteredMarkets();
       return;
     }
 
     const version = ++this.searchVersion;
-    const localMatches = this.filterLocalPredictions(normalized);
+    const localMatches = this.filterByTimeframe(this.filterLocalPredictions(normalized));
     this.renderMarketList(localMatches, `Searching Polymarket for "${normalized}"...`);
 
     if (normalized.length < 2) return;
@@ -193,14 +282,15 @@ export class PredictionPanel extends Panel {
       const liveMatches = await searchPredictions(normalized);
       if (version !== this.searchVersion) return;
       const merged = new Map<string, PredictionMarket>();
-      for (const market of [...localMatches, ...liveMatches]) {
+      for (const market of [...localMatches, ...this.filterByTimeframe(liveMatches)]) {
         const key = market.slug || market.url || market.title;
         const existing = merged.get(key);
         if (!existing || (market.volume ?? 0) > (existing.volume ?? 0)) {
           merged.set(key, market);
         }
       }
-      this.renderMarketList([...merged.values()], `No Polymarket markets found for "${normalized}"`);
+      const top15 = [...merged.values()].sort((a, b) => (b.volume ?? 0) - (a.volume ?? 0)).slice(0, 15);
+      this.renderMarketList(top15, `No Polymarket markets found for "${normalized}"`);
     } catch {
       if (version !== this.searchVersion) return;
       this.renderMarketList(localMatches, `Unable to search Polymarket for "${normalized}"`);

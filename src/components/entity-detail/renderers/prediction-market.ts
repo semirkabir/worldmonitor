@@ -48,6 +48,18 @@ export interface OrderLevel {
   size: number;
 }
 
+type PredictionTimeframe = '1h' | '6h' | '24h' | '48h' | '7d' | 'all';
+
+const TIMEFRAME_STORAGE_KEY = 'wm:time-range';
+const TIMEFRAME_EVENT = 'wm:time-range-changed';
+const TIMEFRAME_MS: Record<Exclude<PredictionTimeframe, 'all'>, number> = {
+  '1h': 1 * 60 * 60 * 1000,
+  '6h': 6 * 60 * 60 * 1000,
+  '24h': 24 * 60 * 60 * 1000,
+  '48h': 48 * 60 * 60 * 1000,
+  '7d': 7 * 24 * 60 * 60 * 1000,
+};
+
 export interface PredictionMarketPanelData {
   id: string;
   title: string;
@@ -227,24 +239,17 @@ export class PredictionMarketRenderer implements EntityRenderer {
 
     const [overviewCard, overviewBody] = ctx.sectionCard('Overview');
     if (leadMarket) overviewBody.append(buildPredictionHero(ctx, data, leadMarket));
+
     const factGrid = ctx.el('div', 'edp-fact-grid edp-prediction-overview-grid');
     factGrid.append(
       makeFactCard(ctx, 'Total Volume', formatVolume(data.totalVolume)),
       makeFactCard(ctx, 'Liquidity', formatVolume(data.liquidity || 0)),
-      makeFactCard(ctx, 'Resolution', formatDate(leadMarket?.endDate || data.endDate || '')),
-      makeFactCard(ctx, 'Best Bid', formatPricePct(data.bestBid)),
-      makeFactCard(ctx, 'Best Ask', formatPricePct(data.bestAsk)),
       makeFactCard(ctx, 'Spread', formatPricePct(data.spread)),
     );
     overviewBody.append(factGrid);
-    if (typeof data.midpoint === 'number') overviewBody.append(row(ctx, 'Midpoint', formatPricePct(data.midpoint)));
-    if (data.lastTradeSide) overviewBody.append(row(ctx, 'Last Trade Side', data.lastTradeSide));
+
     if (data.resolutionSource) overviewBody.append(row(ctx, 'Resolution Source', data.resolutionSource));
     container.append(overviewCard);
-
-    if ((data.recentTrades?.length || 0) > 0) {
-      overviewBody.append(row(ctx, 'Recent Prints', String(data.recentTrades?.length || 0)));
-    }
 
     const leadSlug = leadMarket?.slug || data.slug;
     const holders = data.holders?.[leadSlug] || [];
@@ -280,37 +285,19 @@ function buildPredictionHero(ctx: EntityRenderContext, data: PredictionMarketPan
   const meta = ctx.el('div', 'edp-prediction-hero-meta');
   meta.append(
     makeInlineStat(ctx, 'No', `${leadMarket.noPrice}%`),
-    makeInlineStat(ctx, 'Trades', String(data.recentTrades?.length || 0)),
-    makeInlineStat(ctx, 'Volume', formatVolume(leadMarket.volume || data.totalVolume)),
   );
   top.append(score, meta);
   hero.append(top);
 
   hero.append(buildProbabilityBar(ctx, leadMarket.yesPrice, leadMarket.noPrice));
-
-  const stats = ctx.el('div', 'edp-fact-grid edp-prediction-market-grid');
-  stats.append(
-    makeFactCard(ctx, 'Yes', `${leadMarket.yesPrice}%`),
-    makeFactCard(ctx, 'No', `${leadMarket.noPrice}%`),
-    makeFactCard(ctx, 'Volume', formatVolume(leadMarket.volume || data.totalVolume)),
-  );
-  hero.append(stats);
-
-  if (leadMarket.endDate) hero.append(row(ctx, 'Resolves', formatDate(leadMarket.endDate)));
   const history = data.priceHistory?.[leadMarket.slug] || [];
   if (history.length > 1) {
     const chartWrap = ctx.el('div', 'edp-prediction-chart-wrap');
-    chartWrap.append(createPriceChart(history, leadMarket.yesPrice));
+    chartWrap.append(createInteractivePriceChart(history, leadMarket.yesPrice));
     hero.append(chartWrap);
   }
 
-  const holders = data.holders?.[leadMarket.slug] || [];
-  const comments = data.comments?.[leadMarket.slug] || [];
   const foot = ctx.el('div', 'edp-prediction-market-foot');
-  foot.append(
-    makeMetaChip(ctx, `${holders.length} holder${holders.length === 1 ? '' : 's'}`),
-    makeMetaChip(ctx, `${comments.length} comment${comments.length === 1 ? '' : 's'}`),
-  );
   if (!leadMarket.closed) {
     const tradeLink = ctx.el('a', 'edp-prediction-market-link') as HTMLAnchorElement;
     tradeLink.href = leadMarket.url;
@@ -350,7 +337,6 @@ function buildTradingTabs(
   const [card, body] = ctx.sectionCard('Market Detail');
   body.classList.add('edp-prediction-tabs-shell');
 
-  const summary = buildDetailSummary(ctx, data, holders, comments);
   const tabBar = ctx.el('div', 'edp-prediction-tabs');
   const panelHost = ctx.el('div', 'edp-prediction-tab-panels');
   let activeIndex = tabs.findIndex((tab) => tab.id === PredictionMarketRenderer.lastActiveTabId);
@@ -384,7 +370,7 @@ function buildTradingTabs(
     tabBar.append(button);
   });
 
-  body.append(summary, tabBar, panelHost);
+  body.append(tabBar, panelHost);
   renderActive();
   return card;
 }
@@ -400,27 +386,6 @@ function getPreferredTabId(data: PredictionMarketPanelData, comments: MarketComm
   if ((data.orderBook?.bids.length || 0) > 0 || (data.orderBook?.asks.length || 0) > 0) return 'book';
   if ((data.holders?.[data.slug]?.length || 0) > 0) return 'holders';
   return 'comments';
-}
-
-function buildDetailSummary(
-  ctx: EntityRenderContext,
-  data: PredictionMarketPanelData,
-  holders: MarketHolder[],
-  comments: MarketComment[],
-): HTMLElement {
-  const summary = ctx.el('div', 'edp-prediction-summary-strip');
-  const topBid = data.orderBook?.bids[0];
-  const topAsk = data.orderBook?.asks[0];
-  const lastTrade = data.recentTrades?.[0];
-  summary.append(
-    makeMetricPill(ctx, 'Bid', formatPricePct(topBid?.price), 'is-buy'),
-    makeMetricPill(ctx, 'Ask', formatPricePct(topAsk?.price), 'is-sell'),
-    makeMetricPill(ctx, 'Spread', topBid && topAsk ? formatPricePct(topAsk.price - topBid.price) : '—'),
-    makeMetricPill(ctx, 'Last', formatPricePct(lastTrade?.price)),
-    makeMetricPill(ctx, 'Holders', String(holders.length || 0)),
-    makeMetricPill(ctx, 'Comments', String(comments.length || 0)),
-  );
-  return summary;
 }
 
 function buildOrderBook(ctx: EntityRenderContext, orderBook: PredictionMarketPanelData['orderBook']): HTMLElement {
@@ -470,9 +435,10 @@ function buildBookHeader(ctx: EntityRenderContext, label: string): HTMLElement {
 function buildBookRow(ctx: EntityRenderContext, level: OrderLevel, side: string): HTMLElement {
   const rowEl = ctx.el('div', `edp-prediction-book-row ${side === 'BUY' ? 'is-bid' : 'is-ask'}`);
   const total = level.price * level.size;
+  const sideClass = side === 'BUY' ? 'is-buy' : 'is-sell';
   rowEl.append(
-    ctx.el('span', 'edp-prediction-book-col edp-prediction-book-side-label', side === 'BUY' ? 'Bid' : 'Ask'),
-    ctx.el('span', 'edp-prediction-book-col edp-prediction-book-price', formatPricePct(level.price)),
+    ctx.el('span', `edp-prediction-book-col edp-prediction-book-side-label ${sideClass}`.trim(), side === 'BUY' ? 'Bid' : 'Ask'),
+    ctx.el('span', `edp-prediction-book-col edp-prediction-book-price ${sideClass}`.trim(), formatPricePct(level.price)),
     ctx.el('span', 'edp-prediction-book-col', formatShares(level.size)),
     ctx.el('span', 'edp-prediction-book-col', formatVolume(total)),
   );
@@ -525,28 +491,57 @@ function buildRecentTrades(ctx: EntityRenderContext, trades: MarketTrade[]): HTM
   const wrap = ctx.el('div', 'edp-prediction-table');
   wrap.append(buildTableHeader(ctx, ['Side', 'Price', 'Size', 'Time']));
   for (const trade of trades) {
+    const tone = trade.side.toLowerCase().includes('buy') ? 'is-buy' : trade.side.toLowerCase().includes('sell') ? 'is-sell' : undefined;
     wrap.append(buildTableRow(ctx, [
       trade.side || 'Trade',
       formatPricePct(trade.price),
       formatShares(trade.size),
       formatTime(trade.timestamp),
-    ], trade.side.toLowerCase().includes('buy') ? 'is-buy' : trade.side.toLowerCase().includes('sell') ? 'is-sell' : undefined));
+    ], tone));
   }
   return wrap;
 }
 
 function buildHolders(ctx: EntityRenderContext, holders: MarketHolder[]): HTMLElement {
-  const wrap = ctx.el('div', 'edp-prediction-table');
-  wrap.append(buildTableHeader(ctx, ['Holder', 'Side', 'Shares', 'Value']));
-  for (const holder of holders) {
-    wrap.append(buildTableRow(ctx, [
-      holder.label || shortenAddress(holder.address),
-      holder.side.toUpperCase(),
-      formatShares(holder.shares),
-      formatVolume(holder.value),
-    ], holder.side === 'yes' ? 'is-buy' : 'is-sell'));
+  const wrap = ctx.el('div', 'edp-prediction-holders');
+
+  const yesHolders = holders.filter(h => h.side === 'yes').slice(0, 5);
+  const noHolders = holders.filter(h => h.side === 'no').slice(0, 5);
+
+  if (yesHolders.length > 0) {
+    const yesSection = ctx.el('div', 'edp-prediction-holders-content');
+    yesSection.append(ctx.el('div', 'edp-prediction-holders-header is-yes', `YES Holders (${yesHolders.length})`));
+    for (const holder of yesHolders) yesSection.append(buildHolderRow(ctx, holder));
+    wrap.append(yesSection);
   }
+
+  if (noHolders.length > 0) {
+    const noSection = ctx.el('div', 'edp-prediction-holders-content');
+    noSection.append(ctx.el('div', 'edp-prediction-holders-header is-no', `NO Holders (${noHolders.length})`));
+    for (const holder of noHolders) noSection.append(buildHolderRow(ctx, holder));
+    wrap.append(noSection);
+  }
+
+  if (yesHolders.length === 0 && noHolders.length === 0) {
+    wrap.append(ctx.el('div', 'edp-description', 'No holder data available'));
+  }
+
   return wrap;
+}
+
+function buildHolderRow(ctx: EntityRenderContext, holder: MarketHolder): HTMLElement {
+  const rowEl = ctx.el('div', `edp-prediction-holder-row ${holder.side === 'yes' ? 'is-yes' : 'is-no'}`);
+  const label = holder.label || shortenAddress(holder.address);
+  const profileUrl = `https://polymarket.com/profile/${holder.address}`;
+  const nameLink = ctx.el('a', 'edp-prediction-holder-name') as HTMLAnchorElement;
+  nameLink.href = profileUrl;
+  nameLink.target = '_blank';
+  nameLink.rel = 'noopener noreferrer';
+  nameLink.textContent = label;
+  rowEl.append(nameLink);
+  rowEl.append(ctx.el('span', 'edp-prediction-holder-shares', formatShares(holder.shares)));
+  rowEl.append(ctx.el('span', 'edp-prediction-holder-value', formatVolume(holder.value)));
+  return rowEl;
 }
 
 function buildComments(ctx: EntityRenderContext, comments: MarketComment[]): HTMLElement {
@@ -619,10 +614,6 @@ function makeInlineStat(ctx: EntityRenderContext, label: string, value: string):
   return stat;
 }
 
-function makeMetaChip(ctx: EntityRenderContext, text: string): HTMLElement {
-  return ctx.el('span', 'edp-prediction-meta-chip', text);
-}
-
 function makeMetricPill(ctx: EntityRenderContext, label: string, value: string, tone?: 'is-buy' | 'is-sell'): HTMLElement {
   const pill = ctx.el('div', `edp-prediction-metric ${tone || ''}`.trim());
   pill.append(ctx.el('span', 'edp-prediction-metric-label', label));
@@ -646,6 +637,99 @@ function shortenAddress(value?: string): string {
   if (!value) return '—';
   if (value.length <= 12) return value;
   return `${value.slice(0, 6)}…${value.slice(-4)}`;
+}
+
+function loadStoredTimeframe(): PredictionTimeframe {
+  try {
+    const stored = localStorage.getItem(TIMEFRAME_STORAGE_KEY);
+    if (stored === '1h' || stored === '6h' || stored === '24h' || stored === '48h' || stored === '7d' || stored === 'all') return stored;
+  } catch { /* ignore */ }
+  return '7d';
+}
+
+function storeTimeframe(timeframe: PredictionTimeframe): void {
+  try {
+    localStorage.setItem(TIMEFRAME_STORAGE_KEY, timeframe);
+  } catch { /* ignore */ }
+}
+
+function filterHistoryByTimeframe(history: PricePoint[], timeframe: PredictionTimeframe): PricePoint[] {
+  if (timeframe === 'all' || history.length < 2) return history;
+  const cutoff = Date.now() - TIMEFRAME_MS[timeframe];
+  const filtered = history.filter(point => point.timestamp >= cutoff);
+  return filtered.length > 1 ? filtered : history;
+}
+
+function createInteractivePriceChart(history: PricePoint[], currentPrice: number): HTMLElement {
+  const container = document.createElement('div');
+  container.className = 'edp-prediction-chart-shell';
+
+  const controls = document.createElement('div');
+  controls.className = 'edp-prediction-chart-controls';
+
+  const chartHost = document.createElement('div');
+  chartHost.className = 'edp-prediction-chart-host';
+
+  const tooltip = document.createElement('div');
+  tooltip.className = 'edp-prediction-chart-tooltip';
+  tooltip.hidden = true;
+  chartHost.appendChild(tooltip);
+
+  let timeframe = loadStoredTimeframe();
+  const options: PredictionTimeframe[] = ['1h', '6h', '24h', '48h', '7d', 'all'];
+
+  const render = (): void => {
+    const filteredHistory = filterHistoryByTimeframe(history, timeframe);
+    const svg = createPriceChart(filteredHistory, currentPrice);
+
+    svg.addEventListener('mouseleave', () => {
+      tooltip.hidden = true;
+    });
+
+    svg.addEventListener('mousemove', (event) => {
+      const rect = svg.getBoundingClientRect();
+      const ratio = rect.width > 0 ? (event.clientX - rect.left) / rect.width : 0;
+      const index = Math.max(0, Math.min(filteredHistory.length - 1, Math.round(ratio * (filteredHistory.length - 1))));
+      const point = filteredHistory[index];
+      if (!point) return;
+      tooltip.hidden = false;
+      tooltip.textContent = `${formatPriceDisplay(point.price)} • ${formatChartTime(point.timestamp, timeframe)}`;
+      tooltip.style.left = `${Math.max(8, Math.min(rect.width - 8, event.clientX - rect.left))}px`;
+      tooltip.style.top = '10px';
+    });
+
+    chartHost.replaceChildren(svg, tooltip);
+  };
+
+  for (const option of options) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `edp-prediction-chart-timeframe${option === timeframe ? ' is-active' : ''}`;
+    button.textContent = option === 'all' ? 'All' : option;
+    button.addEventListener('click', () => {
+      timeframe = option;
+      storeTimeframe(timeframe);
+      window.dispatchEvent(new CustomEvent(TIMEFRAME_EVENT, { detail: { range: timeframe } }));
+      [...controls.children].forEach((child) => child.classList.remove('is-active'));
+      button.classList.add('is-active');
+      render();
+    });
+    controls.appendChild(button);
+  }
+
+  window.addEventListener(TIMEFRAME_EVENT, ((event: Event) => {
+    const range = (event as CustomEvent<{ range?: PredictionTimeframe }>).detail?.range;
+    if (!range || range === timeframe) return;
+    timeframe = range;
+    [...controls.children].forEach((child) => {
+      child.classList.toggle('is-active', (child as HTMLButtonElement).textContent?.toLowerCase() === (range === 'all' ? 'all' : range));
+    });
+    render();
+  }) as EventListener);
+
+  container.append(controls, chartHost);
+  render();
+  return container;
 }
 
 function createPriceChart(history: PricePoint[], currentPrice: number): SVGElement {
@@ -726,9 +810,9 @@ function formatPricePct(v?: number): string {
   return `${(v * 100).toFixed(1)}%`;
 }
 
-function formatDate(d: string): string {
-  if (!d) return 'Open-ended';
-  try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); } catch { return d; }
+function formatPriceDisplay(v?: number): string {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return '—';
+  return `${v.toFixed(1)}%`;
 }
 
 function formatDateTime(d: string): string {
@@ -739,4 +823,15 @@ function formatDateTime(d: string): string {
 function formatTime(timestamp: number): string {
   if (!timestamp || !Number.isFinite(timestamp)) return '—';
   try { return new Date(timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch { return '—'; }
+}
+
+function formatChartTime(timestamp: number, timeframe: PredictionTimeframe): string {
+  if (!timestamp || !Number.isFinite(timestamp)) return '—';
+  try {
+    return new Date(timestamp).toLocaleString('en-US', timeframe === '24h'
+      ? { hour: 'numeric', minute: '2-digit' }
+      : { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  } catch {
+    return '—';
+  }
 }

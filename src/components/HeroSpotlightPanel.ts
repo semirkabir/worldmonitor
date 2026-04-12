@@ -1,6 +1,7 @@
 import { Panel } from './Panel';
 import type { NewsItem } from '@/types';
 import { escapeHtml, sanitizeUrl } from '@/utils/sanitize';
+import { buildArticleLinkAttributes } from '@/services/article-open';
 
 /**
  * HeroSpotlightPanel -- Daily hero spotlight card with photo, excerpt, and map location.
@@ -46,6 +47,12 @@ export class HeroSpotlightPanel extends Panel {
 
     // Location button -- only when BOTH lat and lon are defined
     const hasLocation = item.lat !== undefined && item.lon !== undefined;
+    const articleAttrs = buildArticleLinkAttributes({
+      url: item.link,
+      title: item.title,
+      source: item.source,
+      publishedAt: item.pubDate,
+    });
     const locationHtml = hasLocation
       ? `<button class="hero-card-location-btn" data-lat="${item.lat}" data-lon="${item.lon}" type="button">Show on map</button>`
       : '';
@@ -55,7 +62,7 @@ export class HeroSpotlightPanel extends Panel {
   <div class="hero-card-body">
     <span class="hero-card-source">${escapeHtml(item.source)}</span>
     <h3 class="hero-card-title">
-      <a href="${sanitizeUrl(item.link)}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a>
+      <a href="${sanitizeUrl(item.link)}" target="_blank" rel="noopener" ${articleAttrs}>${escapeHtml(item.title)}</a>
     </h3>
     <span class="hero-card-time">${escapeHtml(timeStr)}</span>
     ${locationHtml}

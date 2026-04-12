@@ -159,6 +159,30 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   }
 }
 
+async function fetchBroadPriceHistory(tokenId: string): Promise<PredictionMarketPricePoint[]> {
+  const urls = [
+    `${CLOB_BASE}/prices-history?market=${encodeURIComponent(tokenId)}&interval=max&fidelity=60`,
+    `${CLOB_BASE}/prices-history?market=${encodeURIComponent(tokenId)}&interval=1w&fidelity=1`,
+    `${CLOB_BASE}/prices-history?market=${encodeURIComponent(tokenId)}&interval=1d&fidelity=1`,
+    `${CLOB_BASE}/prices-history?market=${encodeURIComponent(tokenId)}&interval=6h&fidelity=1`,
+    `${CLOB_BASE}/prices-history?market=${encodeURIComponent(tokenId)}&interval=1h&fidelity=1`,
+  ];
+
+  const results = await Promise.all(urls.map((url) => fetchJson<PriceHistoryResponse>(url)));
+  const merged = new Map<number, number>();
+
+  for (const historyData of results) {
+    for (const point of historyData?.history || []) {
+      if (!Number.isFinite(point?.t) || !Number.isFinite(point?.p)) continue;
+      merged.set(parseEpochMillis(point.t as number), point.p as number);
+    }
+  }
+
+  return [...merged.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([timestamp, price]) => ({ timestamp, price }));
+}
+
 async function buildPredictionDetail(
   req: GetPredictionMarketDetailRequest,
 ): Promise<GetPredictionMarketDetailResponse | null> {
@@ -186,7 +210,7 @@ async function buildPredictionDetail(
     tokenId ? fetchJson<{ price?: string | number }>(`${CLOB_BASE}/price?token_id=${encodeURIComponent(tokenId)}&side=BUY`) : Promise.resolve(null),
     tokenId ? fetchJson<{ price?: string | number }>(`${CLOB_BASE}/price?token_id=${encodeURIComponent(tokenId)}&side=SELL`) : Promise.resolve(null),
     tokenId ? fetchJson<{ spread?: string | number }>(`${CLOB_BASE}/spread?token_id=${encodeURIComponent(tokenId)}`) : Promise.resolve(null),
-    tokenId ? fetchJson<PriceHistoryResponse>(`${CLOB_BASE}/prices-history?market=${encodeURIComponent(tokenId)}&interval=1d&fidelity=60`) : Promise.resolve(null),
+    tokenId ? fetchBroadPriceHistory(tokenId) : Promise.resolve([]),
     tokenId ? fetchJson<{ price?: string | number; side?: string }>(`${CLOB_BASE}/last-trade-price?token_id=${encodeURIComponent(tokenId)}`) : Promise.resolve(null),
     conditionId ? fetchJson<DataTradeResponse[]>(`${DATA_BASE}/trades?market=${encodeURIComponent(conditionId)}&limit=${tradeLimit}&offset=0&takerOnly=true`) : Promise.resolve(null),
     conditionId ? fetchJson<DataHolderEnvelope[]>(`${DATA_BASE}/holders?market=${encodeURIComponent(conditionId)}&limit=5`) : Promise.resolve(null),
@@ -231,11 +255,7 @@ async function buildPredictionDetail(
     updatedAt: parseEpochMillis(bookData?.timestamp),
   };
 
-  const history: PredictionMarketPricePoint[] = Array.isArray(historyData?.history)
-    ? historyData.history
-      .filter((point): point is { t: number; p: number } => Number.isFinite(point?.t) && Number.isFinite(point?.p))
-      .map((point) => ({ timestamp: parseEpochMillis(point.t), price: point.p }))
-    : [];
+  const history: PredictionMarketPricePoint[] = historyData;
 
   const recentTrades: PredictionMarketTrade[] = Array.isArray(tradesData)
     ? tradesData.slice(0, tradeLimit).map((trade) => ({

@@ -2517,21 +2517,38 @@ body.panel-resize-active iframe {
 }
 
 .prediction-panel-search {
-  margin-left: auto;
-  margin-right: 8px;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  min-width: 0;
-  width: min(240px, 42%);
-  height: 24px;
-  padding: 0 8px;
-  background: var(--ctrl-bg);
-  border: 1px solid var(--frame-border);
-  border-radius: 5px;
-  box-shadow: var(--depth-resting), inset 0 1px 0 var(--frame-inset-highlight);
-  color: var(--text-dim);
-  transition: border-color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.prediction-timeframe {
+  background: var(--surface-hover);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.prediction-timeframe:hover {
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.prediction-timeframe:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 .prediction-panel-search:focus-within {
@@ -2573,13 +2590,6 @@ body.panel-resize-active iframe {
 }
 
 /* ── Panel sparkline ─────────────────────────────────────────── */
-.panel-sparkline {
-  display: flex;
-  align-items: center;
-  opacity: 1;
-  transition: opacity 0.2s;
-}
-
 @keyframes count-bump {
   0% {
     transform: scale(1);
@@ -4125,9 +4135,9 @@ body.live-news-fullscreen-active .panels-grid > *:not(.live-news-fullscreen) {
   bottom: 8px;
   width: 2px;
   border-radius: 999px;
-  background: var(--item-accent, rgba(255, 255, 255, 0.12));
+  background: var(--item-accent, #ffffff);
   transition: background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
-  opacity: 0.7;
+  opacity: 0.9;
 }
 
 .item.alert {
@@ -4142,14 +4152,23 @@ body.live-news-fullscreen-active .panels-grid > *:not(.live-news-fullscreen) {
   --item-accent: var(--red);
 }
 
+.item:not(.alert)::before {
+  background: #ffffff !important;
+  opacity: 0.9;
+}
+
 .item:hover {
   background: var(--overlay-subtle);
   transform: translateX(2px);
 }
 
 .item:hover::before {
-  background: var(--item-accent-hover, rgba(255, 255, 255, 0.95));
+  background: var(--item-accent-hover, #ffffff);
   opacity: 1;
+}
+
+.item:not(.alert):hover::before {
+  background: #ffffff !important;
 }
 
 .item-source {
@@ -4414,6 +4433,46 @@ body.live-news-fullscreen-active .panels-grid > *:not(.live-news-fullscreen) {
   font-size: 12px;
   line-height: 1.4;
   display: block;
+}
+
+.item-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.item-title-row .item-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-expand-btn {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface) 90%, black 10%);
+  color: var(--text-dim);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  transition: color 0.15s, border-color 0.15s, background 0.15s, transform 0.15s;
+}
+
+.item-expand-btn:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  transform: translateY(-1px);
+}
+
+.item-expand-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 60%, white 10%);
+  outline-offset: 2px;
 }
 
 .item-title:hover {
@@ -7027,12 +7086,6 @@ body.playback-mode .status-dot {
   text-align: right;
 }
 
-.market-data .mini-sparkline {
-  display: block;
-  flex-shrink: 0;
-  opacity: 0.8;
-}
-
 .market-price {
   font-size: 12px;
   font-weight: bold;
@@ -7091,6 +7144,36 @@ body.playback-mode .status-dot {
 
 .crypto-market-item:last-child {
   border-bottom: 0;
+}
+
+.crypto-market-item .market-name,
+.crypto-market-item .market-symbol,
+.crypto-market-item .market-price,
+.crypto-market-item .market-change {
+  font-family: var(--font-mono);
+}
+
+.crypto-market-item .market-name {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.crypto-market-item .market-symbol {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.crypto-market-item .market-price {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.crypto-market-item .market-change {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Price flicker animation for real-time updates */
@@ -7180,12 +7263,6 @@ body.playback-mode .status-dot {
   color: var(--red);
 }
 
-.commodity-item .mini-sparkline {
-  display: block;
-  margin: 2px 0;
-  opacity: 0.8;
-}
-
 /* Predictions */
 .prediction-item {
   position: relative;
@@ -7203,7 +7280,7 @@ body.playback-mode .status-dot {
   bottom: 10px;
   width: 2px;
   border-radius: 999px;
-  background: var(--item-accent, rgba(255, 255, 255, 0.12));
+  background: var(--item-accent, rgba(255, 255, 255, 0.35));
   transition: background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
   opacity: 0.7;
 }
@@ -7218,7 +7295,7 @@ body.playback-mode .status-dot {
 }
 
 .prediction-item:hover::before {
-  background: var(--item-accent-hover, rgba(255, 255, 255, 0.95));
+  background: var(--item-accent-hover, #ffffff);
   opacity: 1;
 }
 
@@ -18735,8 +18812,8 @@ button.cluster-flight-item:focus-visible {
 }
 
 .profile-login-btn {
-  background: var(--accent);
-  color: white;
+  background: var(--text);
+  color: var(--bg);
   border: none;
   padding: 12px 24px;
   border-radius: 8px;

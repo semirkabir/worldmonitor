@@ -2,6 +2,9 @@ import type { AppContext, AppModule } from './app-context';
 import type { PopupType } from '@/components/MapPopup';
 import { EntityDetailPanel } from '@/components/EntityDetailPanel';
 import type { EntityRendererRegistry } from '@/components/entity-detail/types';
+import { getConflictProfile } from '@/config/conflict-profiles';
+import type { ConflictZone } from '@/types';
+import type { MapContainerState } from '@/components/MapContainer';
 import { CableRenderer } from '@/components/entity-detail/renderers/cable';
 import { PortRenderer } from '@/components/entity-detail/renderers/port';
 import { StockExchangeRenderer } from '@/components/entity-detail/renderers/stock-exchange';
@@ -31,6 +34,8 @@ import { WeatherAlertRenderer } from '@/components/entity-detail/renderers/weath
 import { APTGroupRenderer } from '@/components/entity-detail/renderers/apt';
 import { PredictionMarketRenderer } from '@/components/entity-detail/renderers/prediction-market';
 import { ConflictRenderer } from '@/components/entity-detail/renderers/conflict';
+import { ArticleRenderer } from '@/components/entity-detail/renderers/article';
+import { openArticleFromClick } from '@/services/article-open';
 
 export class EntityIntelManager implements AppModule {
   private ctx: AppContext;
@@ -38,6 +43,8 @@ export class EntityIntelManager implements AppModule {
   private hotspotRenderer: HotspotRenderer;
   private tickerClickHandler: ((e: MouseEvent) => void) | null = null;
   private entityOpenHandler: ((e: Event) => void) | null = null;
+  private articleClickHandler: ((e: MouseEvent) => void) | null = null;
+  private conflictOverlaySnapshot: { state: MapContainerState; center: { lat: number; lon: number } | null } | null = null;
 
   constructor(ctx: AppContext) {
     this.ctx = ctx;
@@ -54,8 +61,7 @@ export class EntityIntelManager implements AppModule {
         this.ctx.marketplace?.openMarketplaceRecord(data as import('@/types/marketplace').MarketplacePanelSelection, false);
         return;
       }
-      this.ctx.countryBriefPage?.hide();
-      this.panel!.show(type as PopupType, data);
+      this.showEntity(type as PopupType, data);
     });
 
     // Global delegated handler for inline $TICKER links
@@ -72,21 +78,32 @@ export class EntityIntelManager implements AppModule {
     };
     document.addEventListener('click', this.tickerClickHandler);
 
+    this.articleClickHandler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      const articleTarget = target?.closest<HTMLElement>('[data-article-url]');
+      if (!articleTarget) return;
+      openArticleFromClick(e, articleTarget);
+    };
+    document.addEventListener('click', this.articleClickHandler);
+
     this.entityOpenHandler = (e: Event) => {
       const detail = (e as CustomEvent<{ type: PopupType; data: unknown }>).detail;
       if (!detail) return;
-      this.ctx.countryBriefPage?.hide();
-      this.panel?.show(detail.type, detail.data);
+      this.showEntity(detail.type, detail.data);
     };
     document.addEventListener('wm:open-entity-detail', this.entityOpenHandler as EventListener);
 
-    this.panel.onClose(() => {});
+    this.panel.onClose(() => this.restoreConflictOverlay());
   }
 
   destroy(): void {
     if (this.tickerClickHandler) {
       document.removeEventListener('click', this.tickerClickHandler);
       this.tickerClickHandler = null;
+    }
+    if (this.articleClickHandler) {
+      document.removeEventListener('click', this.articleClickHandler);
+      this.articleClickHandler = null;
     }
     if (this.entityOpenHandler) {
       document.removeEventListener('wm:open-entity-detail', this.entityOpenHandler as EventListener);
@@ -100,7 +117,7 @@ export class EntityIntelManager implements AppModule {
   private buildRegistry(): EntityRendererRegistry {
     return {
       cable: new CableRenderer(),
-      conflict: new ConflictRenderer(),
+      conflict: new ConflictRenderer(this.ctx),
       port: new PortRenderer(),
       stockExchange: new StockExchangeRenderer(),
       base: new MilitaryBaseRenderer(),
@@ -127,6 +144,66 @@ export class EntityIntelManager implements AppModule {
       weather: new WeatherAlertRenderer(),
       apt: new APTGroupRenderer(),
       predictionMarket: new PredictionMarketRenderer(),
+      article: new ArticleRenderer(),
     };
+  }
+
+  private showEntity(type: PopupType, data: unknown): void {
+    if (type === 'conflict') {
+      this.applyConflictOverlay(data as ConflictZone);
+    } else {
+      this.restoreConflictOverlay();
+    }
+    this.ctx.countryBriefPage?.hide();
+    this.panel?.show(type, data);
+  }
+
+  private applyConflictOverlay(conflict: ConflictZone): void {
+    const map = this.ctx.map;
+    if (!map) return;
+
+    const profile = getConflictProfile(conflict);
+    if (!profile) return;
+
+    if (!this.conflictOverlaySnapshot) {
+      this.conflictOverlaySnapshot = {
+        state: map.getState(),
+        center: map.getCenter(),
+      };
+    }
+
+    const nextLayers = { ...map.getState().layers };
+    for (const layer of profile.overlay.enabledLayers) nextLayers[layer] = true;
+    for (const layer of profile.overlay.hiddenLayers ?? []) nextLayers[layer] = false;
+    map.setLayers(nextLayers);
+    map.setCenter(conflict.center[1], conflict.center[0], profile.aoi.zoom);
+
+    if (profile.overlay.focusAisLive) {
+      const lons = profile.aoi.polygon.map(([lon]) => lon);
+      const lats = profile.aoi.polygon.map(([, lat]) => lat);
+      map.enableAisLiveTracking();
+      map.setAisFocusBounds([
+        [Math.min(...lons), Math.min(...lats)],
+        [Math.max(...lons), Math.max(...lats)],
+      ]);
+    } else {
+      map.setAisFocusBounds(null);
+      map.disableAisLiveTracking();
+    }
+  }
+
+  private restoreConflictOverlay(): void {
+    const map = this.ctx.map;
+    const snapshot = this.conflictOverlaySnapshot;
+    if (!map || !snapshot) return;
+
+    map.setView(snapshot.state.view);
+    map.setLayers(snapshot.state.layers);
+    map.setTimeRange(snapshot.state.timeRange);
+    if (snapshot.center) map.setCenter(snapshot.center.lat, snapshot.center.lon, snapshot.state.zoom);
+    else map.setZoom(snapshot.state.zoom);
+    map.setAisFocusBounds(null);
+    map.disableAisLiveTracking();
+    this.conflictOverlaySnapshot = null;
   }
 }

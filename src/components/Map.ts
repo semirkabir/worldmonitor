@@ -167,7 +167,6 @@ export class MapComponent {
   private techEvents: TechEventMarker[] = [];
   private techActivities: TechHubActivity[] = [];
   private geoActivities: GeoHubActivity[] = [];
-  private iranEvents: IranEvent[] = [];
   private news: NewsItem[] = [];
   private onTechHubClick?: (hub: TechHubActivity) => void;
   private onGeoHubClick?: (hub: GeoHubActivity) => void;
@@ -2697,18 +2696,18 @@ export class MapComponent {
           const grp: number[] = [i];
           for (let j = i + 1; j < res.length; j++) {
             if (used.has(j)) continue;
-            if (Math.abs(res[i].v.lat - res[j].v.lat) < THRESHOLD && Math.abs(res[i].v.lon - res[j].v.lon) < THRESHOLD) {
+            if (Math.abs(res[i]!.v.lat - res[j]!.v.lat) < THRESHOLD && Math.abs(res[i]!.v.lon - res[j]!.v.lon) < THRESHOLD) {
               grp.push(j); used.add(j);
             }
           }
           used.add(i);
           if (grp.length < 2) continue;
-          const cLat = grp.reduce((s, k) => s + res[k].v.lat, 0) / grp.length;
-          const cLon = grp.reduce((s, k) => s + res[k].v.lon, 0) / grp.length;
+          const cLat = grp.reduce((s, k) => s + res[k]!.v.lat, 0) / grp.length;
+          const cLon = grp.reduce((s, k) => s + res[k]!.v.lon, 0) / grp.length;
           grp.forEach((k, pos) => {
             const angle = (pos / grp.length) * Math.PI * 2 - Math.PI / 2;
-            res[k].sLat = cLat + SPREAD * Math.cos(angle);
-            res[k].sLon = cLon + SPREAD * Math.sin(angle);
+            res[k]!.sLat = cLat + SPREAD * Math.cos(angle);
+            res[k]!.sLon = cLon + SPREAD * Math.sin(angle);
           });
         }
         return res;
@@ -3857,8 +3856,8 @@ export class MapComponent {
     // SVG/mobile fallback intentionally does not render this layer to stay lightweight.
   }
 
-  public setIranEvents(events: IranEvent[]): void {
-    this.iranEvents = events;
+  public setIranEvents(_events: IranEvent[]): void {
+    // SVG/mobile fallback intentionally does not render iran events
     this.render();
   }
 

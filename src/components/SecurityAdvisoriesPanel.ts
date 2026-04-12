@@ -2,6 +2,7 @@ import { Panel } from './Panel';
 import { escapeHtml } from '@/utils/sanitize';
 import { t } from '@/services/i18n';
 import type { SecurityAdvisory } from '@/services/security-advisories';
+import { buildArticleLinkAttributes } from '@/services/article-open';
 
 type AdvisoryFilter = 'all' | 'critical' | 'US' | 'AU' | 'UK' | 'NZ' | 'health';
 
@@ -162,13 +163,19 @@ export class SecurityAdvisoriesPanel extends Panel {
         const levelCls = this.getLevelClass(a.level);
         const levelLabel = this.getLevelLabel(a.level);
         const flag = this.getSourceFlag(a.sourceCountry);
+        const articleAttrs = buildArticleLinkAttributes({
+          url: a.link,
+          title: a.title,
+          source: a.source,
+          publishedAt: a.pubDate,
+        });
 
         return `<div class="sa-item ${levelCls}">
           <div class="sa-item-header">
             <span class="sa-badge ${levelCls}">${levelLabel}</span>
             <span class="sa-source">${flag} ${escapeHtml(a.source)}</span>
           </div>
-          <a href="${escapeHtml(a.link)}" target="_blank" rel="noopener" class="sa-title">${escapeHtml(a.title)}</a>
+          <a href="${escapeHtml(a.link)}" target="_blank" rel="noopener" class="sa-title" ${articleAttrs}>${escapeHtml(a.title)}</a>
           <div class="sa-time">${this.formatTime(a.pubDate)}</div>
         </div>`;
       }).join('');

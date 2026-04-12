@@ -99,7 +99,16 @@ export async function getPredictionMarketDetail(
       tradeLimit: options?.tradeLimit ?? 20,
       refresh: options?.refresh ?? false,
     }, { signal: options?.signal });
-    if (response?.market) return response;
+    if (response?.market) {
+      const tokenId = response.market.tokenIds?.[0] || '';
+      if (tokenId) {
+        const history = await fetchBroadPriceHistory(tokenId, options?.signal);
+        if (history.length > 0) {
+          return { ...response, history };
+        }
+      }
+      return response;
+    }
   } catch (error) {
     console.warn(`[Polymarket] getPredictionMarketDetail(${trimmed}) failed:`, error);
   }
@@ -142,6 +151,30 @@ async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T | null
   }
 }
 
+async function fetchBroadPriceHistory(tokenId: string, signal?: AbortSignal): Promise<Array<{ timestamp: number; price: number }>> {
+  const urls = [
+    `https://clob.polymarket.com/prices-history?market=${encodeURIComponent(tokenId)}&interval=max&fidelity=60`,
+    `https://clob.polymarket.com/prices-history?market=${encodeURIComponent(tokenId)}&interval=1w&fidelity=1`,
+    `https://clob.polymarket.com/prices-history?market=${encodeURIComponent(tokenId)}&interval=1d&fidelity=1`,
+    `https://clob.polymarket.com/prices-history?market=${encodeURIComponent(tokenId)}&interval=6h&fidelity=1`,
+    `https://clob.polymarket.com/prices-history?market=${encodeURIComponent(tokenId)}&interval=1h&fidelity=1`,
+  ];
+
+  const results = await Promise.all(urls.map((url) => fetchJson<{ history?: Array<{ t?: number; p?: number }> }>(url, signal)));
+  const merged = new Map<number, number>();
+
+  for (const historyData of results) {
+    for (const point of historyData?.history || []) {
+      if (!Number.isFinite(point?.t) || !Number.isFinite(point?.p)) continue;
+      merged.set(parseEpochMillis(point.t as number), point.p as number);
+    }
+  }
+
+  return [...merged.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([timestamp, price]) => ({ timestamp, price }));
+}
+
 async function buildPredictionMarketDetailFallback(
   slug: string,
   options?: { bookDepth?: number; tradeLimit?: number; refresh?: boolean; signal?: AbortSignal },
@@ -168,7 +201,7 @@ async function buildPredictionMarketDetailFallback(
     tokenId ? fetchJson<{ price?: string | number }>(`https://clob.polymarket.com/price?token_id=${encodeURIComponent(tokenId)}&side=BUY`, options?.signal) : Promise.resolve(null),
     tokenId ? fetchJson<{ price?: string | number }>(`https://clob.polymarket.com/price?token_id=${encodeURIComponent(tokenId)}&side=SELL`, options?.signal) : Promise.resolve(null),
     tokenId ? fetchJson<{ spread?: string | number }>(`https://clob.polymarket.com/spread?token_id=${encodeURIComponent(tokenId)}`, options?.signal) : Promise.resolve(null),
-    tokenId ? fetchJson<{ history?: Array<{ t?: number; p?: number }> }>(`https://clob.polymarket.com/prices-history?market=${encodeURIComponent(tokenId)}&interval=1d&fidelity=60`, options?.signal) : Promise.resolve(null),
+    tokenId ? fetchBroadPriceHistory(tokenId, options?.signal) : Promise.resolve([]),
     tokenId ? fetchJson<{ price?: string | number; side?: string }>(`https://clob.polymarket.com/last-trade-price?token_id=${encodeURIComponent(tokenId)}`, options?.signal) : Promise.resolve(null),
     conditionId ? fetchJson<Array<{ side?: string; size?: number; price?: number; timestamp?: number }>>(`https://data-api.polymarket.com/trades?market=${encodeURIComponent(conditionId)}&limit=${tradeLimit}&offset=0&takerOnly=true`, options?.signal) : Promise.resolve(null),
     conditionId ? fetchJson<Array<{ holders?: Array<{ proxyWallet?: string; amount?: number; outcomeIndex?: number; name?: string; pseudonym?: string; profileImage?: string }> }>>(`https://data-api.polymarket.com/holders?market=${encodeURIComponent(conditionId)}&limit=5`, options?.signal) : Promise.resolve(null),
@@ -217,10 +250,7 @@ async function buildPredictionMarketDetailFallback(
       side: trade.side || '',
       timestamp: parseEpochMillis(trade.timestamp),
     })),
-    history: (historyData?.history || []).filter((point): point is { t: number; p: number } => Number.isFinite(point?.t) && Number.isFinite(point?.p)).map((point) => ({
-      timestamp: parseEpochMillis(point.t),
-      price: point.p,
-    })),
+    history: historyData,
     holders: (holdersData?.[0]?.holders || []).map((holder) => ({
       address: holder.proxyWallet || '',
       label: holder.name || holder.pseudonym || `${holder.proxyWallet?.slice(0, 6) ?? ''}…${holder.proxyWallet?.slice(-4) ?? ''}`,

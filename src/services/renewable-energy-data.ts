@@ -123,7 +123,7 @@ export async function fetchEnergyCapacity(): Promise<CapacitySeries[]> {
     return resp.series.map(s => ({
       source: s.energySource,
       name: s.name,
-      data: s.data.map(d => ({ year: d.year, capacityMw: d.capacityMw })),
+      data: s.data.map(d => ({ year: d.year, capacityMw: d.capacityMw ?? 0 })),
     }));
   }, []);
 }

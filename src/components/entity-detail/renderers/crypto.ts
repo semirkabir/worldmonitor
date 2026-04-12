@@ -26,73 +26,49 @@ function getCryptoOutlook(change: number): string {
   return 'Pressure building';
 }
 
-function buildSparklineSvg(sparkline: number[], positive: boolean): SVGSVGElement {
-  const W = 360, H = 120;
-  const min = Math.min(...sparkline);
-  const max = Math.max(...sparkline);
-  const range = max - min || Math.max(Math.abs(max) * 0.04, 1);
-  const pX = 8, pY = 8;
-  const stroke = positive ? '#22c55e' : '#ef4444';
+function toTradingViewSymbol(symbol: string): string {
+  const s = symbol.toUpperCase();
+  if (s === 'BTC') return 'BINANCE:BTCUSDT';
+  if (s === 'ETH') return 'BINANCE:ETHUSDT';
+  if (s === 'SOL') return 'BINANCE:SOLUSDT';
+  if (s === 'BNB') return 'BINANCE:BNBUSDT';
+  if (s === 'XRP') return 'BINANCE:XRPUSDT';
+  if (s === 'ADA') return 'BINANCE:ADAUSDT';
+  if (s === 'DOGE') return 'BINANCE:DOGEUSDT';
+  if (s === 'DOT') return 'BINANCE:DOTUSDT';
+  if (s === 'AVAX') return 'BINANCE:AVAXUSDT';
+  if (s === 'MATIC' || s === 'POL') return 'BINANCE:MATICUSDT';
+  if (s === 'LINK') return 'BINANCE:LINKUSDT';
+  if (s === 'UNI') return 'BINANCE:UNIUSDT';
+  if (s === 'LTC') return 'BINANCE:LTCUSDT';
+  if (s === 'ATOM') return 'BINANCE:ATOMUSDT';
+  if (s === 'NEAR') return 'BINANCE:NEARUSDT';
+  if (s === 'APT') return 'BINANCE:APTUSDT';
+  if (s === 'ARB') return 'BINANCE:ARBUSDT';
+  if (s === 'OP') return 'BINANCE:OPUSDT';
+  if (s === 'FIL') return 'BINANCE:FILUSDT';
+  if (s === 'TRX') return 'BINANCE:TRXUSDT';
+  return `BINANCE:${s}USDT`;
+}
 
-  const pts = sparkline.map((v, i) => {
-    const x = pX + (i / (sparkline.length - 1)) * (W - pX * 2);
-    const y = H - pY - ((v - min) / range) * (H - pY * 2);
-    return { x, y };
+function injectTradingViewWidget(container: HTMLElement, symbol: string): void {
+  const wrap = container.querySelector('.edp-tradingview-widget');
+  if (!wrap) return;
+  const tvSymbol = toTradingViewSymbol(symbol);
+  const script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js';
+  script.async = true;
+  script.textContent = JSON.stringify({
+    symbol: tvSymbol,
+    width: '100%',
+    height: 220,
+    colorTheme: 'dark',
+    isTransparent: true,
+    dateRange: '1M',
+    locale: 'en',
   });
-
-  const linePath = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
-  const first = pts[0]!;
-  const last = pts[pts.length - 1]!;
-  const areaPath = `${linePath} L ${last.x.toFixed(1)} ${H - pY} L ${first.x.toFixed(1)} ${H - pY} Z`;
-
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svg.setAttribute('width', '100%');
-  svg.setAttribute('height', '120');
-  svg.style.display = 'block';
-
-  // Gradient
-  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-  const grad = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-  grad.setAttribute('id', 'crypto-edp-fill');
-  grad.setAttribute('x1', '0'); grad.setAttribute('y1', '0');
-  grad.setAttribute('x2', '0'); grad.setAttribute('y2', '1');
-  const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-  stop1.setAttribute('offset', '0%');
-  stop1.setAttribute('stop-color', stroke);
-  stop1.setAttribute('stop-opacity', '0.3');
-  const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-  stop2.setAttribute('offset', '100%');
-  stop2.setAttribute('stop-color', stroke);
-  stop2.setAttribute('stop-opacity', '0.02');
-  grad.append(stop1, stop2);
-  defs.append(grad);
-  svg.append(defs);
-
-  // Area fill
-  const area = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  area.setAttribute('d', areaPath);
-  area.setAttribute('fill', 'url(#crypto-edp-fill)');
-  svg.append(area);
-
-  // Line
-  const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  line.setAttribute('d', linePath);
-  line.setAttribute('fill', 'none');
-  line.setAttribute('stroke', stroke);
-  line.setAttribute('stroke-width', '2');
-  line.setAttribute('stroke-linecap', 'round');
-  svg.append(line);
-
-  // Last price dot
-  const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  dot.setAttribute('cx', last.x.toFixed(1));
-  dot.setAttribute('cy', last.y.toFixed(1));
-  dot.setAttribute('r', '4');
-  dot.setAttribute('fill', stroke);
-  svg.append(dot);
-
-  return svg;
+  wrap.appendChild(script);
 }
 
 export class CryptoRenderer implements EntityRenderer {
@@ -114,6 +90,10 @@ export class CryptoRenderer implements EntityRenderer {
     header.append(sub);
     container.append(header);
 
+    // TradingView chart widget placeholder
+    const tvWrap = ctx.el('div', 'edp-tradingview-widget');
+    container.append(tvWrap);
+
     // Price hero
     const hero = ctx.el('div', 'crypto-edp-hero');
     hero.append(ctx.el('span', 'crypto-edp-price', formatCryptoPrice(coin.price)));
@@ -127,31 +107,21 @@ export class CryptoRenderer implements EntityRenderer {
     outlook.textContent = getCryptoOutlook(coin.change);
     container.append(outlook);
 
-    // Sparkline chart
+    // Inject TradingView widget
+    injectTradingViewWidget(container, coin.symbol);
+
+    // 7-Day Stats (if sparkline data available)
     const sparkline = coin.sparkline ?? [];
     if (sparkline.length >= 2) {
-      const [chartCard, chartBody] = ctx.sectionCard('7-Day Chart');
-      const chartWrap = ctx.el('div', 'crypto-edp-chart-wrap');
-      chartWrap.append(buildSparklineSvg(sparkline, positive));
-      chartBody.append(chartWrap);
-
-      // Range labels
       const low = Math.min(...sparkline);
       const high = Math.max(...sparkline);
-      const rangeRow = ctx.el('div', 'crypto-edp-range');
-      rangeRow.append(ctx.el('span', 'crypto-edp-range-low', 'Low: ' + formatCryptoPrice(low)));
-      rangeRow.append(ctx.el('span', 'crypto-edp-range-high', 'High: ' + formatCryptoPrice(high)));
-      chartBody.append(rangeRow);
-      container.append(chartCard);
-
-      // Stats grid
-      const [statsCard, statsBody] = ctx.sectionCard('7-Day Stats');
-      const grid = ctx.el('div', 'crypto-edp-stats-grid');
-
       const momentum = sparkline.length >= 2
         ? ((sparkline[sparkline.length - 1]! - sparkline[0]!) / (sparkline[0] || 1)) * 100
         : coin.change;
       const volatility = ((high - low) / (low || 1)) * 100;
+
+      const [statsCard, statsBody] = ctx.sectionCard('7-Day Stats');
+      const grid = ctx.el('div', 'crypto-edp-stats-grid');
 
       const statItems: [string, string, string][] = [
         ['7d Low',        formatCryptoPrice(low),              ''],

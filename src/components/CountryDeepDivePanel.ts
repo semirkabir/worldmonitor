@@ -8,6 +8,7 @@ import type { PredictionMarket } from '@/services/prediction';
 import type { AssetType, NewsItem, RelatedAsset } from '@/types';
 import { sanitizeUrl, escapeHtml } from '@/utils/sanitize';
 import { getCSSColor } from '@/utils';
+import { applyArticleLinkDataset } from '@/services/article-open';
 import { PORTS } from '@/config/ports';
 import { haversineKm } from '@/utils/geo';
 import type {
@@ -280,6 +281,12 @@ export class CountryDeepDivePanel implements CountryBriefPanel {
         row.setAttribute('href', href);
         row.setAttribute('target', '_blank');
         row.setAttribute('rel', 'noopener');
+        applyArticleLinkDataset(row, {
+          url: href,
+          title: item.title,
+          source: item.source,
+          publishedAt: item.pubDate,
+        });
       } else {
         row.removeAttribute('href');
       }

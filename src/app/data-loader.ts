@@ -2090,7 +2090,7 @@ export class DataLoaderManager implements AppModule {
       tradePanel.updateFlows(flows);
       tradePanel.updateBarriers(barriers);
 
-      const totalItems = restrictions.restrictions.length + tariffs.datapoints.length + flows.flows.length + barriers.barriers.length;
+      const totalItems = restrictions.restrictions.length + (tariffs.datapoints?.length ?? 0) + flows.flows.length + barriers.barriers.length;
       const anyUnavailable = restrictions.upstreamUnavailable || tariffs.upstreamUnavailable || flows.upstreamUnavailable || barriers.upstreamUnavailable;
 
       this.ctx.statusPanel?.updateApi('WTO', { status: anyUnavailable ? 'warning' : totalItems > 0 ? 'ok' : 'error' });
