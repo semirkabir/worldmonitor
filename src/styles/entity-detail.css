@@ -1163,44 +1163,82 @@
 .edp-prediction-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
 }
 
 .edp-prediction-tab {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 30px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
-  background: color-mix(in srgb, var(--surface) 88%, black 12%);
+  min-height: 28px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
   color: var(--text-faint);
-  font-size: 10px;
+  font-family: inherit;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.1em;
   text-transform: uppercase;
+  letter-spacing: 0.08em;
   cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.edp-prediction-tab:hover {
+  background: color-mix(in srgb, var(--surface) 95%, white 5%);
+  color: var(--text);
 }
 
 .edp-prediction-tab.is-active {
-  color: var(--text);
-  border-color: color-mix(in srgb, var(--accent-blue, #60a5fa) 36%, transparent);
-  background: color-mix(in srgb, var(--accent-blue, #60a5fa) 12%, transparent);
+  background: color-mix(in srgb, var(--accent-blue, #60a5fa) 18%, transparent);
+  color: var(--accent-blue, #60a5fa);
+  border-color: color-mix(in srgb, var(--accent-blue, #60a5fa) 40%, transparent);
+}
+
+.edp-prediction-tab[data-tab="book"].is-active {
+  background: color-mix(in srgb, var(--accent-blue, #60a5fa) 18%, transparent);
+  color: var(--accent-blue, #60a5fa);
+  border-color: color-mix(in srgb, var(--accent-blue, #60a5fa) 40%, transparent);
+}
+
+.edp-prediction-tab[data-tab="flow"].is-active {
+  background: color-mix(in srgb, var(--accent-green, #4ade80) 18%, transparent);
+  color: var(--accent-green, #4ade80);
+  border-color: color-mix(in srgb, var(--accent-green, #4ade80) 40%, transparent);
+}
+
+.edp-prediction-tab[data-tab="trades"].is-active {
+  background: color-mix(in srgb, var(--accent-orange, #fb923c) 18%, transparent);
+  color: var(--accent-orange, #fb923c);
+  border-color: color-mix(in srgb, var(--accent-orange, #fb923c) 40%, transparent);
+}
+
+.edp-prediction-tab[data-tab="holders"].is-active {
+  background: color-mix(in srgb, var(--accent-purple, #a78bfa) 18%, transparent);
+  color: var(--accent-purple, #a78bfa);
+  border-color: color-mix(in srgb, var(--accent-purple, #a78bfa) 40%, transparent);
+}
+
+.edp-prediction-tab[data-tab="comments"].is-active {
+  background: color-mix(in srgb, var(--accent-pink, #f472b6) 18%, transparent);
+  color: var(--accent-pink, #f472b6);
+  border-color: color-mix(in srgb, var(--accent-pink, #f472b6) 40%, transparent);
 }
 
 .edp-prediction-tab-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  min-height: 20px;
-  padding: 0 6px;
-  border-radius: 999px;
+  min-width: 18px;
+  min-height: 18px;
+  padding: 0 5px;
+  border-radius: 4px;
   background: color-mix(in srgb, var(--surface) 65%, black 35%);
   color: var(--text-faint);
   font-size: 10px;
-  letter-spacing: 0;
+  font-weight: 700;
+  letter-spacing: 0.05em;
 }
 
 .edp-prediction-tab-panels {

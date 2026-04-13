@@ -1292,6 +1292,18 @@ export class PanelLayoutManager implements AppModule {
       if (key) this.removePanel(key);
     });
 
+    const bottomGridEl = document.getElementById('mapBottomGrid');
+    if (bottomGridEl) {
+      bottomGridEl.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest('.panel-remove-btn');
+        if (!btn) return;
+        e.stopPropagation();
+        const panelEl = btn.closest('[data-panel]') as HTMLElement;
+        const key = panelEl?.dataset.panel;
+        if (key) this.removePanel(key);
+      });
+    }
+
     this.mountAddWidgetBtn(panelsGrid);
     this.setupPanelCollapseHandle();
     this.setupLayoutToggle();

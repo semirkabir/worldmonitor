@@ -356,6 +356,7 @@ function buildTradingTabs(
   tabs.forEach((tab, index) => {
     const button = ctx.el('button', 'edp-prediction-tab') as HTMLButtonElement;
     button.type = 'button';
+    button.setAttribute('data-tab', tab.id);
     button.textContent = tab.label;
     if (typeof tab.count === 'number') {
       const count = ctx.el('span', 'edp-prediction-tab-count', String(tab.count));
