@@ -43,6 +43,7 @@ import type { AirportDelayAlert, PositionSample } from '@/services/aviation';
 import { fetchAircraftPositions } from '@/services/aviation';
 import { registerAisCallback, unregisterAisCallback, type AisPositionData } from '@/services/maritime';
 import { type IranEvent } from '@/services/conflict';
+import { CONFIDENCE_TIERS, type ConfidenceTier } from '@/services/confidence-tier';
 import type { GpsJamHex } from '@/services/gps-interference';
 import type { DisplacementFlow } from '@/services/displacement';
 import type { Earthquake } from '@/services/earthquakes';
@@ -2358,6 +2359,18 @@ export class DeckGLMap {
       sizeMaxPixels: 20,
       pickable: true,
       billboard: true,
+      getColor: (d: IranEvent) => {
+        const tier = d.confidenceTier as ConfidenceTier;
+        if (tier && CONFIDENCE_TIERS[tier]) {
+          const hex = CONFIDENCE_TIERS[tier].color;
+          const r = parseInt(hex.slice(1, 3), 16);
+          const g = parseInt(hex.slice(3, 5), 16);
+          const b = parseInt(hex.slice(5, 7), 16);
+          const opacity = Math.round(CONFIDENCE_TIERS[tier].opacity * 255);
+          return [r, g, b, opacity];
+        }
+        return [255, 50, 50, 220];
+      },
     });
   }
 
@@ -3656,8 +3669,13 @@ export class DeckGLMap {
         return { html: `<div class="deckgl-tooltip"><strong>${text(obj.asn || t('components.deckgl.tooltip.internetOutage'))}</strong><br/>${text(obj.country)}</div>` };
       case 'cyber-threats-layer':
         return { html: `<div class="deckgl-tooltip"><strong>${t('popups.cyberThreat.title')}</strong><br/>${text(obj.severity || t('components.deckgl.tooltip.medium'))} · ${text(obj.country || t('popups.unknown'))}</div>` };
-      case 'iran-events-layer':
-        return { html: `<div class="deckgl-tooltip"><strong>${t('components.deckgl.layers.iranAttacks')}: ${text(obj.category || '')}</strong><br/>${text((obj.title || '').slice(0, 80))}</div>` };
+      case 'iran-events-layer': {
+        const tier = obj.confidenceTier as ConfidenceTier;
+        const tierLabel = tier && CONFIDENCE_TIERS[tier] ? CONFIDENCE_TIERS[tier].label : '';
+        const tierStyle = tier && CONFIDENCE_TIERS[tier] ? `color:${CONFIDENCE_TIERS[tier].color};` : '';
+        const tierHtml = tierLabel ? `<br/><span style="font-size:11px;${tierStyle}font-weight:600">${tierLabel}</span>` : '';
+        return { html: `<div class="deckgl-tooltip"><strong>${t('components.deckgl.layers.iranAttacks')}: ${text(obj.category || '')}</strong><br/>${text((obj.title || '').slice(0, 80))}${tierHtml}</div>` };
+      }
       case 'news-locations-layer':
         return { html: `<div class="deckgl-tooltip"><strong>📰 ${t('components.deckgl.tooltip.news')}</strong><br/>${text(obj.title?.slice(0, 80) || '')}</div>` };
       case 'positive-events-layer': {

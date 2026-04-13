@@ -6,7 +6,7 @@ export interface AcledConflictEvent { id: string; eventType: string; country: st
 export interface UcdpViolenceEvent { id: string; dateStart: number; dateEnd: number; location: { latitude: number; longitude: number }; country: string; sideA: string; sideB: string; deathsBest: number; deathsLow: number; deathsHigh: number; violenceType: string; sourceOriginal: string; }
 export interface HumanitarianCountrySummary { countryCode: string; countryName: string; conflictEventsTotal: number; conflictPoliticalViolenceEvents: number; conflictFatalities: number; referencePeriod: string; conflictDemonstrations: number; updatedAt: number; }
 /** IranEvent - lat/lon fields are camelCase; latitude/longitude aliases provided for map layer access */
-export interface IranEvent { id: string; title: string; category: string; sourceUrl: string; lat: number; lon: number; latitude: number; longitude: number; locationName: string; timestamp: number; severity: string; }
+export interface IranEvent { id: string; title: string; category: string; sourceUrl: string; lat: number; lon: number; latitude: number; longitude: number; locationName: string; timestamp: number; severity: string; confidenceTier?: string; }
 
 export interface ListAcledEventsResponse { events: AcledConflictEvent[]; pagination?: { nextCursor: string; totalCount: number }; }
 export interface ListUcdpEventsResponse { events: UcdpViolenceEvent[]; pagination?: { nextCursor: string; totalCount: number }; }

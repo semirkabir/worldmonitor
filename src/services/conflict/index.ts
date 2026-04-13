@@ -15,6 +15,7 @@ import type { UcdpGeoEvent, UcdpEventType } from '@/types';
 import { createCircuitBreaker } from '@/utils';
 import { haversineKm } from '@/utils/geo';
 import { getHydratedData } from '@/services/bootstrap';
+import { getConfidenceTierFromSources, type ConfidenceTier } from '@/services/confidence-tier';
 
 // ---- Client + Circuit Breakers (per-RPC; HAPI uses per-country map) ----
 
@@ -55,6 +56,7 @@ export interface ConflictEvent {
   fatalities: number;
   actors: string[];
   source: string;
+  confidenceTier?: ConfidenceTier;
 }
 
 export interface ConflictData {
@@ -101,6 +103,7 @@ function mapProtoEventType(eventType: string): ConflictEventType {
 }
 
 function toConflictEvent(proto: ProtoAcledEvent): ConflictEvent {
+  const sources = [...proto.actors, proto.source].filter(Boolean);
   return {
     id: proto.id,
     eventType: mapProtoEventType(proto.eventType),
@@ -114,6 +117,7 @@ function toConflictEvent(proto: ProtoAcledEvent): ConflictEvent {
     fatalities: proto.fatalities,
     actors: proto.actors,
     source: proto.source,
+    confidenceTier: getConfidenceTierFromSources(sources),
   };
 }
 
@@ -445,7 +449,12 @@ export function getIranEventSize(severity: string): number {
 
 export async function fetchIranEvents(): Promise<IranEvent[]> {
   const hydrated = getHydratedData('iranEvents') as ListIranEventsResponse | undefined;
-  if (hydrated?.events?.length) return hydrated.events;
+  if (hydrated?.events?.length) {
+    return hydrated.events.map(ev => ({
+      ...ev,
+      confidenceTier: getConfidenceTierFromSources([ev.sourceUrl, ev.category]).toString(),
+    }));
+  }
 
   const resp = await iranBreaker.execute(async () => {
     const cacheBust = Math.floor(Date.now() / 120_000);
@@ -453,5 +462,8 @@ export async function fetchIranEvents(): Promise<IranEvent[]> {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return r.json() as Promise<ListIranEventsResponse>;
   }, emptyIranFallback);
-  return resp.events;
+  return resp.events.map(ev => ({
+    ...ev,
+    confidenceTier: getConfidenceTierFromSources([ev.sourceUrl, ev.category]).toString(),
+  }));
 }

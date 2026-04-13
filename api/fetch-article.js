@@ -10,12 +10,39 @@ const NEGATIVE_CACHE_TTL = 120; // 2 minutes for failed fetches
 
 const CHROME_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
+// DOMParser polyfill for Node.js environment
+let DOMParser, TurndownService;
+try {
+  DOMParser = globalThis.DOMParser || (await import('linkedom')).DOMParser;
+} catch {
+  try {
+    const { DOMParser: dp } = await import('linkedom');
+    DOMParser = dp;
+  } catch {
+    // Fallback - will throw error if used
+  }
+}
+
+async function getTurndown() {
+  if (TurndownService) return new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+  try {
+    const td = (await import('turndown')).default;
+    TurndownService = td;
+    return new td({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Minimal readability-like extraction that works in edge runtime.
  * @mozilla/readability requires JSDOM which is too heavy for edge functions.
  * This extracts article content using DOMParser (available in edge runtime).
  */
 function extractArticle(html, baseUrl) {
+  if (!DOMParser) {
+    throw new Error('DOMParser not available');
+  }
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
 
@@ -63,6 +90,28 @@ function extractArticle(html, baseUrl) {
     '.content',
     'main',
     '[role="main"]',
+    '.article',
+    '.post',
+    '.story',
+    '.entry-text',
+    '.article-copy',
+    '.article-text',
+    '.post-text',
+    '.story-text',
+    '#content',
+    '.content-body',
+    '.article-wrapper',
+    '.post-wrapper',
+    '.story-content-wrapper',
+    '[data-component="article-body"]',
+    '[data-content="article"]',
+    '.article__content',
+    '.article-body__content',
+    '.story__body',
+    '.entry__content',
+    '.post__content',
+    '.article_main',
+    '.article_detail',
   ];
 
   for (const selector of articleSelectors) {
@@ -76,6 +125,22 @@ function extractArticle(html, baseUrl) {
   // Fallback: use body if no article element found
   if (!articleContent) {
     articleContent = doc.body;
+  }
+
+  // If still not enough content, try to find any element with substantial text
+  if (!articleContent || articleContent.innerHTML.length < 100) {
+    const paragraphs = doc.querySelectorAll('p');
+    let combinedContent = '';
+    for (const p of paragraphs) {
+      if (p.textContent.trim().length > 50) {
+        combinedContent += `<p>${p.innerHTML}</p>`;
+      }
+    }
+    if (combinedContent.length > 100) {
+      const wrapper = doc.createElement('div');
+      wrapper.innerHTML = combinedContent;
+      articleContent = wrapper;
+    }
   }
 
   // Extract metadata
@@ -165,19 +230,30 @@ export default async function handler(req) {
 
   // Extract URL from query params (GET) or body (POST)
   let articleUrl;
+  let outputFormat = 'html'; // default
   if (req.method === 'GET') {
     const requestUrl = new URL(req.url);
     articleUrl = requestUrl.searchParams.get('url');
+    outputFormat = requestUrl.searchParams.get('format') || 'html';
   } else {
     try {
       const body = await req.json();
       articleUrl = body.url;
+      outputFormat = body.format || 'html';
     } catch {
       return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
+  }
+
+  // Validate format
+  if (!['html', 'markdown'].includes(outputFormat)) {
+    return new Response(JSON.stringify({ error: 'Invalid format: use html or markdown' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
   }
 
   if (!articleUrl) {
@@ -234,7 +310,7 @@ export default async function handler(req) {
 
     if (!response.ok) {
       const errorResult = { error: `HTTP ${response.status}` };
-      await redisSet(cacheKey, JSON.stringify('__NEG__'), NEGATIVE_CACHE_TTL);
+      try { await redisSet(cacheKey, JSON.stringify('__NEG__'), NEGATIVE_CACHE_TTL); } catch { /* ignore */ }
       return new Response(JSON.stringify(errorResult), {
         status: response.status,
         headers: { 'Content-Type': 'application/json', 'X-Cache': 'MISS', ...corsHeaders },
@@ -245,24 +321,44 @@ export default async function handler(req) {
     const article = extractArticle(html, articleUrl);
 
     if (!article.content || article.content.length < 100) {
-      await redisSet(cacheKey, JSON.stringify('__NEG__'), NEGATIVE_CACHE_TTL);
+      try { await redisSet(cacheKey, JSON.stringify('__NEG__'), NEGATIVE_CACHE_TTL); } catch { /* ignore */ }
       return new Response(JSON.stringify({ error: 'Could not extract article content', url: articleUrl }), {
         status: 422,
         headers: { 'Content-Type': 'application/json', 'X-Cache': 'MISS', ...corsHeaders },
       });
     }
 
-    // Cache the result
+    // Convert to markdown if requested
+    let markdownContent = null;
+    if (outputFormat === 'markdown') {
+      const turndown = await getTurndown();
+      if (turndown) {
+        markdownContent = turndown.turndown(article.content);
+      }
+    }
+
+    // Cache the result (both HTML and markdown)
     const cacheData = {
       title: article.title,
       byline: article.byline,
       content: article.content,
+      markdown: markdownContent,
       imageUrl: article.imageUrl,
       url: articleUrl,
     };
-    await redisSet(cacheKey, JSON.stringify(cacheData), ARTICLE_CACHE_TTL);
+    try { await redisSet(cacheKey, JSON.stringify(cacheData), ARTICLE_CACHE_TTL); } catch { /* ignore */ }
 
-    return new Response(JSON.stringify({ ...cacheData, cached: false }), {
+    // Return the requested format
+    const responseData = {
+      title: article.title,
+      byline: article.byline,
+      content: outputFormat === 'markdown' && markdownContent ? markdownContent : article.content,
+      imageUrl: article.imageUrl,
+      url: articleUrl,
+      format: outputFormat,
+    };
+
+    return new Response(JSON.stringify({ ...responseData, cached: false }), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
